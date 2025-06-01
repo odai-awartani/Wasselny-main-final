@@ -1252,9 +1252,6 @@ const RideDetails = () => {
         style={Platform.OS === 'android' ? styles.androidShadow : styles.iosShadow}
       >
         <View className={`flex-row justify-between items-center mb-3 ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
-          <Text className={`text-lg font-CairoBold text-black ${language === 'ar' ? 'text-right' : 'text-left'}`}>
-            {language === 'ar' ? 'الركاب الحاليين' : 'Current Passengers'}
-          </Text>
           {isDriver && (
             <TouchableOpacity
               onPress={() => router.push({
@@ -1291,21 +1288,24 @@ const RideDetails = () => {
               />
             </TouchableOpacity>
           )}
+          <Text className={`text-lg font-CairoBold text-black ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+            {language === 'ar' ? 'الركاب الحاليين' : 'Current Passengers'}
+          </Text>
         </View>
         {allPassengers.length > 0 ? (
           <View className="border border-gray-200 rounded-lg overflow-hidden">
             <View className={`flex-row bg-gray-50 p-3 border-b border-gray-200 ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
-              <View className="w-[40%] min-h-[40px] px-3 flex justify-center">
+              <View className={`w-[40%] min-h-[40px] px-3 ${language === 'ar' ? 'items-end' : 'items-start'}`}>
                 <Text className={`text-sm font-CairoBold text-gray-700 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
                   {language === 'ar' ? 'الاسم' : 'Name'}
                 </Text>
               </View>
-              <View className="w-[25%] min-h-[40px] px-3 flex items-center justify-center">
-                <Text className={`text-sm font-CairoBold text-gray-700`}>
+              <View className={`w-[25%] min-h-[40px] px-3 ${language === 'ar' ? 'items-end' : 'items-center'}`}>
+                <Text className={`text-sm font-CairoBold text-gray-700 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
                   {language === 'ar' ? 'المقاعد' : 'Seats'}
                 </Text>
               </View>
-              <View className="w-[35%] min-h-[40px] px-3 flex justify-center">
+              <View className={`w-[35%] min-h-[40px] px-3 ${language === 'ar' ? 'items-end' : 'items-start'}`}>
                 <Text className={`text-sm font-CairoBold text-gray-700 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
                   {language === 'ar' ? 'نقطة التوقف' : 'Stop Point'}
                 </Text>
@@ -1313,33 +1313,31 @@ const RideDetails = () => {
             </View>
             {allPassengers.map((passenger) => (
               <View key={passenger.id} className={`flex-row p-3 border-b border-gray-100 ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
-                <View className="w-[40%] min-h-[40px] px-3 flex justify-center">
-                  <View className={`flex-row items-center ${language === 'ar' ? 'flex-row' : 'flex-row-reverse'}`}>
+                <View className={`w-[40%] min-h-[40px] px-3 ${language === 'ar' ? 'items-end' : 'items-start'}`}>
+                  <View className={`flex-row items-center ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
                     <Image
                       source={icons.person}
                       style={{
                         width: 24,
                         height: 24,
-                        marginLeft: language === 'ar' ? 0 : 4,
-                        marginRight: language === 'ar' ? 4 : 0
+                        marginLeft: language === 'ar' ? 4 : 0,
+                        marginRight: language === 'ar' ? 0 : 4
                       }}
                       tintColor="#10B981"
                     />
-                    <View className="flex-1">
-                      <Text 
-                        className={`text-gray-700 font-CairoRegular ${language === 'ar' ? 'text-right' : 'text-left'}`}
-                        numberOfLines={2}
-                        adjustsFontSizeToFit
-                        minimumFontScale={0.7}
-                      >
-                        {passengerNames[passenger.user_id] || (language === 'ar' ? 'الراكب' : 'Passenger')}
-                      </Text>
-                    </View>
+                    <Text 
+                      className={`text-gray-700 font-CairoRegular flex-1 ${language === 'ar' ? 'text-right' : 'text-left'}`}
+                      numberOfLines={2}
+                      adjustsFontSizeToFit
+                      minimumFontScale={0.7}
+                    >
+                      {passengerNames[passenger.user_id] || (language === 'ar' ? 'الراكب' : 'Passenger')}
+                    </Text>
                   </View>
                 </View>
-                <View className="w-[25%] min-h-[40px] px-3 flex items-center justify-center">
+                <View className={`w-[25%] min-h-[40px] px-3 ${language === 'ar' ? 'items-end' : 'items-center'}`}>
                   <Text 
-                    className="text-gray-700 font-CairoRegular"
+                    className={`text-gray-700 font-CairoRegular ${language === 'ar' ? 'text-right' : 'text-left'}`}
                     numberOfLines={1}
                     adjustsFontSizeToFit
                     minimumFontScale={0.7}
@@ -1347,7 +1345,7 @@ const RideDetails = () => {
                     {passenger.requested_seats || 1}
                   </Text>
                 </View>
-                <View className="w-[35%] min-h-[40px] px-3 flex justify-center">
+                <View className={`w-[35%] min-h-[40px] px-3 ${language === 'ar' ? 'items-end' : 'items-start'}`}>
                   <Text 
                     className={`text-gray-700 font-CairoRegular ${language === 'ar' ? 'text-right' : 'text-left'}`}
                     numberOfLines={2}
@@ -2170,6 +2168,5 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 3,
   },
-});
+});export default RideDetails;
 
-export default RideDetails;
