@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert, Image } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert, Image, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, updateDoc, collection, query, where, onSnapshot, getDocs } from 'firebase/firestore';
@@ -424,63 +424,63 @@ const UserDetails = () => {
         {showRatings && (
           <View className="space-y-4">
             {ratings.map((rating, index) => (
-              <View key={index} className="bg-white p-4 rounded-xl">
-                <View className="flex-row justify-between items-center mb-2">
-                  <Text className={`text-sm ${language === 'ar' ? 'font-CairoRegular' : 'font-JakartaRegular'} text-gray-600`}>
+              <View key={index} className={`bg-white p-4 rounded-xl ${language === 'ar' ? 'items-end' : 'items-start'}`}>
+                <View className={`flex-row justify-between items-center mb-2 ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
+                  <Text className={`text-sm ${language === 'ar' ? 'font-CairoRegular text-right' : 'font-JakartaRegular text-left'} text-gray-600`}>
                     {rating.passenger_name}
                   </Text>
-                  <View className="flex-row items-center">
-                    <Text className={`text-base ${language === 'ar' ? 'font-CairoBold' : 'font-JakartaBold'} text-gray-900 ${language === 'ar' ? 'mr-1' : 'ml-1'}`}>
+                  <View className={`flex-row items-center ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
+                    <Text className={`text-base ${language === 'ar' ? 'font-CairoBold text-right mr-1' : 'font-JakartaBold text-left ml-1'} text-gray-900`}>
                       {rating.overall.toFixed(1)}
                     </Text>
                     <Image source={icons.star} style={{ width: 16, height: 16 }} />
                   </View>
                 </View>
 
-                <View className="space-y-2">
-                  <View className="flex-row justify-between">
-                    <Text className={`text-sm ${language === 'ar' ? 'font-CairoRegular' : 'font-JakartaRegular'} text-gray-600`}>
+                <View className={`space-y-2 ${language === 'ar' ? 'items-end' : 'items-start'}`}>
+                  <View className={`flex-row justify-between w-full ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
+                    <Text className={`text-sm ${language === 'ar' ? 'font-CairoRegular text-right' : 'font-JakartaRegular text-left'} text-gray-600`}>
                       {language === 'ar' ? 'قيادة السيارة' : 'Driving'}
                     </Text>
-                    <Text className={`text-sm ${language === 'ar' ? 'font-CairoBold' : 'font-JakartaBold'} text-gray-900`}>
+                    <Text className={`text-sm ${language === 'ar' ? 'font-CairoBold text-right' : 'font-JakartaBold text-left'} text-gray-900`}>
                       {rating.driving}
                     </Text>
                   </View>
-                  <View className="flex-row justify-between">
-                    <Text className={`text-sm ${language === 'ar' ? 'font-CairoRegular' : 'font-JakartaRegular'} text-gray-600`}>
+                  <View className={`flex-row justify-between w-full ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
+                    <Text className={`text-sm ${language === 'ar' ? 'font-CairoRegular text-right' : 'font-JakartaRegular text-left'} text-gray-600`}>
                       {language === 'ar' ? 'الأخلاق والسلوك' : 'Behavior'}
                     </Text>
-                    <Text className={`text-sm ${language === 'ar' ? 'font-CairoBold' : 'font-JakartaBold'} text-gray-900`}>
+                    <Text className={`text-sm ${language === 'ar' ? 'font-CairoBold text-right' : 'font-JakartaBold text-left'} text-gray-900`}>
                       {rating.behavior}
                     </Text>
                   </View>
-                  <View className="flex-row justify-between">
-                    <Text className={`text-sm ${language === 'ar' ? 'font-CairoRegular' : 'font-JakartaRegular'} text-gray-600`}>
+                  <View className={`flex-row justify-between w-full ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
+                    <Text className={`text-sm ${language === 'ar' ? 'font-CairoRegular text-right' : 'font-JakartaRegular text-left'} text-gray-600`}>
                       {language === 'ar' ? 'الالتزام بالمواعيد' : 'Punctuality'}
                     </Text>
-                    <Text className={`text-sm ${language === 'ar' ? 'font-CairoBold' : 'font-JakartaBold'} text-gray-900`}>
+                    <Text className={`text-sm ${language === 'ar' ? 'font-CairoBold text-right' : 'font-JakartaBold text-left'} text-gray-900`}>
                       {rating.punctuality}
                     </Text>
                   </View>
-                  <View className="flex-row justify-between">
-                    <Text className={`text-sm ${language === 'ar' ? 'font-CairoRegular' : 'font-JakartaRegular'} text-gray-600`}>
+                  <View className={`flex-row justify-between w-full ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
+                    <Text className={`text-sm ${language === 'ar' ? 'font-CairoRegular text-right' : 'font-JakartaRegular text-left'} text-gray-600`}>
                       {language === 'ar' ? 'نظافة السيارة' : 'Cleanliness'}
                     </Text>
-                    <Text className={`text-sm ${language === 'ar' ? 'font-CairoBold' : 'font-JakartaBold'} text-gray-900`}>
+                    <Text className={`text-sm ${language === 'ar' ? 'font-CairoBold text-right' : 'font-JakartaBold text-left'} text-gray-900`}>
                       {rating.cleanliness}
                     </Text>
                   </View>
                 </View>
 
                 {rating.comment && (
-                  <View className="mt-2 p-2 bg-gray-50 rounded-lg">
-                    <Text className={`text-sm ${language === 'ar' ? 'font-CairoRegular' : 'font-JakartaRegular'} text-gray-600 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+                  <View className={`mt-2 p-2 bg-gray-50 rounded-lg ${language === 'ar' ? 'items-end' : 'items-start'}`}>
+                    <Text className={`text-sm ${language === 'ar' ? 'font-CairoRegular text-right' : 'font-JakartaRegular text-left'} text-gray-600`}>
                       {rating.comment}
                     </Text>
                   </View>
                 )}
 
-                <Text className={`text-xs ${language === 'ar' ? 'font-CairoRegular' : 'font-JakartaRegular'} text-gray-500 mt-2 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+                <Text className={`text-xs ${language === 'ar' ? 'font-CairoRegular text-right' : 'font-JakartaRegular text-left'} text-gray-500 mt-2`}>
                   {rating.ride_details.origin_address} → {rating.ride_details.destination_address}
                 </Text>
               </View>
@@ -531,102 +531,77 @@ const UserDetails = () => {
           headerTitleAlign: 'center',
         }} 
       />
-    <SafeAreaView className="flex-1 bg-gray-50">
-      <Header showProfileImage={false} showSideMenu={false} title={language === 'ar' ? 'تفاصيل المستخدم' : 'User Details'} />
-      <ScrollView className="flex-1">
-          {/* Profile Section */}
-          <View className="bg-white p-4 mb-4">
-          <View className="items-center mb-6">
-            {userDetails.profile_image_url ? (
-              <Image 
-                source={{ uri: userDetails.profile_image_url }}
-                className="w-24 h-24 rounded-full mb-4"
-              />
-            ) : (
-              <View className="w-24 h-24 rounded-full bg-gray-200 items-center justify-center mb-4">
-                <MaterialCommunityIcons name="account" size={48} color="#6B7280" />
-              </View>
-            )}
-              <Text className={`text-2xl font-bold mb-1 ${language === 'ar' ? 'font-CairoBold' : 'font-JakartaBold'}`}>
-                {userDetails.name}
-              </Text>
-              <Text className={`text-gray-600 mb-2 ${language === 'ar' ? 'font-CairoRegular' : 'font-JakartaRegular'}`}>
-                {userDetails.email}
-              </Text>
-            <View className="flex-row">
-              <View className={`px-3 py-1 rounded-full mr-2 ${userDetails.role === 'admin' ? 'bg-purple-100' : userDetails.driver ? 'bg-green-100' : 'bg-blue-100'}`}>
-                  <Text className={`${userDetails.role === 'admin' ? 'text-purple-700' : userDetails.driver ? 'text-green-700' : 'text-blue-700'} ${language === 'ar' ? 'font-CairoMedium' : 'font-JakartaMedium'}`}>
-                  {userDetails.role === 'admin' ? 'Admin' : userDetails.driver ? 'Driver' : 'Passenger'}
+      <SafeAreaView className="flex-1 bg-gray-50">
+        <Header showProfileImage={false} showSideMenu={false} title={language === 'ar' ? 'تفاصيل المستخدم' : 'User Details'} />
+        <ScrollView className="flex-1">
+          <View className={`px-4 ${language === 'ar' ? 'items-end' : 'items-start'}`}>
+            {/* Profile Section */}
+            <View className="w-full bg-white p-4 mb-4">
+              <View className="items-center mb-6">
+                {userDetails.profile_image_url ? (
+                  <Image 
+                    source={{ uri: userDetails.profile_image_url }}
+                    className="w-24 h-24 rounded-full mb-4"
+                  />
+                ) : (
+                  <View className="w-24 h-24 rounded-full bg-gray-200 items-center justify-center mb-4">
+                    <MaterialCommunityIcons name="account" size={48} color="#6B7280" />
+                  </View>
+                )}
+                <Text className={`text-2xl font-bold mb-1 text-center ${language === 'ar' ? 'font-CairoBold' : 'font-JakartaBold'}`}>
+                  {userDetails.name}
                 </Text>
+                <Text className={`text-gray-600 mb-2 text-center ${language === 'ar' ? 'font-CairoRegular' : 'font-JakartaRegular'}`}>
+                  {userDetails.email}
+                </Text>
+                <View className="flex-row justify-center">
+                  <View className={`px-3 py-1 rounded-full ${language === 'ar' ? 'ml-2' : 'mr-2'} ${userDetails.role === 'admin' ? 'bg-purple-100' : userDetails.driver ? 'bg-green-100' : 'bg-blue-100'}`}>
+                    <Text className={`${userDetails.role === 'admin' ? 'text-purple-700' : userDetails.driver ? 'text-green-700' : 'text-blue-700'} ${language === 'ar' ? 'font-CairoMedium' : 'font-JakartaMedium'}`}>
+                      {userDetails.role === 'admin' ? 'Admin' : userDetails.driver ? 'Driver' : 'Passenger'}
+                    </Text>
+                  </View>
+                  {userDetails.driver && (
+                    <View className={`px-3 py-1 rounded-full ${userDetails.driver.is_active ? 'bg-green-100' : 'bg-yellow-100'}`}>
+                      <Text className={`${userDetails.driver.is_active ? 'text-green-700' : 'text-yellow-700'} ${language === 'ar' ? 'font-CairoMedium' : 'font-JakartaMedium'}`}>
+                        {userDetails.driver.is_active ? 'Active' : 'Inactive'}
+                      </Text>
+                    </View>
+                  )}
+                </View>
               </View>
-              {userDetails.driver && (
-                <View className={`px-3 py-1 rounded-full ${userDetails.driver.is_active ? 'bg-green-100' : 'bg-yellow-100'}`}>
-                    <Text className={`${userDetails.driver.is_active ? 'text-green-700' : 'text-yellow-700'} ${language === 'ar' ? 'font-CairoMedium' : 'font-JakartaMedium'}`}>
-                    {userDetails.driver.is_active ? 'Active' : 'Inactive'}
-                  </Text>
-                </View>
-              )}
-            </View>
-          </View>
-
-            {/* Basic Information */}
-            <View className="bg-gray-50 rounded-xl p-4 mb-4">
-              <Text className={`text-lg font-bold mb-4 ${language === 'ar' ? 'font-CairoBold' : 'font-JakartaBold'}`}>
-                {language === 'ar' ? 'المعلومات الأساسية' : 'Basic Information'}
-              </Text>
-              <View className="space-y-3">
-                <View>
-                  <Text className={`text-gray-600 ${language === 'ar' ? 'font-CairoRegular' : 'font-JakartaRegular'}`}>
-                    {language === 'ar' ? 'رقم الهاتف' : 'Phone Number'}
-                  </Text>
-                  <Text className={`text-lg ${language === 'ar' ? 'font-CairoMedium' : 'font-JakartaMedium'}`}>
-                    {userDetails.phone || '-'}
-                  </Text>
-                </View>
-                <View>
-                  <Text className={`text-gray-600 ${language === 'ar' ? 'font-CairoRegular' : 'font-JakartaRegular'}`}>
-                    {language === 'ar' ? 'الجنس' : 'Gender'}
-                  </Text>
-                  <Text className={`text-lg ${language === 'ar' ? 'font-CairoMedium' : 'font-JakartaMedium'}`}>
-                    {userDetails.gender || '-'}
-                  </Text>
-                </View>
-                <View>
-                  <Text className={`text-gray-600 ${language === 'ar' ? 'font-CairoRegular' : 'font-JakartaRegular'}`}>
-                    {language === 'ar' ? 'القطاع' : 'Industry'}
-                  </Text>
-                  <Text className={`text-lg ${language === 'ar' ? 'font-CairoMedium' : 'font-JakartaMedium'}`}>
-                    {userDetails.industry || '-'}
-                  </Text>
-                </View>
-                <View>
-                  <Text className={`text-gray-600 ${language === 'ar' ? 'font-CairoRegular' : 'font-JakartaRegular'}`}>
-                    {language === 'ar' ? 'تاريخ الإنشاء' : 'Created At'}
-                  </Text>
-                  <Text className={`text-lg ${language === 'ar' ? 'font-CairoMedium' : 'font-JakartaMedium'}`}>
-                    {new Date(userDetails.createdAt).toLocaleDateString()}
-                  </Text>
-                </View>
-            </View>
             </View>
 
             {/* Statistics - Only for Drivers */}
             {userDetails.driver && (
               <View className="flex-row justify-between mb-4">
-                <View className="flex-1 bg-gray-50 rounded-xl p-4 mr-2">
-                  <Text className={`text-gray-600 mb-1 ${language === 'ar' ? 'font-CairoRegular' : 'font-JakartaRegular'}`}>
+                <View className="flex-1 bg-gray-50 rounded-xl p-4 mr-2 border border-gray-100 items-center" style={{
+                      elevation: Platform.OS === "android" ? 4 : 0,
+                      shadowColor: "#000",
+                      shadowOffset: { width: 0, height: 2 },
+                      shadowOpacity: 0.1,
+                      shadowRadius: 3,
+                    }}>
+                  <Text className={`text-gray-600 text-center ${language === 'ar' ? 'font-CairoRegular' : 'font-JakartaRegular'}`}>
                     {language === 'ar' ? 'إجمالي الرحلات' : 'Total Rides'}
                   </Text>
-                  <Text className={`text-2xl font-bold ${language === 'ar' ? 'font-CairoBold' : 'font-JakartaBold'}`}>
+                  <View className="h-px bg-gray-300 w-full my-2" />
+                  <Text className={`text-2xl font-bold text-center ${language === 'ar' ? 'font-CairoBold' : 'font-JakartaBold'}`}>
                     {userDetails.driver.total_rides || 0}
                   </Text>
                 </View>
-                <View className="flex-1 bg-gray-50 rounded-xl p-4 ml-2">
-                  <Text className={`text-gray-600 mb-1 ${language === 'ar' ? 'font-CairoRegular' : 'font-JakartaRegular'}`}>
+                <View className="flex-1 bg-gray-50 rounded-xl p-4 ml-2 border border-gray-100 items-center" style={{
+                      elevation: Platform.OS === "android" ? 4 : 0,
+                      shadowColor: "#000",
+                      shadowOffset: { width: 0, height: 2 },
+                      shadowOpacity: 0.1,
+                      shadowRadius: 3,
+                    }}>
+                  <Text className={`text-gray-600 text-center ${language === 'ar' ? 'font-CairoRegular' : 'font-JakartaRegular'}`}>
                     {language === 'ar' ? 'التقييم' : 'Rating'}
                   </Text>
-                  <View className="flex-row items-center">
-                    <Text className={`text-2xl font-bold ${language === 'ar' ? 'font-CairoBold' : 'font-JakartaBold'} ${language === 'ar' ? 'mr-1' : 'ml-1'}`}>
+                  <View className="h-px bg-gray-300 w-full my-2" />
+                  <View className="flex-row items-center justify-center">
+                    <Text className={`text-2xl font-bold ${language === 'ar' ? 'font-CairoBold mr-1' : 'font-JakartaBold ml-1'}`}>
                       {userDetails.driver.rating?.toFixed(1) || '0.0'}
                     </Text>
                     <Image source={icons.star} style={{ width: 20, height: 20 }} />
@@ -635,18 +610,59 @@ const UserDetails = () => {
               </View>
             )}
 
+            {/* Basic Information */}
+            <View className="w-full bg-gray-50 rounded-xl p-4 mb-4">
+              <Text className={`text-lg font-bold mb-4 ${language === 'ar' ? 'font-CairoBold text-right' : 'font-JakartaBold text-left'}`}>
+                {language === 'ar' ? 'المعلومات الأساسية' : 'Basic Information'}
+              </Text>
+              <View className={`space-y-3 ${language === 'ar' ? 'items-end' : 'items-start'}`}>
+                <View>
+                  <Text className={`text-gray-600 ${language === 'ar' ? 'font-CairoRegular text-right' : 'font-JakartaRegular text-left'}`}>
+                    {language === 'ar' ? 'رقم الهاتف' : 'Phone Number'}
+                  </Text>
+                  <Text className={`text-lg ${language === 'ar' ? 'font-CairoMedium text-right' : 'font-JakartaMedium text-left'}`}>
+                    {userDetails.phone || '-'}
+                  </Text>
+                </View>
+                <View>
+                  <Text className={`text-gray-600 ${language === 'ar' ? 'font-CairoRegular text-right' : 'font-JakartaRegular text-left'}`}>
+                    {language === 'ar' ? 'الجنس' : 'Gender'}
+                  </Text>
+                  <Text className={`text-lg ${language === 'ar' ? 'font-CairoMedium text-right' : 'font-JakartaMedium text-left'}`}>
+                    {userDetails.gender || '-'}
+                  </Text>
+                </View>
+                <View>
+                  <Text className={`text-gray-600 ${language === 'ar' ? 'font-CairoRegular text-right' : 'font-JakartaRegular text-left'}`}>
+                    {language === 'ar' ? 'القطاع' : 'Industry'}
+                  </Text>
+                  <Text className={`text-lg ${language === 'ar' ? 'font-CairoMedium text-right' : 'font-JakartaMedium text-left'}`}>
+                    {userDetails.industry || '-'}
+                  </Text>
+                </View>
+                <View>
+                  <Text className={`text-gray-600 ${language === 'ar' ? 'font-CairoRegular text-right' : 'font-JakartaRegular text-left'}`}>
+                    {language === 'ar' ? 'تاريخ الإنشاء' : 'Created At'}
+                  </Text>
+                  <Text className={`text-lg ${language === 'ar' ? 'font-CairoMedium text-right' : 'font-JakartaMedium text-left'}`}>
+                    {new Date(userDetails.createdAt).toLocaleDateString()}
+                  </Text>
+                </View>
+              </View>
+            </View>
+
             {/* Detailed Ratings */}
             {renderDetailedRatings()}
 
-          {/* Driver Details */}
-          {userDetails.driver && (
-              <View className="bg-gray-50 rounded-xl p-4 mb-4">
-                <Text className={`text-lg font-bold mb-4 ${language === 'ar' ? 'font-CairoBold' : 'font-JakartaBold'}`}>
+            {/* Driver Details */}
+            {userDetails.driver && (
+              <View className="w-full bg-gray-50 rounded-xl p-4 mb-4">
+                <Text className={`text-lg font-bold mb-4 ${language === 'ar' ? 'font-CairoBold text-right' : 'font-JakartaBold text-left'}`}>
                   {language === 'ar' ? 'معلومات السائق' : 'Driver Information'}
                 </Text>
-              <View className="space-y-3">
-                <View>
-                    <Text className={`text-gray-600 ${language === 'ar' ? 'font-CairoRegular' : 'font-JakartaRegular'}`}>
+                <View className={`space-y-3 ${language === 'ar' ? 'items-end' : 'items-start'}`}>
+                  <View>
+                    <Text className={`text-gray-600 ${language === 'ar' ? 'font-CairoRegular text-right' : 'font-JakartaRegular text-left'}`}>
                       {language === 'ar' ? 'الحالة' : 'Status'}
                     </Text>
                     <View className="flex-row items-center">
@@ -659,141 +675,154 @@ const UserDetails = () => {
                           userDetails.driver.status === 'approved' ? 'text-green-700' :
                           userDetails.driver.status === 'rejected' ? 'text-red-700' :
                           'text-yellow-700'
-                        } ${language === 'ar' ? 'font-CairoMedium' : 'font-JakartaMedium'}`}>
+                        } ${language === 'ar' ? 'font-CairoMedium text-right' : 'font-JakartaMedium text-left'}`}>
                           {userDetails.driver.status === 'approved' ? (language === 'ar' ? 'موافق' : 'Approved') :
                            userDetails.driver.status === 'rejected' ? (language === 'ar' ? 'مرفوض' : 'Rejected') :
                            (language === 'ar' ? 'قيد الانتظار' : 'Pending')}
                         </Text>
-                </View>
+                      </View>
                     </View>
                   </View>
-                  <View>
-                    <Text className={`text-gray-600 ${language === 'ar' ? 'font-CairoRegular' : 'font-JakartaRegular'}`}>
+
+                  <View className={`w-full ${language === 'ar' ? 'items-end' : 'items-start'}`}>
+                    <Text className={`text-gray-600 ${language === 'ar' ? 'font-CairoRegular text-right' : 'font-JakartaRegular text-left'}`}>
                       {language === 'ar' ? 'نوع السيارة' : 'Car Type'}
                     </Text>
-                    <Text className={`text-lg ${language === 'ar' ? 'font-CairoMedium' : 'font-JakartaMedium'}`}>
+                    <Text className={`text-lg ${language === 'ar' ? 'font-CairoMedium text-right' : 'font-JakartaMedium text-left'}`}>
                       {userDetails.driver.car_type || '-'}
                     </Text>
+                    {userDetails.driver.car_image_url && (
+                      <View className="mt-2 w-full">
+                        <Image 
+                          source={{ uri: userDetails.driver.car_image_url }}
+                          className="w-full h-40 rounded-lg"
+                          resizeMode="cover"
+                        />
+                      </View>
+                    )}
                   </View>
-                  <View>
-                    <Text className={`text-gray-600 ${language === 'ar' ? 'font-CairoRegular' : 'font-JakartaRegular'}`}>
+
+                  <View className={`w-full ${language === 'ar' ? 'items-end' : 'items-start'}`}>
+                    <Text className={`text-gray-600 ${language === 'ar' ? 'font-CairoRegular text-right' : 'font-JakartaRegular text-left'}`}>
                       {language === 'ar' ? 'عدد المقاعد' : 'Number of Seats'}
                     </Text>
-                    <Text className={`text-lg ${language === 'ar' ? 'font-CairoMedium' : 'font-JakartaMedium'}`}>
+                    <Text className={`text-lg ${language === 'ar' ? 'font-CairoMedium text-right' : 'font-JakartaMedium text-left'}`}>
                       {userDetails.driver.car_seats || '-'}
                     </Text>
                   </View>
-                  <View>
-                    <Text className={`text-gray-600 ${language === 'ar' ? 'font-CairoRegular' : 'font-JakartaRegular'}`}>
+
+                  <View className={`w-full ${language === 'ar' ? 'items-end' : 'items-start'}`}>
+                    <Text className={`text-gray-600 ${language === 'ar' ? 'font-CairoRegular text-right' : 'font-JakartaRegular text-left'}`}>
                       {language === 'ar' ? 'تاريخ الموافقة' : 'Approval Date'}
                     </Text>
-                    <Text className={`text-lg ${language === 'ar' ? 'font-CairoMedium' : 'font-JakartaMedium'}`}>
+                    <Text className={`text-lg ${language === 'ar' ? 'font-CairoMedium text-right' : 'font-JakartaMedium text-left'}`}>
                       {userDetails.driver.approved_at ? new Date(userDetails.driver.approved_at).toLocaleDateString() : '-'}
                     </Text>
+                    {userDetails.driver.approved_at && (
+                      <Text className={`text-sm text-gray-500 mt-1 ${language === 'ar' ? 'font-CairoRegular text-right' : 'font-JakartaRegular text-left'}`}>
+                        {new Date(userDetails.driver.approved_at).toLocaleTimeString()}
+                      </Text>
+                    )}
                   </View>
+
                   {userDetails.driver.rejection_reason && (
                     <View>
-                      <Text className={`text-gray-600 ${language === 'ar' ? 'font-CairoRegular' : 'font-JakartaRegular'}`}>
+                      <Text className={`text-gray-600 ${language === 'ar' ? 'font-CairoRegular text-right' : 'font-JakartaRegular text-left'}`}>
                         {language === 'ar' ? 'سبب الرفض' : 'Rejection Reason'}
                       </Text>
-                      <Text className={`text-lg ${language === 'ar' ? 'font-CairoMedium' : 'font-JakartaMedium'}`}>
+                      <Text className={`text-lg ${language === 'ar' ? 'font-CairoMedium text-right' : 'font-JakartaMedium text-left'}`}>
                         {userDetails.driver.rejection_reason}
                       </Text>
                     </View>
                   )}
-                  {userDetails.driver.car_image_url && (
-                    <View className="mt-4">
-                      <Text className={`text-gray-600 mb-2 ${language === 'ar' ? 'font-CairoRegular' : 'font-JakartaRegular'}`}>
-                        {language === 'ar' ? 'صورة السيارة' : 'Car Image'}
-                      </Text>
-                      <Image 
-                        source={{ uri: userDetails.driver.car_image_url }}
-                        className="w-full h-40 rounded-lg"
-                        resizeMode="cover"
-                      />
-                    </View>
-                )}
-                <TouchableOpacity
-                  onPress={() => handleStatusChange(!userDetails.driver?.is_active)}
-                  className={`mt-4 py-2 px-4 rounded-full ${userDetails.driver.status === 'approved' ? 'bg-red-100' : 'bg-green-100'}`}
-                >
+
+                  <TouchableOpacity
+                    onPress={() => handleStatusChange(!userDetails.driver?.is_active)}
+                    className={`mt-4 py-2 px-4 rounded-full ${userDetails.driver.status === 'approved' ? 'bg-red-100' : 'bg-green-100'}`}
+                  >
                     <Text className={`text-center ${userDetails.driver.status === 'approved' ? 'text-red-700' : 'text-green-700'} ${language === 'ar' ? 'font-CairoMedium' : 'font-JakartaMedium'}`}>
                       {userDetails.driver.status === 'approved'
                         ? (language === 'ar' ? 'إيقاف السائق' : 'Deactivate Driver')
                         : (language === 'ar' ? 'تفعيل السائق' : 'Activate Driver')}
-                  </Text>
-                </TouchableOpacity>
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               </View>
-            </View>
-          )}
+            )}
 
-          {/* Recent Rides */}
-            <View className="bg-gray-50 rounded-xl p-4">
-              <Text className={`text-lg font-bold mb-4 ${language === 'ar' ? 'font-CairoBold' : 'font-JakartaBold'}`}>
+            {/* Recent Rides */}
+            <View className="w-full bg-gray-50 rounded-xl p-4">
+              <Text className={`text-lg font-bold mb-4 ${language === 'ar' ? 'font-CairoBold text-right' : 'font-JakartaBold text-left'}`}>
                 {userDetails.driver 
                   ? (language === 'ar' ? 'الرحلات المكتملة' : 'Completed Rides')
                   : (language === 'ar' ? 'طلبات الرحلات' : 'Ride Requests')}
               </Text>
-            {recentRides.length > 0 ? (
-              recentRides.map(ride => (
-                <TouchableOpacity
-                  key={ride.id}
-                  onPress={() => router.push({
-                    pathname: '/(root)/admin/rideDetails',
-                    params: { 
-                      rideId: userDetails.driver ? ride.id : ride.ride_id || ride.id 
-                    }
-                  } as any)}
-                  className="bg-white p-4 rounded-xl mb-3 shadow-sm"
-                >
-                  <View className="flex-row justify-between items-start mb-3">
-                  <View className="flex-1">
-                      <View className="flex-row items-center mb-2">
-                        <MaterialCommunityIcons name="map-marker" size={16} color="#F97316" />
-                        <Text className={`ml-1 font-medium ${language === 'ar' ? 'font-CairoMedium' : 'font-JakartaMedium'}`}>
-                          {ride.origin_address}
-                    </Text>
+              {recentRides.length > 0 ? (
+                recentRides.map(ride => (
+                  <TouchableOpacity
+                    key={ride.id}
+                    onPress={() => router.push({
+                      pathname: '/(root)/admin/rideDetails',
+                      params: { 
+                        rideId: userDetails.driver ? ride.id : ride.ride_id || ride.id 
+                      }
+                    } as any)}
+                    className="w-full bg-white p-4 rounded-xl mb-3 border border-gray-100"
+                    style={{
+                      elevation: Platform.OS === "android" ? 4 : 0,
+                      shadowColor: "#000",
+                      shadowOffset: { width: 0, height: 2 },
+                      shadowOpacity: 0.1,
+                      shadowRadius: 3,
+                    }}
+                  >
+                    <View className={`flex-row justify-between items-start mb-3 ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
+                      <View className={`flex-1 ${language === 'ar' ? 'items-end' : 'items-start'}`}>
+                        <View className={`flex-row items-center mb-2 ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
+                          <MaterialCommunityIcons name="map-marker" size={16} color="#F97316" />
+                          <Text className={`${language === 'ar' ? 'mr-1 text-right' : 'ml-1 text-left'} font-medium ${language === 'ar' ? 'font-CairoMedium' : 'font-JakartaMedium'}`}>
+                            {ride.origin_address}
+                          </Text>
+                        </View>
+                        <View className={`flex-row items-center ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
+                          <MaterialCommunityIcons name="map-marker-check" size={16} color="#22C55E" />
+                          <Text className={`${language === 'ar' ? 'mr-1 text-right' : 'ml-1 text-left'} font-medium ${language === 'ar' ? 'font-CairoMedium' : 'font-JakartaMedium'}`}>
+                            {ride.destination_address}
+                          </Text>
+                        </View>
                       </View>
-                      <View className="flex-row items-center">
-                        <MaterialCommunityIcons name="map-marker-check" size={16} color="#22C55E" />
-                        <Text className={`ml-1 font-medium ${language === 'ar' ? 'font-CairoMedium' : 'font-JakartaMedium'}`}>
-                          {ride.destination_address}
-                    </Text>
-                  </View>
-                    </View>
-                    <View className={`px-3 py-1 rounded-full ${
-                      userDetails.driver 
-                        ? 'bg-green-100'
-                        : ride.status === 'checked_out' 
-                          ? 'bg-green-100'
-                          : ride.status === 'checked_in'
-                            ? 'bg-blue-100'
-                            : 'bg-yellow-100'
-                    }`}>
-                      <Text className={`text-sm ${
+                      <View className={`px-3 py-1 rounded-full ${
                         userDetails.driver 
-                          ? 'text-green-700'
-                          : ride.status === 'checked_out'
+                          ? 'bg-green-100'
+                          : ride.status === 'checked_out' 
+                            ? 'bg-green-100'
+                            : ride.status === 'checked_in'
+                              ? 'bg-blue-100'
+                              : 'bg-yellow-100'
+                      }`}>
+                        <Text className={`text-sm ${
+                          userDetails.driver 
                             ? 'text-green-700'
-                            : ride.status === 'checked_in'
-                              ? 'text-blue-700'
-                              : 'text-yellow-700'
-                      } ${language === 'ar' ? 'font-CairoMedium' : 'font-JakartaMedium'}`}>
-                        {userDetails.driver 
-                          ? (language === 'ar' ? 'مكتملة' : 'Completed')
-                          : ride.status === 'checked_out'
+                            : ride.status === 'checked_out'
+                              ? 'text-green-700'
+                              : ride.status === 'checked_in'
+                                ? 'text-blue-700'
+                                : 'text-yellow-700'
+                        } ${language === 'ar' ? 'font-CairoMedium' : 'font-JakartaMedium'}`}>
+                          {userDetails.driver 
                             ? (language === 'ar' ? 'مكتملة' : 'Completed')
-                            : ride.status === 'checked_in'
-                              ? (language === 'ar' ? 'تم تسجيل الدخول' : 'Checked In')
-                              : (language === 'ar' ? 'مقبول' : 'Accepted')}
-                      </Text>
+                            : ride.status === 'checked_out'
+                              ? (language === 'ar' ? 'مكتملة' : 'Completed')
+                              : ride.status === 'checked_in'
+                                ? (language === 'ar' ? 'تم تسجيل الدخول' : 'Checked In')
+                                : (language === 'ar' ? 'مقبول' : 'Accepted')}
+                        </Text>
+                      </View>
                     </View>
-                  </View>
 
-                  <View className="flex-row items-center justify-between border-t border-gray-100 pt-3">
-                    <View className="flex-row items-center">
+                    <View className={`flex-row items-center ${language === 'ar' ? 'flex-row' : 'flex-row-reverse'}`}>
                       <MaterialCommunityIcons name="calendar-clock" size={16} color="#6B7280" />
-                      <Text className={`ml-1 text-gray-600 ${language === 'ar' ? 'font-CairoRegular' : 'font-JakartaRegular'}`}>
+                      <Text className={`${language === 'ar' ? 'mr-1 text-right' : 'ml-1 text-left'} text-gray-600 ${language === 'ar' ? 'font-CairoRegular' : 'font-JakartaRegular'}`}>
                         {(() => {
                           const [datePart, timePart] = ride.ride_datetime.split(' ');
                           const [day, month, year] = datePart.split('/').map(Number);
@@ -811,37 +840,36 @@ const UserDetails = () => {
                         })()}
                       </Text>
                     </View>
-                  </View>
 
-                  <View className="flex-row justify-between items-center">
-                    {ride.is_recurring && (
-                      <View className="mt-3 flex-row items-center">
-                        <MaterialCommunityIcons name="repeat" size={16} color="#6B7280" />
-                        <Text className={`ml-1 text-gray-600 ${language === 'ar' ? 'font-CairoRegular' : 'font-JakartaRegular'}`}>
-                          {language === 'ar' ? 'رحلة متكررة' : 'Recurring Ride'} - {ride.ride_days?.join(', ')}
+                    <View className={`flex-row justify-between items-center ${language === 'ar' ? 'flex-row' : 'flex-row-reverse'}`}>
+                      {ride.is_recurring && (
+                        <View className={`mt-3 flex-row items-center ${language === 'ar' ? 'flex-row' : 'flex-row-reverse'}`}>
+                          <MaterialCommunityIcons name="repeat" size={16} color="#6B7280" />
+                          <Text className={`${language === 'ar' ? 'mr-1 text-right' : 'ml-1 text-left'} text-gray-600 ${language === 'ar' ? 'font-CairoRegular' : 'font-JakartaRegular'}`}>
+                            {language === 'ar' ? 'رحلة متكررة' : 'Recurring Ride'} - {ride.ride_days?.join(', ')}
+                          </Text>
+                        </View>
+                      )}
+                      <View className={`flex-row mt-2 items-center ${language === 'ar' ? 'flex-row' : 'flex-row-reverse'}`}>
+                        <MaterialCommunityIcons name="seat-passenger" size={16} color="#6B7280" />
+                        <Text className={`${language === 'ar' ? 'mr-1 text-right' : 'ml-1 text-left'} text-gray-600 ${language === 'ar' ? 'font-CairoRegular' : 'font-JakartaRegular'}`}>
+                          {ride.available_seats} {language === 'ar' ? 'مقاعد' : 'Seats'}
                         </Text>
                       </View>
-                    )}
-                    <View className="flex-row mt-2 items-center">
-                      <MaterialCommunityIcons name="seat-passenger" size={16} color="#6B7280" />
-                      <Text className={`ml-1 text-gray-600 ${language === 'ar' ? 'font-CairoRegular' : 'font-JakartaRegular'}`}>
-                        {ride.available_seats} {language === 'ar' ? 'مقاعد' : 'Seats'}
-                    </Text>
                     </View>
-                  </View>
-                </TouchableOpacity>
-              ))
-            ) : (
-                <Text className={`text-gray-600 text-center py-4 ${language === 'ar' ? 'font-CairoRegular' : 'font-JakartaRegular'}`}>
+                  </TouchableOpacity>
+                ))
+              ) : (
+                <Text className={`text-gray-600 py-4 ${language === 'ar' ? 'font-CairoRegular text-right' : 'font-JakartaRegular text-left'}`}>
                   {userDetails.driver 
                     ? (language === 'ar' ? 'لا توجد رحلات مكتملة' : 'No completed rides found')
                     : (language === 'ar' ? 'لا توجد طلبات رحلات' : 'No ride requests found')}
                 </Text>
-            )}
+              )}
+            </View>
           </View>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+        </ScrollView>
+      </SafeAreaView>
     </>
   );
 };
