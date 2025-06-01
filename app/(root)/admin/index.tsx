@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Image, ActivityIndicator, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, onSnapshot } from 'firebase/firestore';
@@ -143,17 +143,20 @@ const AdminDashboard = () => {
       className="bg-white rounded-xl p-4 mb-4 shadow-sm"
     >
       <View className={`flex-row items-center ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
-        <View className={`bg-${color}-100 p-3 rounded-full ${language === 'ar' ? 'ml-4' : 'mr-4'}`}>
+        <View 
+          className={`bg-white p-3 rounded-full border border-gray-100 ${language === 'ar' ? 'ml-4' : 'mr-4'}`}
+          style={{
+            elevation: Platform.OS === "android" ? 2 : 0,
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 1 },
+            shadowOpacity: 0.08,
+            shadowRadius: 1.5,
+          }}
+        >
           <MaterialCommunityIcons 
             name={icon} 
             size={24} 
-            color={`#${
-              color === 'blue' ? '3B82F6' : 
-              color === 'green' ? '22C55E' : 
-              color === 'yellow' ? 'EAB308' : 
-              color === 'red' ? 'EF4444' : 
-              '8B5CF6'
-            }`} 
+            color="#F97316"
           />
         </View>
         <View className={`flex-1 ${language === 'ar' ? 'items-end' : 'items-start'}`}>
@@ -219,42 +222,11 @@ const AdminDashboard = () => {
       />
       
       <ScrollView className="flex-1 px-4">
-        <View className="py-4">
-          {/* Stats Section */}
-          <View className="mb-6">
-            <Text className={`text-lg mb-4 ${language === 'ar' ? 'font-CairoBold text-right' : 'font-JakartaBold text-left'}`}>
-              {language === 'ar' ? 'الإحصائيات' : 'Statistics'}
-            </Text>
-            <StatCard 
-              title={language === 'ar' ? 'إجمالي المستخدمين' : 'Total Users'} 
-              value={stats.totalUsers} 
-              icon="account-group" 
-              color="blue" 
-            />
-            <StatCard 
-              title={language === 'ar' ? 'السائقين النشطين' : 'Active Drivers'} 
-              value={stats.activeDrivers} 
-              icon="car" 
-              color="green" 
-            />
-            <StatCard 
-              title={language === 'ar' ? 'الطلبات المعلقة' : 'Pending Applications'} 
-              value={stats.pendingApplications} 
-              icon="clock-outline" 
-              color="red" 
-            />
-            <StatCard 
-              title={language === 'ar' ? 'إجمالي الرحلات' : 'Total Rides'} 
-              value={stats.totalRides} 
-              icon="map-marker-path" 
-              color="purple" 
-            />
-          </View>
-
+        <View className="py-6">
           {/* Quick Actions Section */}
-          <View className="mb-6">
+          <View>
             <Text className={`text-lg mb-4 ${language === 'ar' ? 'font-CairoBold text-right' : 'font-JakartaBold text-left'}`}>
-              {language === 'ar' ? 'إجراءات سريعة' : 'Quick Actions'}
+              {language === 'ar' ? 'مركز الادارة' : 'Quick Actions'}
             </Text>
             <QuickActionCard 
               title={language === 'ar' ? 'رسائل الدعم' : 'Support Messages'} 
