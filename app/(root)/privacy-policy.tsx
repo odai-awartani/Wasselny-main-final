@@ -61,22 +61,22 @@ export default function PrivacyPolicy() {
       title: language === 'ar' ? 'المعلومات التي نجمعها' : 'Information We Collect',
       content: language === 'ar'
         ? (
-          <>
-            <Text>• البيانات الشخصية (مثل الاسم، البريد الإلكتروني، رقم الهاتف)</Text>
-            <Text>• بيانات الموقع الجغرافي</Text>
-            <Text>• بيانات الاستخدام (مثل تفاعلك مع التطبيق)</Text>
-            <Text>• بيانات الجهاز (مثل نوع الجهاز ونظام التشغيل)</Text>
-            <Text>• ملفات تعريف الارتباط وتقنيات التتبع</Text>
-          </>
+          <View className="space-y-2">
+            <View><Text className={`${language === 'ar' ? 'text-right' : 'text-left'}`}>• البيانات الشخصية (مثل الاسم، البريد الإلكتروني، رقم الهاتف)</Text></View>
+            <View><Text className={`${language === 'ar' ? 'text-right' : 'text-left'}`}>• بيانات الموقع الجغرافي</Text></View>
+            <View><Text className={`${language === 'ar' ? 'text-right' : 'text-left'}`}>• بيانات الاستخدام (مثل تفاعلك مع التطبيق)</Text></View>
+            <View><Text className={`${language === 'ar' ? 'text-right' : 'text-left'}`}>• بيانات الجهاز (مثل نوع الجهاز ونظام التشغيل)</Text></View>
+            <View><Text className={`${language === 'ar' ? 'text-right' : 'text-left'}`}>• ملفات تعريف الارتباط وتقنيات التتبع</Text></View>
+          </View>
         )
         : (
-          <>
-            <Text>• Personal data (such as name, email, phone number)</Text>
-            <Text>• Location data</Text>
-            <Text>• Usage data (such as your interactions with the app)</Text>
-            <Text>• Device data (such as device type and OS)</Text>
-            <Text>• Cookies and tracking technologies</Text>
-          </>
+          <View className="space-y-2">
+            <View><Text className={`${language === 'ar' ? 'text-right' : 'text-left'}`}>• Personal data (such as name, email, phone number)</Text></View>
+            <View><Text className={`${language === 'ar' ? 'text-right' : 'text-left'}`}>• Location data</Text></View>
+            <View><Text className={`${language === 'ar' ? 'text-right' : 'text-left'}`}>• Usage data (such as your interactions with the app)</Text></View>
+            <View><Text className={`${language === 'ar' ? 'text-right' : 'text-left'}`}>• Device data (such as device type and OS)</Text></View>
+            <View><Text className={`${language === 'ar' ? 'text-right' : 'text-left'}`}>• Cookies and tracking technologies</Text></View>
+          </View>
         )
     },
     {
@@ -84,22 +84,22 @@ export default function PrivacyPolicy() {
       title: language === 'ar' ? 'كيفية استخدام المعلومات' : 'How We Use Your Information',
       content: language === 'ar'
         ? (
-          <>
-            <Text>• تقديم خدمات التطبيق وتحسينها</Text>
-            <Text>• تخصيص تجربتك</Text>
-            <Text>• التواصل معك بشأن التحديثات أو العروض</Text>
-            <Text>• التحليل وتحسين الأداء</Text>
-            <Text>• الامتثال للمتطلبات القانونية</Text>
-          </>
+          <View className="space-y-2">
+            <View><Text className={`${language === 'ar' ? 'text-right' : 'text-left'}`}>• تقديم خدمات التطبيق وتحسينها</Text></View>
+            <View><Text className={`${language === 'ar' ? 'text-right' : 'text-left'}`}>• تخصيص تجربتك</Text></View>
+            <View><Text className={`${language === 'ar' ? 'text-right' : 'text-left'}`}>• التواصل معك بشأن التحديثات أو العروض</Text></View>
+            <View><Text className={`${language === 'ar' ? 'text-right' : 'text-left'}`}>• التحليل وتحسين الأداء</Text></View>
+            <View><Text className={`${language === 'ar' ? 'text-right' : 'text-left'}`}>• الامتثال للمتطلبات القانونية</Text></View>
+          </View>
         )
         : (
-          <>
-            <Text>• To provide and improve our services</Text>
-            <Text>• To personalize your experience</Text>
-            <Text>• To communicate with you about updates or offers</Text>
-            <Text>• For analytics and performance improvement</Text>
-            <Text>• To comply with legal requirements</Text>
-          </>
+          <View className="space-y-2">
+            <View><Text className={`${language === 'ar' ? 'text-right' : 'text-left'}`}>• To provide and improve our services</Text></View>
+            <View><Text className={`${language === 'ar' ? 'text-right' : 'text-left'}`}>• To personalize your experience</Text></View>
+            <View><Text className={`${language === 'ar' ? 'text-right' : 'text-left'}`}>• To communicate with you about updates or offers</Text></View>
+            <View><Text className={`${language === 'ar' ? 'text-right' : 'text-left'}`}>• For analytics and performance improvement</Text></View>
+            <View><Text className={`${language === 'ar' ? 'text-right' : 'text-left'}`}>• To comply with legal requirements</Text></View>
+          </View>
         )
     },
     {
@@ -107,20 +107,20 @@ export default function PrivacyPolicy() {
       title: language === 'ar' ? 'مشاركة المعلومات' : 'How We Share Your Information',
       content: language === 'ar'
         ? (
-          <>
-            <Text>• مع مزودي الخدمة (مثل خدمات الاستضافة والتحليلات)</Text>
-            <Text>• لأسباب قانونية أو استجابة للطلبات الحكومية</Text>
-            <Text>• بموافقتك الصريحة</Text>
-            <Text>• لا نبيع بياناتك لأي طرف ثالث</Text>
-          </>
+          <View className="space-y-2">
+            <View><Text className={`${language === 'ar' ? 'text-right' : 'text-left'}`}>• مع مزودي الخدمة (مثل خدمات الاستضافة والتحليلات)</Text></View>
+            <View><Text className={`${language === 'ar' ? 'text-right' : 'text-left'}`}>• لأسباب قانونية أو استجابة للطلبات الحكومية</Text></View>
+            <View><Text className={`${language === 'ar' ? 'text-right' : 'text-left'}`}>• بموافقتك الصريحة</Text></View>
+            <View><Text className={`${language === 'ar' ? 'text-right' : 'text-left'}`}>• لا نبيع بياناتك لأي طرف ثالث</Text></View>
+          </View>
         )
         : (
-          <>
-            <Text>• With service providers (such as hosting and analytics)</Text>
-            <Text>• For legal reasons or in response to government requests</Text>
-            <Text>• With your explicit consent</Text>
-            <Text>• We do not sell your data to third parties</Text>
-          </>
+          <View className="space-y-2">
+            <View><Text className={`${language === 'ar' ? 'text-right' : 'text-left'}`}>• With service providers (such as hosting and analytics)</Text></View>
+            <View><Text className={`${language === 'ar' ? 'text-right' : 'text-left'}`}>• For legal reasons or in response to government requests</Text></View>
+            <View><Text className={`${language === 'ar' ? 'text-right' : 'text-left'}`}>• With your explicit consent</Text></View>
+            <View><Text className={`${language === 'ar' ? 'text-right' : 'text-left'}`}>• We do not sell your data to third parties</Text></View>
+          </View>
         )
     },
     {
@@ -142,22 +142,22 @@ export default function PrivacyPolicy() {
       title: language === 'ar' ? 'حقوق المستخدم' : 'User Rights',
       content: language === 'ar'
         ? (
-          <>
-            <Text>• الوصول إلى بياناتك</Text>
-            <Text>• تصحيح أو تحديث بياناتك</Text>
-            <Text>• حذف حسابك</Text>
-            <Text>• الاعتراض أو تقييد معالجة بياناتك</Text>
-            <Text>• طلب نقل بياناتك</Text>
-          </>
+          <View className="space-y-2">
+            <View><Text className={`${language === 'ar' ? 'text-right' : 'text-left'}`}>• الوصول إلى بياناتك</Text></View>
+            <View><Text className={`${language === 'ar' ? 'text-right' : 'text-left'}`}>• تصحيح أو تحديث بياناتك</Text></View>
+            <View><Text className={`${language === 'ar' ? 'text-right' : 'text-left'}`}>• حذف حسابك</Text></View>
+            <View><Text className={`${language === 'ar' ? 'text-right' : 'text-left'}`}>• الاعتراض أو تقييد معالجة بياناتك</Text></View>
+            <View><Text className={`${language === 'ar' ? 'text-right' : 'text-left'}`}>• طلب نقل بياناتك</Text></View>
+          </View>
         )
         : (
-          <>
-            <Text>• Access your data</Text>
-            <Text>• Correct or update your data</Text>
-            <Text>• Delete your account</Text>
-            <Text>• Object to or restrict processing</Text>
-            <Text>• Request data portability</Text>
-          </>
+          <View className="space-y-2">
+            <View><Text className={`${language === 'ar' ? 'text-right' : 'text-left'}`}>• Access your data</Text></View>
+            <View><Text className={`${language === 'ar' ? 'text-right' : 'text-left'}`}>• Correct or update your data</Text></View>
+            <View><Text className={`${language === 'ar' ? 'text-right' : 'text-left'}`}>• Delete your account</Text></View>
+            <View><Text className={`${language === 'ar' ? 'text-right' : 'text-left'}`}>• Object to or restrict processing</Text></View>
+            <View><Text className={`${language === 'ar' ? 'text-right' : 'text-left'}`}>• Request data portability</Text></View>
+          </View>
         )
     },
     {
