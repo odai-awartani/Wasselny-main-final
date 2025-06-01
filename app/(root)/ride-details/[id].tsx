@@ -1295,17 +1295,17 @@ const RideDetails = () => {
         {allPassengers.length > 0 ? (
           <View className="border border-gray-200 rounded-lg overflow-hidden">
             <View className={`flex-row bg-gray-50 p-3 border-b border-gray-200 ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
-              <View className={`w-[40%] px-3 ${language === 'ar' ? 'items-end' : 'items-start'}`}>
+              <View className="flex-1">
                 <Text className={`text-sm font-CairoBold text-gray-700 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
                   {language === 'ar' ? 'الاسم' : 'Name'}
                 </Text>
               </View>
-              <View className={`w-[25%] px-3 ${language === 'ar' ? 'items-end' : 'items-center'}`}>
+              <View className="w-24">
                 <Text className={`text-sm font-CairoBold text-gray-700 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
                   {language === 'ar' ? 'المقاعد' : 'Seats'}
                 </Text>
               </View>
-              <View className={`w-[35%] px-3 ${language === 'ar' ? 'items-end' : 'items-start'}`}>
+              <View className="w-49">
                 <Text className={`text-sm font-CairoBold text-gray-700 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
                   {language === 'ar' ? 'نقطة التوقف' : 'Stop Point'}
                 </Text>
@@ -1313,46 +1313,40 @@ const RideDetails = () => {
             </View>
             {allPassengers.map((passenger) => (
               <View key={passenger.id} className={`flex-row p-3 border-b border-gray-100 ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
-                <View className={`w-[40%] px-3 ${language === 'ar' ? 'items-end' : 'items-start'}`}>
-                  <View className={`flex-row items-center ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
-                    <Image
-                      source={icons.person}
-                      style={{
-                        width: 24,
-                        height: 24,
-                        marginLeft: language === 'ar' ? 4 : 0,
-                        marginRight: language === 'ar' ? 0 : 4
-                      }}
-                      tintColor="#10B981"
-                    />
-                    <Text 
-                      className={`text-gray-700 font-CairoRegular flex-1 ${language === 'ar' ? 'text-right' : 'text-left'}`}
-                      numberOfLines={1}
-                      adjustsFontSizeToFit
-                      minimumFontScale={0.7}
-                    >
-                      {(passengerNames[passenger.user_id] || (language === 'ar' ? 'الراكب' : 'Passenger')).toString()}
-                    </Text>
-                  </View>
-                </View>
-                <View className={`w-[25%] px-3 ${language === 'ar' ? 'items-end' : 'items-center'}`}>
-                  <Text 
-                    className={`text-gray-700 font-CairoRegular ${language === 'ar' ? 'text-right' : 'text-left'}`}
-                    numberOfLines={1}
-                    adjustsFontSizeToFit
-                    minimumFontScale={0.7}
-                  >
-                    {(passenger.requested_seats || 1).toString()}
+                <View className={`flex-1 flex-row items-center ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
+                  <Image
+                    source={icons.person}
+                    className={`w-5 h-5 ${language === 'ar' ? 'ml-2' : 'mr-2'}`}
+                    tintColor="#10B981"
+                  />
+                  <Text className={`text-sm pt-1.5 text-gray-700 font-CairoRegular ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+                    {passengerNames[passenger.user_id] || (language === 'ar' ? 'الراكب' : 'Passenger')}
                   </Text>
                 </View>
-                <View className={`w-[35%] px-3 ${language === 'ar' ? 'items-end' : 'items-start'}`}>
-                  <Text 
-                    className={`text-gray-700 font-CairoRegular ${language === 'ar' ? 'text-right' : 'text-left'}`}
-                    numberOfLines={1}
-                    adjustsFontSizeToFit
-                    minimumFontScale={0.7}
-                  >
-                    {(passenger.selected_waypoint?.address || (language === 'ar' ? 'نقطة البداية' : 'Start Point')).toString()}
+                <View className="w-20 justify-center">
+                  <Text className={`text-sm pt-1.5 text-gray-700 font-CairoRegular ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+                    {passenger.requested_seats || 1} {passenger.requested_seats === 1 ? t.seat : t.seats}
+                  </Text>
+                </View>
+                <View className="w-49 justify-center">
+                  <Text className={`text-sm pt-1.5 text-gray-700 font-CairoRegular ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+                    {passenger.selected_waypoint ? (
+                      <>
+                        {passenger.selected_waypoint.address === ride?.origin_address ? (
+                          language === 'ar' ? 'نقطة البداية' : 'Starting Point'
+                        ) : ride?.waypoints?.findIndex(
+                          wp => wp.address === passenger.selected_waypoint?.address
+                        ) !== -1 ? (
+                          <Text className="text-gray-500 text-lg mt-1">
+                            {passenger.selected_waypoint.address}
+                          </Text>
+                        ) : (
+                          language === 'ar' ? 'نقطة البداية' : 'Starting Point'
+                        )}
+                      </>
+                    ) : (
+                      language === 'ar' ? 'نقطة البداية' : 'Starting Point'
+                    )}
                   </Text>
                 </View>
               </View>
@@ -2171,3 +2165,5 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
   },
 });export default RideDetails;
+
+export default RideDetails;

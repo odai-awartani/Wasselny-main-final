@@ -106,11 +106,11 @@ const Reports = () => {
   const StatCard = ({ title, value, icon, color }: { title: string; value: string | number; icon: string; color: string }) => (
     <View className="bg-white rounded-xl p-4 mb-4 shadow-sm">
       <View className={`flex-row items-center justify-between ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
-        <View>
-          <Text className={`text-2xl ${language === 'ar' ? 'font-CairoBold' : 'font-JakartaBold'} text-${color}-600`}>{value}</Text>
-          <Text className={`text-gray-600 text-sm mt-1 ${language === 'ar' ? 'font-CairoRegular' : 'font-JakartaRegular'}`}>{title}</Text>
+        <View className={`flex-1 ${language === 'ar' ? 'items-end' : 'items-start'}`}>
+          <Text className={`text-2xl ${language === 'ar' ? 'font-CairoBold text-right' : 'font-JakartaBold text-left'} text-${color}-600`}>{value}</Text>
+          <Text className={`text-gray-600 text-sm mt-1 ${language === 'ar' ? 'font-CairoRegular text-right' : 'font-JakartaRegular text-left'}`}>{title}</Text>
         </View>
-        <View className={`bg-${color}-50 p-3 rounded-full`}>
+        <View className={`bg-${color}-50 p-3 rounded-full ${language === 'ar' ? 'ml-4' : 'mr-4'}`}>
           <MaterialCommunityIcons 
             name={icon as any} 
             size={24} 
@@ -126,9 +126,9 @@ const Reports = () => {
   );
 
   const StatusCard = ({ title, value, color }: { title: string; value: number; color: string }) => (
-    <View className={`bg-${color}-50 rounded-xl p-4 mb-4`}>
-      <Text className={`text-${color}-700 ${language === 'ar' ? 'font-CairoMedium' : 'font-JakartaMedium'} mb-1`}>{title}</Text>
-      <Text className={`text-${color}-900 text-2xl ${language === 'ar' ? 'font-CairoBold' : 'font-JakartaBold'}`}>{value}</Text>
+    <View className={`bg-${color}-50 rounded-xl p-4 mb-4 ${language === 'ar' ? 'items-end' : 'items-start'}`}>
+      <Text className={`text-${color}-700 ${language === 'ar' ? 'font-CairoMedium text-right' : 'font-JakartaMedium text-left'} mb-1`}>{title}</Text>
+      <Text className={`text-${color}-900 text-2xl ${language === 'ar' ? 'font-CairoBold text-right' : 'font-JakartaBold text-left'}`}>{value}</Text>
     </View>
   );
 
@@ -136,7 +136,7 @@ const Reports = () => {
     return (
       <SafeAreaView className="flex-1 items-center justify-center bg-white">
         <ActivityIndicator size="large" color="#F97316" />
-        <Text className={`text-gray-600 mt-4 ${language === 'ar' ? 'font-CairoMedium' : 'font-JakartaMedium'}`}>
+        <Text className={`text-gray-600 mt-4 ${language === 'ar' ? 'font-CairoMedium text-right' : 'font-JakartaMedium text-left'}`}>
           {language === 'ar' ? 'جاري تحميل التقارير...' : 'Loading reports...'}
         </Text>
       </SafeAreaView>
@@ -155,7 +155,7 @@ const Reports = () => {
         <View className="py-4">
           {/* Overview Stats */}
           <View className="mb-6">
-            <Text className={`text-lg mb-4 ${language === 'ar' ? 'font-CairoBold' : 'font-JakartaBold'}`}>
+            <Text className={`text-lg mb-4 ${language === 'ar' ? 'font-CairoBold text-right' : 'font-JakartaBold text-left'}`}>
               {language === 'ar' ? 'نظرة عامة' : 'Overview'}
             </Text>
             <StatCard 
@@ -180,10 +180,10 @@ const Reports = () => {
 
           {/* Ride Status Distribution */}
           <View className="mb-6">
-            <Text className={`text-lg mb-4 ${language === 'ar' ? 'font-CairoBold' : 'font-JakartaBold'}`}>
+            <Text className={`text-lg mb-4 ${language === 'ar' ? 'font-CairoBold text-right' : 'font-JakartaBold text-left'}`}>
               {language === 'ar' ? 'حالة الرحلات' : 'Ride Status'}
             </Text>
-            <View className="flex-row flex-wrap -mx-2">
+            <View className={`flex-row flex-wrap -mx-2 ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
               <View className="w-1/2 px-2">
                 <StatusCard 
                   title={language === 'ar' ? 'متاح' : 'Available'} 
@@ -217,7 +217,7 @@ const Reports = () => {
 
           {/* Recent Activity */}
           <View className="mb-6">
-            <Text className={`text-lg mb-4 ${language === 'ar' ? 'font-CairoBold' : 'font-JakartaBold'}`}>
+            <Text className={`text-lg mb-4 ${language === 'ar' ? 'font-CairoBold text-right' : 'font-JakartaBold text-left'}`}>
               {language === 'ar' ? 'النشاط الأخير' : 'Recent Activity'}
             </Text>
             <View className="bg-white rounded-xl p-4 shadow-sm">
@@ -226,10 +226,10 @@ const Reports = () => {
                 .slice(0, 5)
                 .map(([date, count]) => (
                   <View key={date} className={`flex-row justify-between items-center py-2 border-b border-gray-100 ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
-                    <Text className={`text-gray-600 ${language === 'ar' ? 'font-CairoRegular' : 'font-JakartaRegular'}`}>
+                    <Text className={`text-gray-600 ${language === 'ar' ? 'font-CairoRegular text-right' : 'font-JakartaRegular text-left'}`}>
                       {new Date(date).toLocaleDateString(language === 'ar' ? 'ar-SA' : 'en-US')}
                     </Text>
-                    <Text className={`${language === 'ar' ? 'font-CairoMedium' : 'font-JakartaMedium'} text-blue-600`}>
+                    <Text className={`${language === 'ar' ? 'font-CairoMedium text-right' : 'font-JakartaMedium text-left'} text-blue-600`}>
                       {count} {language === 'ar' ? 'رحلة' : 'rides'}
                     </Text>
                   </View>

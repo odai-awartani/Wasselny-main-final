@@ -118,12 +118,12 @@ const AdminDashboard = () => {
 
   const StatCard = ({ title, value, icon, color }: { title: string; value: number; icon: IconName; color: string }) => (
     <View className="bg-white rounded-xl p-4 mb-4 shadow-sm">
-      <View className="flex-row items-center justify-between">
-        <View>
-          <Text className={`text-2xl font-bold text-${color}-600`}>{value}</Text>
-          <Text className="text-gray-600 text-sm mt-1">{title}</Text>
+      <View className={`flex-row items-center justify-between ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
+        <View className={`flex-1 ${language === 'ar' ? 'items-end' : 'items-start'}`}>
+          <Text className={`text-2xl font-bold text-${color}-600 ${language === 'ar' ? 'text-right' : 'text-left'}`}>{value}</Text>
+          <Text className={`text-gray-600 text-sm mt-1 ${language === 'ar' ? 'text-right' : 'text-left'}`}>{title}</Text>
         </View>
-        <View className={`bg-${color}-100 p-3 rounded-full`}>
+        <View className={`bg-${color}-100 p-3 rounded-full ${language === 'ar' ? 'ml-4' : 'mr-4'}`}>
           <MaterialCommunityIcons name={icon} size={24} color={`#${color === 'blue' ? '3B82F6' : color === 'green' ? '22C55E' : color === 'orange' ? 'F97316' : '8B5CF6'}`} />
         </View>
       </View>
@@ -142,8 +142,8 @@ const AdminDashboard = () => {
       onPress={onPress}
       className="bg-white rounded-xl p-4 mb-4 shadow-sm"
     >
-      <View className="flex-row items-center">
-        <View className={`bg-${color}-100 p-3 rounded-full mr-4`}>
+      <View className={`flex-row items-center ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
+        <View className={`bg-${color}-100 p-3 rounded-full ${language === 'ar' ? 'ml-4' : 'mr-4'}`}>
           <MaterialCommunityIcons 
             name={icon} 
             size={24} 
@@ -156,18 +156,22 @@ const AdminDashboard = () => {
             }`} 
           />
         </View>
-        <View className="flex-1">
-          <View className="flex-row items-center">
-            <Text className="text-lg font-bold">{title}</Text>
+        <View className={`flex-1 ${language === 'ar' ? 'items-end' : 'items-start'}`}>
+          <View className={`flex-row items-center ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
+            <Text className={`text-lg font-bold ${language === 'ar' ? 'text-right' : 'text-left'}`}>{title}</Text>
             {badge ? (
-              <View className="bg-red-500 rounded-full ml-2 px-2 py-0.5">
+              <View className={`bg-red-500 rounded-full px-2 py-0.5 ${language === 'ar' ? 'mr-2' : 'ml-2'}`}>
                 <Text className="text-white text-xs font-bold">{badge}</Text>
               </View>
             ) : null}
           </View>
-          <Text className="text-gray-600 text-sm">{description}</Text>
+          <Text className={`text-gray-600 text-sm ${language === 'ar' ? 'text-right' : 'text-left'}`}>{description}</Text>
         </View>
-        <MaterialCommunityIcons name="chevron-right" size={24} color="#6B7280" />
+        <MaterialCommunityIcons 
+          name={language === 'ar' ? "chevron-left" : "chevron-right"} 
+          size={24} 
+          color="#6B7280" 
+        />
       </View>
     </TouchableOpacity>
   );
@@ -218,7 +222,7 @@ const AdminDashboard = () => {
         <View className="py-4">
           {/* Stats Section */}
           <View className="mb-6">
-            <Text className={`text-lg mb-4 ${language === 'ar' ? 'font-CairoBold' : 'font-JakartaBold'}`}>
+            <Text className={`text-lg mb-4 ${language === 'ar' ? 'font-CairoBold text-right' : 'font-JakartaBold text-left'}`}>
               {language === 'ar' ? 'الإحصائيات' : 'Statistics'}
             </Text>
             <StatCard 
@@ -249,7 +253,7 @@ const AdminDashboard = () => {
 
           {/* Quick Actions Section */}
           <View className="mb-6">
-            <Text className={`text-lg mb-4 ${language === 'ar' ? 'font-CairoBold' : 'font-JakartaBold'}`}>
+            <Text className={`text-lg mb-4 ${language === 'ar' ? 'font-CairoBold text-right' : 'font-JakartaBold text-left'}`}>
               {language === 'ar' ? 'إجراءات سريعة' : 'Quick Actions'}
             </Text>
             <QuickActionCard 

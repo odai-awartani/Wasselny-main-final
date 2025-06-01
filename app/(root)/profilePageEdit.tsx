@@ -845,8 +845,8 @@ const ProfileEdit = () => {
           showsVerticalScrollIndicator={false}
         >
           {/* Profile Images */}
-          <View className="flex-row justify-between">
-            <View className="w-[48%]">
+          <View className={`${userData.isDriver ? 'flex-row justify-between' : 'items-center'}`}>
+            <View className={`${userData.isDriver ? 'w-[48%]' : 'w-[40%]'}`}>
               <TouchableOpacity 
                 onPress={() => setShowFullImage(true)} 
                 className="bg-white rounded-2xl overflow-hidden"
@@ -865,7 +865,7 @@ const ProfileEdit = () => {
               </TouchableOpacity>
             </View>
 
-            {userData.isDriver ? (
+            {userData.isDriver && (
               <View className="w-[48%]">
                 <TouchableOpacity 
                   onPress={() => setShowFullCarImage(true)} 
@@ -883,13 +883,6 @@ const ProfileEdit = () => {
                     <MaterialCommunityIcons name="camera" size={20} color="white" />
                   </TouchableOpacity>
                 </TouchableOpacity>
-              </View>
-            ) : (
-              <View className="w-[48%] bg-gray-50 rounded-2xl p-4 items-center justify-center">
-                <MaterialCommunityIcons name="car" size={40} color="#9CA3AF" />
-                <Text className={`text-sm text-gray-500 mt-2 text-center ${language === 'ar' ? 'font-CairoMedium' : 'font-JakartaMedium'}`}>
-                  {language === 'ar' ? 'متاح فقط للسائقين' : 'Available for drivers only'}
-                </Text>
               </View>
             )}
           </View>
