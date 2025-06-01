@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, View, Platform, TouchableOpacity, Image } from "react-native";
+import { ActivityIndicator, View, Platform, TouchableOpacity, Image, Alert } from "react-native";
 import MapView, { Marker, PROVIDER_DEFAULT } from "react-native-maps";
 import MapViewDirections from "react-native-maps-directions";
 import * as Location from "expo-location";
@@ -7,6 +7,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 
 import { icons } from "@/constants";
 import { calculateRegion } from "@/lib/map";
+import CustomErrorModal from '@/components/CustomErrorModal';
 
 interface LocationCoords {
   latitude: number;
@@ -30,20 +31,23 @@ interface RideMapProps {
   waypoints?: Waypoint[];
   onTargetPress?: () => void;
   passengerLocations?: Record<string, { latitude: number; longitude: number; name: string }>;
+  language: "en" | "ar";
 }
 
 const directionsAPI = process.env.EXPO_PUBLIC_DIRECTIONS_API_KEY;
 
-const RideMap = ({ origin, destination, waypoints = [], onTargetPress, passengerLocations = {} }: RideMapProps) => {
+const RideMap = ({ origin, destination, waypoints = [], onTargetPress, passengerLocations = {}, language }: RideMapProps) => {
   const [userLocation, setUserLocation] = useState<LocationCoords | null>(null);
   const mapRef = useRef<MapView | null>(null);
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   const hasOrigin = origin?.latitude && origin?.longitude;
   const hasDestination = destination?.latitude && destination?.longitude;
 
   // Validate coordinates
   const isValidCoordinate = (coord: number) => {
-    return coord >= -90 && coord <= 90;
+    return typeof coord === 'number' && coord >= -90 && coord <= 90;
   };
 
   const isValidRoute = hasOrigin && 
@@ -52,6 +56,22 @@ const RideMap = ({ origin, destination, waypoints = [], onTargetPress, passenger
     isValidCoordinate(origin.longitude!) && 
     isValidCoordinate(destination.latitude!) && 
     isValidCoordinate(destination.longitude!);
+
+  console.log('RideMap received props:', { origin, destination, waypoints });
+  console.log('isValidRoute:', isValidRoute);
+  if (!isValidRoute) {
+    console.log('Invalid coordinate detected:');
+    if (!hasOrigin) console.log('  Origin is missing or invalid');
+    else {
+      if (!isValidCoordinate(origin.latitude!)) console.log('  Origin Latitude is invalid:', origin.latitude);
+      if (!isValidCoordinate(origin.longitude!)) console.log('  Origin Longitude is invalid:', origin.longitude);
+    }
+    if (!hasDestination) console.log('  Destination is missing or invalid');
+    else {
+      if (!isValidCoordinate(destination.latitude!)) console.log('  Destination Latitude is invalid:', destination.latitude);
+      if (!isValidCoordinate(destination.longitude!)) console.log('  Destination Longitude is invalid:', destination.longitude);
+    }
+  }
 
   // جلب موقع المستخدم الحالي
   useEffect(() => {
@@ -156,24 +176,33 @@ const RideMap = ({ origin, destination, waypoints = [], onTargetPress, passenger
             optimizeWaypoints={false}
             onError={(errorMessage) => {
               console.warn("حدث خطأ في رسم المسار:", errorMessage);
+              const translatedErrorMessage = language === 'ar'
+                ? "تعذر رسم المسار على الخريطة. الرجاء التأكد من صحة نقاط البداية والنهاية."
+                : "Could not draw the route on the map. Please ensure the start and end points are correct.";
+              setErrorMessage(translatedErrorMessage);
+              setShowErrorModal(true);
             }}
             onReady={(result) => {
               console.log("Route calculated successfully:", result);
-              // Adjust the map region to show the entire route
-              if (result.coordinates && result.coordinates.length > 0) {
-                const coordinates = result.coordinates;
-                const minLat = Math.min(...coordinates.map(coord => coord.latitude));
-                const maxLat = Math.max(...coordinates.map(coord => coord.latitude));
-                const minLng = Math.min(...coordinates.map(coord => coord.longitude));
-                const maxLng = Math.max(...coordinates.map(coord => coord.longitude));
-                
-                const padding = 0.01; // Add some padding around the route
-                mapRef.current?.animateToRegion({
-                  latitude: (minLat + maxLat) / 2,
-                  longitude: (minLng + maxLng) / 2,
-                  latitudeDelta: (maxLat - minLat) + padding,
-                  longitudeDelta: (maxLng - minLng) + padding,
-                });
+              // Adjust the map region to show the entire route including waypoints
+              if (mapRef.current && result.coordinates && result.coordinates.length > 0) {
+                const allCoords = [
+                  { latitude: origin.latitude!, longitude: origin.longitude! },
+                  { latitude: destination.latitude!, longitude: destination.longitude! },
+                  ...waypoints.map(waypoint => ({ latitude: waypoint.latitude, longitude: waypoint.longitude }))
+                ].filter(coord => coord.latitude !== undefined && coord.longitude !== undefined);
+
+                if (allCoords.length > 0) {
+                  mapRef.current.fitToCoordinates(allCoords, {
+                    edgePadding: {
+                      top: 50,
+                      right: 50,
+                      bottom: 50,
+                      left: 50,
+                    },
+                    animated: true,
+                  });
+                }
               }
             }}
           />
@@ -220,6 +249,13 @@ const RideMap = ({ origin, destination, waypoints = [], onTargetPress, passenger
           />
         </TouchableOpacity>
       )}
+
+      {/* Custom Error Modal */}
+      <CustomErrorModal
+        visible={showErrorModal}
+        message={errorMessage}
+        onClose={() => setShowErrorModal(false)}
+      />
     </View>
   );
 };

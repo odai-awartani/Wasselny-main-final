@@ -28,6 +28,7 @@ const RideLayout = ({
   MapComponent = RideMap,
   bottomSheetRef,
   useScrollView = true,
+  language,
 }: {
   title: string;
   snapPoints?: string[];
@@ -38,6 +39,7 @@ const RideLayout = ({
   MapComponent?: React.ComponentType<any>;
   bottomSheetRef?: React.RefObject<BottomSheet>;
   useScrollView?: boolean;
+  language: "en" | "ar";
 }) => {
   const pathname = usePathname();
 
@@ -100,7 +102,7 @@ const RideLayout = ({
             </TouchableOpacity>
             <Text className="text-xl font-CairoBold mt-1.5 ml-5">{title || 'Go back'}</Text>
           </View>
-          <MapComponent origin={origin} destination={destination} waypoints={waypoints} />
+          <MapComponent origin={origin} destination={destination} waypoints={waypoints} language={language} />
         </View>
         <BottomSheet
           ref={bottomSheetRef}

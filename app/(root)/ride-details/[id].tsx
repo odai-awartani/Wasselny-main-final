@@ -1061,22 +1061,29 @@ const RideDetails = () => {
               </View>
             </View>
 
-            {formattedRide?.waypoints && formattedRide.waypoints.length > 0 && (
-              formattedRide.waypoints.map((waypoint, index) => (
-                <View key={index} className={`flex-row items-center mb-3 ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
+            {formattedRide?.waypoints && Array.isArray(formattedRide.waypoints) && formattedRide.waypoints.length > 0 && (
+              <View className="mt-4 mb-4">
+                <View className={`flex-row items-center mb-3 ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
                   <Image source={icons.map} className={`w-6 h-6 ${language === 'ar' ? 'ml-3' : 'mr-3'}`} tintColor="#F79824" />
-                  <View className="flex-1">
-                    <Text className={`text-lg font-CairoBold text-black ${language === 'ar' ? 'text-right' : 'text-left'}`}>
-                      {language === 'ar' ? `نقطة توقف ${index + 1}: ` : `Stop ${index + 1}: `}{waypoint.address}
-                    </Text>
-                    {waypoint.street && (
-                      <Text className={`text-sm font-CairoRegular text-gray-600 mt-1 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
-                        {waypoint.street}
-                      </Text>
-                    )}
-                  </View>
+                  <Text className={`text-lg font-CairoBold text-black ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+                    {language === 'ar' ? 'نقاط التوقف' : 'Waypoints'}
+                  </Text>
                 </View>
-              ))
+                <View className={`flex-row flex-wrap ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
+                  {formattedRide.waypoints?.map((waypoint, index) => (
+                    <View key={index} className={`flex-row items-center ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
+                      <Text className={`text-base font-CairoMedium text-black ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+                        {waypoint.address}
+                      </Text>
+                      {index < (formattedRide.waypoints?.length || 0) - 1 && (
+                        <View className={`mx-1 ${language === 'ar' ? 'transform rotate-180' : ''}`}>
+                          <MaterialIcons name="arrow-forward" size={18} color="#F79824" />
+                        </View>
+                      )}
+                    </View>
+                  ))}
+                </View>
+              </View>
             )}
 
             <View className={`flex-row items-center ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
@@ -2116,6 +2123,7 @@ const RideDetails = () => {
       destination={ride ? { latitude: ride.destination_latitude, longitude: ride.destination_longitude } : undefined}
       waypoints={ride?.waypoints}
       bottomSheetRef={bottomSheetRef}
+      language={language}
     >
       <ScrollView
         ref={scrollViewRef}
@@ -2164,6 +2172,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 3,
   },
-});export default RideDetails;
+});
 
 export default RideDetails;
