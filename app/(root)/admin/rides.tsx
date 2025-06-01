@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, TextInput, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, ActivityIndicator, Alert, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, doc, updateDoc, onSnapshot, getDoc } from 'firebase/firestore';
@@ -36,25 +36,28 @@ interface Ride {
   };
 }
 
-const SkeletonRideCard = () => (
-  <View className="bg-white rounded-xl p-4 mb-4 shadow-sm">
-    <View className="flex-row justify-between items-start">
-      <View className="flex-1">
-        <View className="h-6 w-64 bg-gray-200 rounded mb-2" />
-        <View className="flex-row items-center mb-2">
-          <View className="h-4 w-4 bg-gray-200 rounded-full mr-2" />
-          <View className="h-4 w-32 bg-gray-200 rounded" />
+const SkeletonRideCard = ({ language }: { language: string }) => {
+  const isRTL = language === 'ar';
+  return (
+    <View className="bg-white rounded-xl p-4 mb-4 shadow-sm border border-gray-100">
+      <View className={`flex-row justify-between items-start ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+        <View className="flex-1">
+          <View className={`h-6 w-64 bg-gray-200 rounded mb-2 ${isRTL ? 'self-end' : 'self-start'}`} />
+          <View className={`flex-row items-center mb-2 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+            <View className={`h-4 w-4 bg-gray-200 rounded-full ${isRTL ? 'ml-2' : 'mr-2'}`} />
+            <View className="h-4 w-32 bg-gray-200 rounded" />
+          </View>
+          <View className={`flex-row items-center mb-2 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+            <View className={`h-4 w-4 bg-gray-200 rounded-full ${isRTL ? 'ml-2' : 'mr-2'}`} />
+            <View className="h-4 w-32 bg-gray-200 rounded" />
+          </View>
+          <View className={`h-6 w-20 bg-gray-200 rounded-full ${isRTL ? 'self-end' : 'self-start'}`} />
         </View>
-        <View className="flex-row items-center mb-2">
-          <View className="h-4 w-4 bg-gray-200 rounded-full mr-2" />
-          <View className="h-4 w-32 bg-gray-200 rounded" />
-        </View>
-        <View className="h-6 w-20 bg-gray-200 rounded-full" />
+        <View className="h-10 w-10 bg-gray-200 rounded-full" />
       </View>
-      <View className="h-10 w-10 bg-gray-200 rounded-full" />
     </View>
-  </View>
-);
+  );
+};
 
 const RidesManagement = () => {
   const { user } = useUser();
@@ -170,27 +173,36 @@ const RidesManagement = () => {
   };
 
   const RideCard = ({ ride }: { ride: Ride }) => (
-    <View className="bg-white rounded-xl p-4 mb-4 shadow-sm">
+    <View 
+      className="bg-white rounded-xl p-4 mb-4 border border-gray-100"
+      style={{
+        elevation: Platform.OS === "android" ? 4 : 0,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 3,
+      }}
+    >
       <View className={`flex-row justify-between items-start ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
-        <View className="flex-1">
-          <Text className={`text-lg mb-2 ${language === 'ar' ? 'font-CairoBold' : 'font-JakartaBold'}`}>
+        <View className={`flex-1 ${language === 'ar' ? 'items-end' : 'items-start'}`}>
+          <Text className={`text-lg mb-2 ${language === 'ar' ? 'font-CairoBold text-right' : 'font-JakartaBold text-left'}`}>
             {ride.origin_address || (language === 'ar' ? 'نقطة البداية غير معروفة' : 'Unknown origin')} → {ride.destination_address || (language === 'ar' ? 'نقطة الوصول غير معروفة' : 'Unknown destination')}
           </Text>
           <View className={`flex-row items-center mb-2 ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
             <MaterialCommunityIcons name="account" size={16} color="#6B7280" />
-            <Text className={`text-gray-600 ${language === 'ar' ? 'font-CairoRegular mr-2' : 'font-JakartaRegular ml-2'}`}>
+            <Text className={`text-gray-600 ${language === 'ar' ? 'font-CairoRegular mr-2 text-right' : 'font-JakartaRegular ml-2 text-left'}`}>
               {language === 'ar' ? 'السائق: ' : 'Driver: '}{ride.driver?.name || (language === 'ar' ? 'غير محدد' : 'Not assigned')}
             </Text>
           </View>
           <View className={`flex-row items-center mb-2 ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
             <MaterialCommunityIcons name="car" size={16} color="#6B7280" />
-            <Text className={`text-gray-600 ${language === 'ar' ? 'font-CairoRegular mr-2' : 'font-JakartaRegular ml-2'}`}>
+            <Text className={`text-gray-600 ${language === 'ar' ? 'font-CairoRegular mr-2 text-right' : 'font-JakartaRegular ml-2 text-left'}`}>
               {language === 'ar' ? 'المقاعد المتاحة: ' : 'Available Seats: '}{ride.available_seats}
             </Text>
           </View>
           <View className={`flex-row items-center justify-between ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
             <View className={`px-2 py-1 rounded-full ${getStatusColor(ride.status)}`}>
-              <Text className={`text-sm ${language === 'ar' ? 'font-CairoMedium' : 'font-JakartaMedium'}`}>
+              <Text className={`text-sm ${language === 'ar' ? 'font-CairoMedium text-right' : 'font-JakartaMedium text-left'}`}>
                 {getStatusText(ride.status)}
               </Text>
             </View>
@@ -242,11 +254,11 @@ const RidesManagement = () => {
 
             {/* Rides List Skeleton */}
             <View>
-              <SkeletonRideCard />
-              <SkeletonRideCard />
-              <SkeletonRideCard />
-              <SkeletonRideCard />
-              <SkeletonRideCard />
+              <SkeletonRideCard language={language} />
+              <SkeletonRideCard language={language} />
+              <SkeletonRideCard language={language} />
+              <SkeletonRideCard language={language} />
+              <SkeletonRideCard language={language} />
             </View>
           </View>
         </ScrollView>
