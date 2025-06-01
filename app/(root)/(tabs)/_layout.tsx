@@ -69,6 +69,10 @@ const Layout = () => {
                 tabBarStyle: {
                   backgroundColor: "black",
                   borderRadius: 20,
+                  borderTopLeftRadius: 20,
+                  borderTopRightRadius: 20,
+                  borderBottomLeftRadius: 0,
+                  borderBottomRightRadius: 0,
                   paddingTop: 20,
                   paddingBottom: 50,
                   marginHorizontal: 0,
