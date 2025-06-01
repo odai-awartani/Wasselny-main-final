@@ -1252,9 +1252,6 @@ const RideDetails = () => {
         style={Platform.OS === 'android' ? styles.androidShadow : styles.iosShadow}
       >
         <View className={`flex-row justify-between items-center mb-3 ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
-          <Text className={`text-lg font-CairoBold text-black ${language === 'ar' ? 'text-right' : 'text-left'}`}>
-            {language === 'ar' ? 'الركاب الحاليين' : 'Current Passengers'}
-          </Text>
           {isDriver && (
             <TouchableOpacity
               onPress={() => router.push({
@@ -1291,21 +1288,24 @@ const RideDetails = () => {
               />
             </TouchableOpacity>
           )}
+          <Text className={`text-lg font-CairoBold text-black ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+            {language === 'ar' ? 'الركاب الحاليين' : 'Current Passengers'}
+          </Text>
         </View>
         {allPassengers.length > 0 ? (
           <View className="border border-gray-200 rounded-lg overflow-hidden">
             <View className={`flex-row bg-gray-50 p-3 border-b border-gray-200 ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
-              <View className="flex-1">
+              <View className={`w-[40%] px-3 ${language === 'ar' ? 'items-end' : 'items-start'}`}>
                 <Text className={`text-sm font-CairoBold text-gray-700 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
                   {language === 'ar' ? 'الاسم' : 'Name'}
                 </Text>
               </View>
-              <View className="w-24">
+              <View className={`w-[25%] px-3 ${language === 'ar' ? 'items-end' : 'items-center'}`}>
                 <Text className={`text-sm font-CairoBold text-gray-700 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
                   {language === 'ar' ? 'المقاعد' : 'Seats'}
                 </Text>
               </View>
-              <View className="w-49">
+              <View className={`w-[35%] px-3 ${language === 'ar' ? 'items-end' : 'items-start'}`}>
                 <Text className={`text-sm font-CairoBold text-gray-700 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
                   {language === 'ar' ? 'نقطة التوقف' : 'Stop Point'}
                 </Text>
@@ -1313,466 +1313,62 @@ const RideDetails = () => {
             </View>
             {allPassengers.map((passenger) => (
               <View key={passenger.id} className={`flex-row p-3 border-b border-gray-100 ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
-                <View className={`flex-1 flex-row items-center ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
-                  <Image
-                    source={icons.person}
-                    className={`w-5 h-5 ${language === 'ar' ? 'ml-2' : 'mr-2'}`}
-                    tintColor="#10B981"
-                  />
-                  <Text className={`text-sm pt-1.5 text-gray-700 font-CairoRegular ${language === 'ar' ? 'text-right' : 'text-left'}`}>
-                    {passengerNames[passenger.user_id] || (language === 'ar' ? 'الراكب' : 'Passenger')}
+                <View className={`w-[40%] px-3 ${language === 'ar' ? 'items-end' : 'items-start'}`}>
+                  <View className={`flex-row items-center ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
+                    <Image
+                      source={icons.person}
+                      style={{
+                        width: 24,
+                        height: 24,
+                        marginLeft: language === 'ar' ? 4 : 0,
+                        marginRight: language === 'ar' ? 0 : 4
+                      }}
+                      tintColor="#10B981"
+                    />
+                    <Text 
+                      className={`text-gray-700 font-CairoRegular flex-1 ${language === 'ar' ? 'text-right' : 'text-left'}`}
+                      numberOfLines={1}
+                      adjustsFontSizeToFit
+                      minimumFontScale={0.7}
+                    >
+                      {(passengerNames[passenger.user_id] || (language === 'ar' ? 'الراكب' : 'Passenger')).toString()}
+                    </Text>
+                  </View>
+                </View>
+                <View className={`w-[25%] px-3 ${language === 'ar' ? 'items-end' : 'items-center'}`}>
+                  <Text 
+                    className={`text-gray-700 font-CairoRegular ${language === 'ar' ? 'text-right' : 'text-left'}`}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.7}
+                  >
+                    {(passenger.requested_seats || 1).toString()}
                   </Text>
                 </View>
-                <View className="w-20 justify-center">
-                  <Text className={`text-sm pt-1.5 text-gray-700 font-CairoRegular ${language === 'ar' ? 'text-right' : 'text-left'}`}>
-                    {passenger.requested_seats || 1} {passenger.requested_seats === 1 ? t.seat : t.seats}
-                  </Text>
-                </View>
-                <View className="w-49 justify-center">
-                  <Text className={`text-sm pt-1.5 text-gray-700 font-CairoRegular ${language === 'ar' ? 'text-right' : 'text-left'}`}>
-                    {passenger.selected_waypoint ? (
-                      <>
-                        {passenger.selected_waypoint.address === ride?.origin_address ? (
-                          language === 'ar' ? 'نقطة البداية' : 'Starting Point'
-                        ) : ride?.waypoints?.findIndex(
-                          wp => wp.address === passenger.selected_waypoint?.address
-                        ) !== -1 ? (
-                          <Text className="text-gray-500 text-lg mt-1">
-                            {passenger.selected_waypoint.address}
-                          </Text>
-                        ) : (
-                          language === 'ar' ? 'نقطة البداية' : 'Starting Point'
-                        )}
-                      </>
-                    ) : (
-                      language === 'ar' ? 'نقطة البداية' : 'Starting Point'
-                    )}
+                <View className={`w-[35%] px-3 ${language === 'ar' ? 'items-end' : 'items-start'}`}>
+                  <Text 
+                    className={`text-gray-700 font-CairoRegular ${language === 'ar' ? 'text-right' : 'text-left'}`}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.7}
+                  >
+                    {(passenger.selected_waypoint?.address || (language === 'ar' ? 'نقطة البداية' : 'Start Point')).toString()}
                   </Text>
                 </View>
               </View>
             ))}
           </View>
         ) : (
-          <View className="bg-gray-50 p-4 rounded-xl">
-            <Text className={`text-base text-gray-700 text-center font-CairoBold ${language === 'ar' ? 'text-right' : 'text-left'}`}>
-              {language === 'ar' ? 'لا يوجد ركاب حالياً' : 'No passengers at the moment'}
+          <View className="p-4 bg-gray-50 rounded-lg">
+            <Text className={`text-gray-500 text-center font-CairoRegular ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+              {language === 'ar' ? 'لا يوجد ركاب حالياً' : 'No passengers yet'}
             </Text>
           </View>
         )}
       </View>
     ),
-    [allPassengers, passengerNames, ride, isDriver, pendingRequestsCount, language, t.seat, t.seats]
+    [allPassengers, isDriver, language, passengerNames, pendingRequestsCount, ride, router]
   );
-
-  // Add these new functions after the existing handle functions
-  const handleStartRide = async () => {
-    try {
-      if (Platform.OS === 'android') {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      }
-      if (!ride || !ride.id) {
-        Alert.alert('معلومات الرحلة غير مكتملة');
-        return;
-      }
-
-      const currentStatus = ride.status;
-
-      // Update local state immediately
-      setRide(prevRide => prevRide ? { ...prevRide, status: 'in-progress' } : null);
-
-      // Update Firebase
-      await updateDoc(doc(db, 'rides', ride.id), {
-        status: 'in-progress',
-        updated_at: serverTimestamp(),
-      });
-
-      // Notify all passengers
-      for (const passenger of allPassengers) {
-        await sendRideStatusNotification(
-          passenger.user_id,
-          'بدأت الرحلة!',
-          `بدأ السائق رحلتك من ${ride.origin_address} إلى ${ride.destination_address}`,
-          ride.id
-        );
-      }
-
-      Alert.alert('✅ تم بدء الرحلة بنجاح');
-    } catch (error) {
-      // Revert local state if Firebase update fails
-      if (ride) {
-        setRide(prevRide => prevRide ? { ...prevRide, status: ride.status } : null);
-      }
-      console.error('Error starting ride:', error);
-      Alert.alert('حدث خطأ أثناء بدء الرحلة.');
-    }
-  };
-
-  const handleFinishRide = async () => {
-    try {
-      if (Platform.OS === 'android') {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      }
-      if (!ride || !ride.id) {
-        Alert.alert('معلومات الرحلة غير مكتملة');
-        return;
-      }
-
-      // Update ride status to completed
-      await updateDoc(doc(db, 'rides', ride.id), {
-        status: 'completed',
-        updated_at: serverTimestamp(),
-      });
-
-      // Update local ride state
-      setRide(prevRide => prevRide ? { ...prevRide, status: 'completed' } : null);
-
-      // Notify all passengers
-      for (const passenger of allPassengers) {
-        await sendRideStatusNotification(
-          passenger.user_id,
-          'تم إنهاء الرحلة!',
-          `تم إنهاء رحلتك من ${ride.origin_address} إلى ${ride.destination_address}`,
-          ride.id
-        );
-      }
-
-      // If it's a recurring ride, ask the driver if they want to continue next week
-      if (ride.is_recurring) {
-        Alert.alert(
-          'رحلة متكررة',
-          'هل تريد تكرار هذه الرحلة للأسبوع القادم؟',
-          [
-            {
-              text: 'لا',
-              style: 'cancel',
-              onPress: () => {
-                Alert.alert('✅ تم إنهاء الرحلة بنجاح');
-              }
-            },
-            {
-              text: 'نعم',
-              onPress: async () => {
-                try {
-                  // Calculate next week's date
-                  const currentRideDate = parse(ride.ride_datetime, DATE_FORMAT, new Date());
-                  const nextWeekDate = new Date(currentRideDate);
-                  nextWeekDate.setDate(nextWeekDate.getDate() + 7);
-                  const nextWeekDateTime = format(nextWeekDate, DATE_FORMAT);
-
-                  // Get the highest ride number
-                  const ridesRef = collection(db, 'rides');
-                  const q = query(ridesRef, orderBy('ride_number', 'desc'), limit(1));
-                  const querySnapshot = await getDocs(q);
-                  const highestRide = querySnapshot.docs[0];
-                  const nextRideNumber = highestRide ? highestRide.data().ride_number + 1 : 1;
-
-                  // Create new ride document with custom ID
-                  const newRideId = `(${ride.ride_number})`;
-                  await setDoc(doc(db, 'rides', newRideId), {
-                    origin_address: ride.origin_address,
-                    destination_address: ride.destination_address,
-                    origin_latitude: ride.origin_latitude,
-                    origin_longitude: ride.origin_longitude,
-                    destination_latitude: ride.destination_latitude,
-                    destination_longitude: ride.destination_longitude,
-                    ride_datetime: nextWeekDateTime,
-                    driver_id: ride.driver_id,
-                    status: 'available',
-                    available_seats: ride.driver?.car_seats || DEFAULT_CAR_SEATS,
-                    is_recurring: true,
-                    no_children: ride.no_children,
-                    no_music: ride.no_music,
-                    no_smoking: ride.no_smoking,
-                    required_gender: ride.required_gender,
-                    ride_days: ride.ride_days,
-                    ride_number: nextRideNumber,
-                    created_at: serverTimestamp(),
-                  });
-
-                  // Notify driver about the new ride
-                  await sendRideStatusNotification(
-                    ride.driver_id || '',
-                    'تم إنشاء رحلة جديدة',
-                    `تم إنشاء رحلة جديدة للأسبوع القادم من ${ride.origin_address} إلى ${ride.destination_address}`,
-                    newRideId
-                  );
-
-                  // Notify all current passengers about the next week's ride
-                  for (const passenger of allPassengers) {
-                    // Schedule reminder notification for the next ride
-                    const notificationId = await schedulePassengerRideReminder(
-                      newRideId,
-                      nextWeekDateTime,
-                      ride.origin_address,
-                      ride.destination_address,
-                      ride.driver?.name || DEFAULT_DRIVER_NAME
-                    );
-
-                    // Send immediate notification about the next ride
-                    await sendRideStatusNotification(
-                      passenger.user_id,
-                      'رحلة جديدة للأسبوع القادم!',
-                      `تم إنشاء رحلة جديدة للأسبوع القادم من ${ride.origin_address} إلى ${ride.destination_address}. سيتم تذكيرك قبل الرحلة.`,
-                      newRideId
-                    );
-
-                    // Create a new ride request for the next week's ride
-                    await addDoc(collection(db, 'ride_requests'), {
-                      ride_id: newRideId,
-                      user_id: passenger.user_id,
-                      driver_id: ride.driver_id,
-                      status: 'waiting',
-                      created_at: serverTimestamp(),
-                      passenger_name: passengerNames[passenger.user_id] || 'الراكب',
-                      notification_id: notificationId,
-                      selected_waypoint: passenger.selected_waypoint
-                    });
-                  }
-
-                  Alert.alert(
-                    '✅ تم إنشاء الرحلة الجديدة',
-                    'تم إنشاء رحلة جديدة للأسبوع القادم بنفس التفاصيل وتم إخطار جميع الركاب'
-                  );
-                } catch (error) {
-                  console.error('Error creating next week ride:', error);
-                  Alert.alert('حدث خطأ أثناء إنشاء الرحلة الجديدة');
-                }
-              }
-            }
-          ]
-        );
-      } else {
-        Alert.alert('✅ تم إنهاء الرحلة بنجاح');
-      }
-    } catch (error) {
-      console.error('Error finishing ride:', error);
-      Alert.alert('حدث خطأ أثناء إنهاء الرحلة.');
-    }
-  };
-
-  const handleCancelRideByDriver = async () => {
-    try {
-      if (Platform.OS === 'android') {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      }
-      if (!ride || !ride.id) {
-        Alert.alert('معلومات الرحلة غير مكتملة');
-        return;
-      }
-
-      await updateDoc(doc(db, 'rides', ride.id), {
-        status: 'cancelled',
-        updated_at: serverTimestamp(),
-      });
-
-      // Notify all passengers
-      for (const passenger of allPassengers) {
-        await sendRideStatusNotification(
-          passenger.user_id,
-          'تم إلغاء الرحلة',
-          `تم إلغاء رحلتك من ${ride.origin_address} إلى ${ride.destination_address}`,
-          ride.id
-        );
-      }
-
-      Alert.alert('✅ تم إلغاء الرحلة بنجاح');
-    } catch (error) {
-      console.error('Error cancelling ride:', error);
-      Alert.alert('حدث خطأ أثناء إلغاء الرحلة.');
-    }
-  };
-
-  // Modify the renderActionButtons function to remove on-hold status
-  const renderActionButtons = useCallback(() => {
-    if (isDriver) {
-      // Check if ride is full
-      if (ride?.available_seats === 0 && ride.status === 'available') {
-        updateDoc(doc(db, 'rides', ride.id), {
-          status: 'full',
-          updated_at: serverTimestamp(),
-        });
-      }
-
-      switch (ride?.status) {
-        case 'available':
-        case 'full':
-          return (
-            <View className="p-4 m-3">
-              {isRideTime ? (
-                <CustomButton
-                  title={language === 'ar' ? "بدء الرحلة" : "Start Ride"}
-                  onPress={handleStartRide}
-                  className="bg-blue-500 py-3 rounded-xl mb-3"
-                />
-              ) : (
-                <View className="mb-3">
-                  <CustomButton
-                    title={language === 'ar' ? "بدء الرحلة" : "Start Ride"}
-                    onPress={handleStartRide}
-                    className="bg-gray-400 py-3 rounded-xl"
-                    disabled={true}
-                  />
-                  <Text className={`text-center text-sm text-gray-500 mt-2 font-CairoRegular ${language === 'ar' ? 'text-right' : 'text-left'}`}>
-                    {(() => {
-                      const [datePart, timePart] = ride?.ride_datetime?.split(' ') || ['', ''];
-                      return language === 'ar' 
-                        ? `يمكن بدء الرحلة في ${timePart} بتاريخ ${datePart}`
-                        : `Ride can be started at ${timePart} on ${datePart}`;
-                    })()}
-                  </Text>
-                </View>
-              )}
-              <CustomButton
-                title={language === 'ar' ? "إلغاء الرحلة" : "Cancel Ride"}
-                onPress={handleCancelRideByDriver}
-                className="bg-red-500 py-3 rounded-xl"
-              />
-            </View>
-          );
-        case 'in-progress':
-          return (
-            <View className="p-4 m-3">
-              <CustomButton
-                title={language === 'ar' ? "إنهاء الرحلة" : "Finish Ride"}
-                onPress={handleFinishRide}
-                className="bg-green-500 py-3 rounded-xl"
-              />
-            </View>
-          );
-        case 'completed':
-          return (
-            <View className="p-4 m-3 bg-green-100 rounded-xl">
-              <View className={`flex-row items-center justify-center ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
-                <MaterialIcons name="check-circle" size={24} color="#10B981" />
-                <Text className={`text-green-700 font-CairoBold text-lg ${language === 'ar' ? 'mr-2' : 'ml-2'}`}>
-                  {language === 'ar' ? 'تم إكمال الرحلة بنجاح' : 'Ride completed successfully'}
-                </Text>
-              </View>
-            </View>
-          );
-        case 'cancelled':
-          return null;
-        default:
-          return null;
-      }
-    } else {
-      // Passenger buttons
-      if (!rideRequest) {
-        // Show book button if ride is available or full
-        if (ride?.status === 'available' || ride?.status === 'full') {
-          return (
-            <View className="p-4 m-3">
-              <CustomButton
-                title={ride.available_seats > 0 
-                  ? (language === 'ar' ? "طلب حجز الرحلة" : "Book Ride")
-                  : (language === 'ar' ? "طلب حجز (قائمة الانتظار)" : "Book (Waitlist)")
-                }
-                onPress={handleBookRide}
-                className={`${ride.available_seats > 0 ? "bg-orange-500" : "bg-yellow-500"} py-3 rounded-xl`}
-              />
-            </View>
-          );
-        } else if (ride?.status === 'in-progress') {
-          return (
-            <View className="p-4 m-3 bg-blue-100 rounded-xl">
-              <Text className={`text-blue-800 font-CairoBold text-center text-lg ${language === 'ar' ? 'text-right' : 'text-left'}`}>
-                {language === 'ar' ? 'الرحلة جارية حالياً - لا يمكن حجز مقعد' : 'Ride is in progress - Cannot book a seat'}
-              </Text>
-            </View>
-          );
-        } else if (ride?.status === 'completed') {
-          return (
-            <View className="p-4 m-3 bg-gray-100 rounded-xl">
-              <Text className={`text-gray-700 font-CairoBold text-center text-lg ${language === 'ar' ? 'text-right' : 'text-left'}`}>
-                {language === 'ar' ? 'تم إكمال الرحلة' : 'Ride completed'}
-              </Text>
-            </View>
-          );
-        } else if (ride?.status === 'cancelled') {
-          return (
-            <View className="p-4 m-3 bg-gray-100 rounded-xl">
-              <Text className={`text-gray-700 font-CairoBold text-center text-lg ${language === 'ar' ? 'text-right' : 'text-left'}`}>
-                {language === 'ar' ? 'تم إلغاء الرحلة' : 'Ride cancelled'}
-              </Text>
-            </View>
-          );
-        }
-      } else {
-        // Show different buttons based on request status
-        switch (rideRequest.status) {
-          case 'waiting':
-            return (
-              <View className="p-4 m-3">
-                <View className="bg-yellow-100 p-4 rounded-xl mb-3">
-                  <Text className={`text-yellow-800 font-CairoBold text-center text-lg ${language === 'ar' ? 'text-right' : 'text-left'}`}>
-                    {rideRequest.is_waitlist 
-                      ? (language === 'ar' ? 'في قائمة الانتظار - سيتم إخطارك عند توفر مقعد' : 'On waitlist - You will be notified when a seat is available')
-                      : (language === 'ar' ? 'في انتظار موافقة السائق' : 'Waiting for driver approval')
-                    }
-                  </Text>
-                </View>
-                <CustomButton
-                  title={language === 'ar' ? "إلغاء طلب الحجز" : "Cancel Booking Request"}
-                  onPress={handleCancelRide}
-                  className="bg-red-500 py-3 rounded-xl"
-                />
-              </View>
-            );
-          case 'accepted':
-            return (
-              <View className="p-4 m-3">
-                <CustomButton
-                  title={language === 'ar' ? "تسجيل الدخول" : "Check In"}
-                  onPress={handleCheckIn}
-                  className="bg-green-500 py-3 rounded-xl mb-3"
-                />
-                <CustomButton
-                  title={language === 'ar' ? "إلغاء الحجز" : "Cancel Booking"}
-                  onPress={handleCancelRide}
-                  className="bg-red-500 py-3 rounded-xl"
-                />
-              </View>
-            );
-          case 'checked_in':
-            return (
-              <View className="p-4 m-3">
-                <CustomButton
-                  title={language === 'ar' ? "تسجيل الخروج" : "Check Out"}
-                  onPress={handleCheckOut}
-                  className="bg-orange-500 py-3 rounded-xl"
-                />
-              </View>
-            );
-          case 'checked_out':
-            return (
-              <View className="p-4 m-3 bg-gray-100 rounded-xl">
-                <Text className={`text-gray-700 font-CairoBold text-center text-lg ${language === 'ar' ? 'text-right' : 'text-left'}`}>
-                  {language === 'ar' ? 'تم إكمال الرحلة' : 'Ride completed'}
-                </Text>
-              </View>
-            );
-          case 'rejected':
-            return (
-              <View className="p-4 m-3 bg-gray-100 rounded-xl">
-                <Text className={`text-gray-700 font-CairoBold text-center text-lg ${language === 'ar' ? 'text-right' : 'text-left'}`}>
-                  {language === 'ar' ? 'تم رفض طلب الحجز' : 'Booking request rejected'}
-                </Text>
-              </View>
-            );
-          case 'cancelled':
-            return (
-              <View className="p-4 m-3 bg-gray-100 rounded-xl">
-                <Text className={`text-gray-700 font-CairoBold text-center text-lg ${language === 'ar' ? 'text-right' : 'text-left'}`}>
-                  {language === 'ar' ? 'تم إلغاء الحجز' : 'Booking cancelled'}
-                </Text>
-              </View>
-            );
-          default:
-            return null;
-        }
-      }
-    }
-  }, [isDriver, ride, rideRequest, allPassengers, isRideTime, language]);
 
   useEffect(() => {
     fetchRideDetails();
@@ -2257,18 +1853,20 @@ const RideDetails = () => {
       <View key={passenger.id} className="flex-row items-center justify-between p-4 bg-white rounded-lg mb-2">
         <View className="flex-1">
           <Text className="text-lg font-CairoBold text-gray-800">
-            {passengerNames[passenger.id] || t.user}
+            {(passengerNames[passenger.user_id] || t.user).toString()}
           </Text>
-          {passenger.selected_waypoint && (
+          {/* Display selected waypoint address if available */}
+          {passenger.selected_waypoint?.address ? (
             <Text className="text-sm font-CairoRegular text-gray-600 mt-1">
-              {t.currentLocation}: {passenger.selected_waypoint.address}
+              {`${t.currentLocation}: ${passenger.selected_waypoint.address.toString()}`}
             </Text>
-          )}
-          {passengerLocations[passenger.id] && (
+          ) : null}
+          {/* Display current location if available in state and checked in */}
+          {passenger.status === 'checked_in' && passengerLocations[passenger.user_id]?.latitude !== undefined && passengerLocations[passenger.user_id]?.longitude !== undefined ? (
             <Text className="text-sm font-CairoRegular text-gray-600 mt-1">
-              {t.currentLocation}: {`${passengerLocations[passenger.id].latitude.toFixed(6)}, ${passengerLocations[passenger.id].longitude.toFixed(6)}`}
+              {`${t.currentLocation}: ${passengerLocations[passenger.user_id].latitude.toFixed(6)}, ${passengerLocations[passenger.user_id].longitude.toFixed(6)}`}
             </Text>
-          )}
+          ) : null}
         </View>
         <View className="flex-row items-center">
           <Text className={`text-sm font-CairoRegular mr-2 ${
@@ -2276,49 +1874,246 @@ const RideDetails = () => {
             passenger.status === 'accepted' ? 'text-blue-600' :
             'text-gray-600'
           }`}>
-            {getStatusTranslation(passenger.status)}
+            {getStatusTranslation(passenger.status).toString()}
           </Text>
         </View>
       </View>
     ));
   };
 
-  if (loading) {
-    return (
-      <View className="flex-1 justify-center items-center bg-white">
-        <ActivityIndicator size="large" color="#f97316" />
-        <Text className="mt-4 text-black font-CairoMedium">
-          {language === 'ar' ? "جاري تحميل تفاصيل الرحلة..." : "Loading ride details..."}
-        </Text>
-      </View>
-    );
-  }
+  // Add handler functions first
+  const handleStartRide = async () => {
+    try {
+      if (Platform.OS === 'android') {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      }
+      if (!ride || !ride.id) {
+        Alert.alert('معلومات الرحلة غير مكتملة');
+        return;
+      }
 
-  if (error || !formattedRide) {
-    return (
-      <View className="flex-1 justify-center items-center p-4 bg-white">
-        <MaterialIcons name="error-outline" size={48} color="#f97316" />
-        <Text className="mt-4 text-black text-center font-CairoMedium">
-          {error || (language === 'ar' ? 'الرحلة غير موجودة.' : 'Ride not found.')}
-        </Text>
-        <CustomButton
-          title={language === 'ar' ? "إعادة المحاولة" : "Try Again"}
-          onPress={() => {
-            if (Platform.OS === 'android') {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-            }
-            fetchRideDetails();
-          }}
-          className="mt-4 bg-orange-500 py-3 px-6 rounded-xl"
-        />
-        <TouchableOpacity onPress={() => router.back()} className="mt-2">
-          <Text className="text-blue-500 font-CairoMedium">
-            {language === 'ar' ? "العودة" : "Back"}
-          </Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
+      // Check if it's ride time
+      if (!isRideTime) {
+        Alert.alert(
+          'غير متاح',
+          'لا يمكن بدء الرحلة قبل موعدها المحدد.'
+        );
+        return;
+      }
+
+      await updateDoc(doc(db, 'rides', ride.id), {
+        status: 'in-progress',
+        updated_at: serverTimestamp(),
+      });
+
+      // Notify all passengers
+      for (const passenger of allPassengers) {
+        await sendRideStatusNotification(
+          passenger.user_id,
+          'بدأت الرحلة!',
+          `بدأت رحلتك من ${ride.origin_address} إلى ${ride.destination_address}`,
+          ride.id
+        );
+      }
+
+      Alert.alert('✅ تم بدء الرحلة بنجاح');
+    } catch (error) {
+      console.error('Error starting ride:', error);
+      Alert.alert('حدث خطأ أثناء بدء الرحلة.');
+    }
+  };
+
+  const handleFinishRide = async () => {
+    try {
+      if (Platform.OS === 'android') {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      }
+      if (!ride || !ride.id) {
+        Alert.alert('معلومات الرحلة غير مكتملة');
+        return;
+      }
+
+      await updateDoc(doc(db, 'rides', ride.id), {
+        status: 'completed',
+        updated_at: serverTimestamp(),
+      });
+
+      // Notify all passengers
+      for (const passenger of allPassengers) {
+        await sendRideStatusNotification(
+          passenger.user_id,
+          'انتهت الرحلة!',
+          `انتهت رحلتك من ${ride.origin_address} إلى ${ride.destination_address}`,
+          ride.id
+        );
+      }
+
+      Alert.alert('✅ تم إنهاء الرحلة بنجاح');
+    } catch (error) {
+      console.error('Error finishing ride:', error);
+      Alert.alert('حدث خطأ أثناء إنهاء الرحلة.');
+    }
+  };
+
+  // Then define renderActionButtons
+  const renderActionButtons = useCallback(() => {
+    if (isDriver) {
+      // Driver buttons
+      switch (ride?.status) {
+        case 'available':
+          return (
+            <View className="p-4 m-3">
+              <CustomButton
+                title={language === 'ar' ? "بدء الرحلة" : "Start Ride"}
+                onPress={handleStartRide}
+                className="bg-green-500 py-3 rounded-xl"
+              />
+            </View>
+          );
+        case 'in-progress':
+          return (
+            <View className="p-4 m-3">
+              <CustomButton
+                title={language === 'ar' ? "إنهاء الرحلة" : "Finish Ride"}
+                onPress={handleFinishRide}
+                className="bg-green-500 py-3 rounded-xl"
+              />
+            </View>
+          );
+        case 'completed':
+          return (
+            <View className="p-4 m-3 bg-green-100 rounded-xl">
+              <View className={`flex-row items-center justify-center ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
+                <MaterialIcons name="check-circle" size={24} color="#10B981" />
+                <Text className={`text-green-700 font-CairoBold text-lg ${language === 'ar' ? 'mr-2' : 'ml-2'}`}>
+                  {language === 'ar' ? 'تم إكمال الرحلة بنجاح' : 'Ride completed successfully'}
+                </Text>
+              </View>
+            </View>
+          );
+        case 'cancelled':
+          return null;
+        default:
+          return null;
+      }
+    } else {
+      // Passenger buttons
+      if (!rideRequest) {
+        // Show book button if ride is available or full
+        if (ride?.status === 'available' || ride?.status === 'full') {
+          return (
+            <View className="p-4 m-3">
+              <CustomButton
+                title={ride.available_seats > 0 
+                  ? (language === 'ar' ? "طلب حجز الرحلة" : "Book Ride")
+                  : (language === 'ar' ? "طلب حجز (قائمة الانتظار)" : "Book (Waitlist)")
+                }
+                onPress={handleBookRide}
+                className={`${ride.available_seats > 0 ? "bg-orange-500" : "bg-yellow-500"} py-3 rounded-xl`}
+              />
+            </View>
+          );
+        } else if (ride?.status === 'in-progress') {
+          return (
+            <View className="p-4 m-3 bg-blue-100 rounded-xl">
+              <Text className={`text-blue-800 font-CairoBold text-center text-lg ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+                {language === 'ar' ? 'الرحلة جارية حالياً - لا يمكن حجز مقعد' : 'Ride is in progress - Cannot book a seat'}
+              </Text>
+            </View>
+          );
+        } else if (ride?.status === 'completed') {
+          return (
+            <View className="p-4 m-3 bg-gray-100 rounded-xl">
+              <Text className={`text-gray-700 font-CairoBold text-center text-lg ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+                {language === 'ar' ? 'تم إكمال الرحلة' : 'Ride completed'}
+              </Text>
+            </View>
+          );
+        } else if (ride?.status === 'cancelled') {
+          return (
+            <View className="p-4 m-3 bg-gray-100 rounded-xl">
+              <Text className={`text-gray-700 font-CairoBold text-center text-lg ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+                {language === 'ar' ? 'تم إلغاء الرحلة' : 'Ride cancelled'}
+              </Text>
+            </View>
+          );
+        }
+      } else {
+        // Show different buttons based on request status
+        switch (rideRequest.status) {
+          case 'waiting':
+            return (
+              <View className="p-4 m-3">
+                <View className="bg-yellow-100 p-4 rounded-xl mb-3">
+                  <Text className={`text-yellow-800 font-CairoBold text-center text-lg ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+                    {rideRequest.is_waitlist 
+                      ? (language === 'ar' ? 'في قائمة الانتظار - سيتم إخطارك عند توفر مقعد' : 'On waitlist - You will be notified when a seat is available')
+                      : (language === 'ar' ? 'في انتظار موافقة السائق' : 'Waiting for driver approval')
+                    }
+                  </Text>
+                </View>
+                <CustomButton
+                  title={language === 'ar' ? "إلغاء طلب الحجز" : "Cancel Booking Request"}
+                  onPress={handleCancelRide}
+                  className="bg-red-500 py-3 rounded-xl"
+                />
+              </View>
+            );
+          case 'accepted':
+            return (
+              <View className="p-4 m-3">
+                <CustomButton
+                  title={language === 'ar' ? "تسجيل الدخول" : "Check In"}
+                  onPress={handleCheckIn}
+                  className="bg-green-500 py-3 rounded-xl mb-3"
+                />
+                <CustomButton
+                  title={language === 'ar' ? "إلغاء الحجز" : "Cancel Booking"}
+                  onPress={handleCancelRide}
+                  className="bg-red-500 py-3 rounded-xl"
+                />
+              </View>
+            );
+          case 'checked_in':
+            return (
+              <View className="p-4 m-3">
+                <CustomButton
+                  title={language === 'ar' ? "تسجيل الخروج" : "Check Out"}
+                  onPress={handleCheckOut}
+                  className="bg-orange-500 py-3 rounded-xl"
+                />
+              </View>
+            );
+          case 'checked_out':
+            return (
+              <View className="p-4 m-3 bg-gray-100 rounded-xl">
+                <Text className={`text-gray-700 font-CairoBold text-center text-lg ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+                  {language === 'ar' ? 'تم إكمال الرحلة' : 'Ride completed'}
+                </Text>
+              </View>
+            );
+          case 'rejected':
+            return (
+              <View className="p-4 m-3 bg-gray-100 rounded-xl">
+                <Text className={`text-gray-700 font-CairoBold text-center text-lg ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+                  {language === 'ar' ? 'تم رفض طلب الحجز' : 'Booking request rejected'}
+                </Text>
+              </View>
+            );
+          case 'cancelled':
+            return (
+              <View className="p-4 m-3 bg-gray-100 rounded-xl">
+                <Text className={`text-gray-700 font-CairoBold text-center text-lg ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+                  {language === 'ar' ? 'تم إلغاء الرحلة' : 'Ride cancelled'}
+                </Text>
+              </View>
+            );
+          default:
+            return null;
+        }
+      }
+    }
+  }, [isDriver, ride, rideRequest, language, handleStartRide, handleFinishRide, handleBookRide, handleCancelRide, handleCheckIn, handleCheckOut]);
 
   return (
     <RideLayout
@@ -2375,6 +2170,4 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 3,
   },
-});
-
-export default RideDetails;
+});export default RideDetails;
