@@ -12,7 +12,7 @@ import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import Header from '@/components/Header';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { sendLocationShareNotification } from '@/lib/notifications';
+import { sendLocationShareNotification, sendLocationUpdateNotification } from '@/lib/notifications';
 
 interface Share {
   recipient_id: string;
@@ -373,7 +373,7 @@ export default function MySharesPage() {
       });
       
       // Add sharing document
-      await addDoc(collection(db, 'location_sharing'), {
+      const shareDoc = await addDoc(collection(db, 'location_sharing'), {
         sharer_id: user?.id,
         recipient_id: selectedUser.id,
         latitude: location.coords.latitude,
@@ -383,7 +383,12 @@ export default function MySharesPage() {
       });
       
       // Send location share notification using the centralized function
-      await sendLocationShareNotification(selectedUser.id, user?.fullName || (isRTL ? 'مستخدم' : 'A user'), isRTL);
+      await sendLocationShareNotification(
+        selectedUser.id, 
+        user?.fullName || (isRTL ? 'مستخدم' : 'A user'), 
+        isRTL,
+        user?.id || ''
+      );
       
       // Close modal and show success
       setActiveModal('none');
@@ -406,6 +411,40 @@ export default function MySharesPage() {
     } catch (error) {
       console.error('Error starting location sharing:', error);
       Alert.alert('Error', 'Failed to start location sharing');
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  const updateLocation = async (share: any) => {
+    try {
+      setIsRefreshing(true);
+      
+      // Get current location
+      const location = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced
+      });
+      
+      // Update location in Firestore
+      await updateDoc(doc(db, 'location_sharing', share.docId), {
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+        last_updated: new Date().toISOString()
+      });
+      
+      // Send location update notification
+      await sendLocationUpdateNotification(
+        share.recipient.id,
+        user?.fullName || (isRTL ? 'مستخدم' : 'A user'),
+        isRTL,
+        user?.id || ''
+      );
+      
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (error) {
+      console.error('Error updating location:', error);
+      Alert.alert('Error', 'Failed to update location');
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     } finally {
       setIsRefreshing(false);

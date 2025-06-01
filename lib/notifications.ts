@@ -583,47 +583,82 @@ export const sendRideRequestNotification = async (
 export const sendLocationShareNotification = async (
   recipientId: string,
   sharerName: string,
-  isRTL: boolean
+  isRTL: boolean,
+  sharerId: string
 ): Promise<boolean> => {
   try {
-    const title = isRTL ? 'تمت مشاركة الموقع' : 'Location Shared';
-    const body = isRTL 
-      ? `${sharerName} شارك معك موقعه`
-      : `${sharerName} is sharing their location with you. Check it out!`;
+    const title = 'تمت مشاركة الموقع';
+    const body = `${sharerName} شارك معك موقعه`;
 
-    // Use scheduleNotification to send the push notification
     const notificationId = await scheduleNotification(
       title,
       body,
-      new Date(), // Trigger immediately
-      undefined, // No rideId associated with location share
-      recipientId // Target user
+      new Date(),
+      'location_share',
+      recipientId
     );
 
     if (notificationId) {
-      // Save notification record to database
       await saveNotificationToDB({
         user_id: recipientId,
-        type: 'chat', // Using 'chat' type for now, consider adding 'location_share' type
+        type: 'location_share',
         title,
         message: body,
         notification_id: notificationId,
         read: false,
         data: {
           type: 'location_share',
-          recipientId: recipientId,
-          sharerId: sharerName // Using name for simplicity, ideally use sharer's actual ID
+          sharerId,
+          notificationId
         }
       });
-      console.log(`Location share notification sent and logged for recipient: ${recipientId}`);
       return true;
-    } else {
-      console.error(`Failed to send or log location share notification for recipient: ${recipientId}`);
-      return false;
     }
-
+    return false;
   } catch (error) {
     console.error('Error sending location share notification:', error);
+    return false;
+  }
+};
+
+// Send location update notification
+export const sendLocationUpdateNotification = async (
+  recipientId: string,
+  sharerName: string,
+  isRTL: boolean,
+  sharerId: string
+): Promise<boolean> => {
+  try {
+    const title = 'تحديث الموقع';
+    const body = `${sharerName} قام بتحديث موقعه`;
+
+    const notificationId = await scheduleNotification(
+      title,
+      body,
+      new Date(),
+      'location_update',
+      recipientId
+    );
+
+    if (notificationId) {
+      await saveNotificationToDB({
+        user_id: recipientId,
+        type: 'location_update',
+        title,
+        message: body,
+        notification_id: notificationId,
+        read: false,
+        data: {
+          type: 'location_update',
+          sharerId,
+          notificationId
+        }
+      });
+      return true;
+    }
+    return false;
+  } catch (error) {
+    console.error('Error sending location update notification:', error);
     return false;
   }
 };

@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, Image, FlatList, ActivityIndicator, Platform } from 'react-native'
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, Image, FlatList, ActivityIndicator, Platform, ScrollView } from 'react-native'
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter, useLocalSearchParams } from 'expo-router'
@@ -20,10 +20,39 @@ import { MaterialIcons } from '@expo/vector-icons'
 // Constants
 const MAX_DISTANCE_KM = 500
 const MIN_DISTANCE_KM = 1
-const RIDES_PER_PAGE = 10
-const STATUS_OPTIONS = ['all', 'available', 'pending', 'ended', 'cancelled', 'in-progress', 'completed']
+const RIDES_PER_PAGE = 5
+const STATUS_OPTIONS = ['all', 'available', 'cancelled', 'in-progress', 'completed', 'full']
 const GENDER_OPTIONS = ['any', 'male', 'female']
-const RECURRING_OPTIONS = ['all', 'recurring', 'nonrecurring']
+// const RECURRING_OPTIONS = ['all', 'recurring', 'nonrecurring']
+
+const FILTERS = {
+  ALL: 'all',
+  TODAY: 'today',
+  TOMORROW: 'tomorrow',
+  DAY_AFTER_TOMORROW: 'day_after_tomorrow',
+  DAY_3: 'day_3',
+  DAY_4: 'day_4',
+  DAY_5: 'day_5'
+};
+
+// Update the GENDER_MAP constant
+const GENDER_MAP: { [key: string]: string } = {
+  'male': 'male',
+  'Male': 'male',
+  'ذكر': 'male',
+  'MALE': 'male',
+  'female': 'female',
+  'Female': 'female',
+  'أنثى': 'female',
+  'FEMALE': 'female',
+  'any': 'any',
+  'Any': 'any',
+  'both': 'any',
+  'Both': 'any',
+  'كلاهما': 'any',
+  'ANY': 'any',
+  'BOTH': 'any'
+};
 
 interface SearchResult {
   id: string
@@ -61,7 +90,7 @@ interface FilterOptions {
   status?: string[]
   date?: Date | null
   gender?: string
-  recurring?: 'all' | 'recurring' | 'nonrecurring'
+  // recurring?: 'all' | 'recurring' | 'nonrecurring'
 }
 
 // Helper to parse DD/MM/YYYY HH:mm
@@ -97,6 +126,14 @@ function hasToDate(obj: any): obj is { toDate: () => Date } {
   return obj && typeof obj === 'object' && typeof obj.toDate === 'function';
 }
 
+// Helper function to normalize gender values
+const normalizeGender = (gender: string | undefined): string | undefined => {
+  if (!gender) return undefined;
+  const normalized = GENDER_MAP[gender] || gender.toLowerCase();
+  console.log('Normalizing gender:', { original: gender, normalized });
+  return normalized;
+};
+
 const Search = () => {
   const router = useRouter()
   const params = useLocalSearchParams()
@@ -110,6 +147,7 @@ const Search = () => {
   const [showFilters, setShowFilters] = useState(false)
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null)
   const [hasMore, setHasMore] = useState(true)
+  const [activeFilter, setActiveFilter] = useState(FILTERS.ALL)
   const [filters, setFilters] = useState<FilterOptions>({
     type: 'all',
     sortBy: 'time',
@@ -119,7 +157,7 @@ const Search = () => {
     status: [],
     date: null,
     gender: 'any',
-    recurring: 'all',
+    // recurring: 'all',
   })
   const [showDatePicker, setShowDatePicker] = useState(false)
   const searchTimeout = useRef<NodeJS.Timeout | null>(null)
@@ -286,7 +324,8 @@ const Search = () => {
         const destMatch = item.destination?.toLowerCase().includes(searchText) ||
           item.destination?.toLowerCase().includes(searchText.replace('ة', 'ه')) ||
           item.destination?.toLowerCase().includes(searchText.replace('ه', 'ة'))
-        return originMatch || destMatch
+        const nameMatch = item.name?.toLowerCase().includes(searchText)
+        return originMatch || destMatch || nameMatch
       })
     }
 
@@ -308,56 +347,97 @@ const Search = () => {
 
     // Status filter
     if (filters.status?.length && !filters.status.includes('all')) {
-      filtered = filtered.filter(item => item.status && filters.status!.includes(item.status))
+      filtered = filtered.filter(item => {
+        if (!item.status) return false
+        return filters.status!.includes(item.status)
+      })
     }
 
     // Date filter
     if (filters.date) {
-      const filterDay = filters.date.getDate();
-      const filterMonth = filters.date.getMonth() + 1;
-      const filterYear = filters.date.getFullYear();
+      const filterDay = filters.date.getDate()
+      const filterMonth = filters.date.getMonth()
+      const filterYear = filters.date.getFullYear()
+      
       filtered = filtered.filter(item => {
-        if (!item.ride_datetime) return false;
-        let rideDateObj;
+        if (!item.ride_datetime) return false
+        
+        let rideDate: Date
         if (typeof item.ride_datetime === 'string') {
-          rideDateObj = parseCustomDate(item.ride_datetime);
+          const [datePart, timePart] = item.ride_datetime.split(' ')
+          const [day, month, year] = datePart.split('/').map(Number)
+          rideDate = new Date(year, month - 1, day)
         } else {
-          const dt: any = item.ride_datetime;
-          if (dt && typeof dt === 'object' && hasToDate(dt)) {
-            rideDateObj = dt.toDate();
-          } else {
-            return false;
-          }
+          rideDate = new Date(item.ride_datetime)
         }
+
         return (
-          rideDateObj.getDate() === filterDay &&
-          rideDateObj.getMonth() + 1 === filterMonth &&
-          rideDateObj.getFullYear() === filterYear
-        );
-      });
+          rideDate.getDate() === filterDay &&
+          rideDate.getMonth() === filterMonth &&
+          rideDate.getFullYear() === filterYear
+        )
+      })
     }
 
     // Gender filter
-    if (filters.gender && filters.gender !== 'any') {
-      filtered = filtered.filter(item => item.gender_preference === filters.gender)
+    if (filters.gender) {
+      console.log('=== Gender Filter Debug ===')
+      console.log('Selected gender filter:', filters.gender)
+      console.log('Total rides before gender filter:', filtered.length)
+      
+      filtered = filtered.filter(item => {
+        const normalizedItemGender = normalizeGender(item.gender_preference)
+        const normalizedFilterGender = normalizeGender(filters.gender)
+        
+        console.log('\nChecking ride:', {
+          id: item.id,
+          original_gender: item.gender_preference,
+          normalized_gender: normalizedItemGender,
+          filter_gender: normalizedFilterGender
+        })
+
+        // If gender is 'any', show all rides
+        if (normalizedFilterGender === 'any') {
+          console.log('Filter is "any" - showing all rides')
+          return true
+        }
+
+        // For specific gender filters (male/female)
+        if (normalizedFilterGender === 'male' || normalizedFilterGender === 'female') {
+          // Only show rides that exactly match the selected gender
+          const matchesGender = normalizedItemGender === normalizedFilterGender
+
+          console.log('Gender filter details:', {
+            matchesGender,
+            willShow: matchesGender,
+            itemGender: normalizedItemGender,
+            filterGender: normalizedFilterGender
+          })
+
+          // Strict matching - only show exact matches
+          return matchesGender
+        }
+
+        return true
+      })
+      
+      console.log('Total rides after gender filter:', filtered.length)
+      console.log('=== End Gender Filter Debug ===\n')
     }
 
     // Price filter
     if (filters.maxPrice) {
-      filtered = filtered.filter(item => item.price && item.price <= filters.maxPrice!)
+      filtered = filtered.filter(item => {
+        if (!item.price) return true
+        return item.price <= filters.maxPrice!
+      })
     }
 
     // Rating filter
     if (filters.minRating) {
-      filtered = filtered.filter(item => item.rating && item.rating >= filters.minRating!)
-    }
-
-    // Recurring filter
-    if (filters.recurring && filters.recurring !== 'all') {
       filtered = filtered.filter(item => {
-        if (filters.recurring === 'recurring') return item.is_recurring === true
-        if (filters.recurring === 'nonrecurring') return item.is_recurring === false
-        return true
+        if (!item.rating) return true
+        return item.rating >= filters.minRating!
       })
     }
 
@@ -367,7 +447,13 @@ const Search = () => {
         case 'price':
           return (a.price || 0) - (b.price || 0)
         case 'time':
-          return new Date(a.ride_datetime || '').getTime() - new Date(b.ride_datetime || '').getTime()
+          const dateA = typeof a.ride_datetime === 'string' 
+            ? parseCustomDate(a.ride_datetime)
+            : new Date(a.ride_datetime || '')
+          const dateB = typeof b.ride_datetime === 'string'
+            ? parseCustomDate(b.ride_datetime)
+            : new Date(b.ride_datetime || '')
+          return dateA.getTime() - dateB.getTime()
         case 'rating':
           return (b.rating || 0) - (a.rating || 0)
         default:
@@ -429,7 +515,90 @@ const Search = () => {
     setShowDatePicker(false)
     if (selectedDate) {
       setFilters(prev => ({ ...prev, date: selectedDate }))
+      // Apply filters immediately when date changes
+      const filteredResults = applyFilters(allResults)
+      setDisplayedResults(filteredResults.slice(0, currentIndex))
+      setHasMore(filteredResults.length > currentIndex)
     }
+  }
+
+  // Helper function to get formatted date
+  const getFormattedDate = (daysFromNow: number): string => {
+    const date = new Date();
+    date.setDate(date.getDate() + daysFromNow);
+    return date.toLocaleDateString('en-US', { 
+      month: 'numeric', 
+      day: 'numeric',
+      year: 'numeric'
+    });
+  };
+
+  // Render filter button
+  const renderFilterButton = (filter: string, label: string) => (
+    <TouchableOpacity
+      onPress={() => {
+        setActiveFilter(filter);
+        // Apply date filter
+        let filterDate = null;
+        const now = new Date();
+        
+        switch (filter) {
+          case FILTERS.TODAY:
+            filterDate = new Date(now);
+            break;
+          case FILTERS.TOMORROW:
+            filterDate = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+            break;
+          case FILTERS.DAY_AFTER_TOMORROW:
+            filterDate = new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000);
+            break;
+          case FILTERS.DAY_3:
+            filterDate = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
+            break;
+          case FILTERS.DAY_4:
+            filterDate = new Date(now.getTime() + 4 * 24 * 60 * 60 * 1000);
+            break;
+          case FILTERS.DAY_5:
+            filterDate = new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000);
+            break;
+        }
+        
+        setFilters(prev => ({ ...prev, date: filterDate }));
+      }}
+      className={`px-4 py-2 rounded-full mx-1 ${
+        activeFilter === filter ? 'bg-orange-500' : 'bg-gray-200'
+      }`}
+    >
+      <Text
+        className={`font-CairoMedium text-sm ${
+          activeFilter === filter ? 'text-white' : 'text-gray-700'
+        }`}
+        style={{ textAlign: language === 'ar' ? 'right' : 'left' }}
+      >
+        {label}
+      </Text>
+    </TouchableOpacity>
+  );
+
+  // Handle gender filter change
+  const handleGenderFilter = (gender: string) => {
+    console.log('\n=== Gender Filter Change ===')
+    console.log('Changing gender filter to:', gender)
+    
+    setFilters(prev => {
+      const newFilters = { ...prev, gender }
+      console.log('New filters state:', newFilters)
+      return newFilters
+    })
+
+    // Apply filters immediately when gender changes
+    const filteredResults = applyFilters(allResults)
+    console.log('Filtered results count:', filteredResults.length)
+    
+    setDisplayedResults(filteredResults.slice(0, currentIndex))
+    setHasMore(filteredResults.length > currentIndex)
+    
+    console.log('=== End Gender Filter Change ===\n')
   }
 
   // Render filter modal
@@ -440,21 +609,25 @@ const Search = () => {
       style={{ justifyContent: 'flex-end', margin: 0 }}
     >
       <View className="bg-white rounded-t-3xl p-6 max-h-[92%]">
+        {/* Header */}
         <View className={`flex-row justify-between items-center mb-6 ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
           <Text className={`text-xl ${language === 'ar' ? 'font-CairoBold' : 'font-JakartaBold'} ${language === 'ar' ? 'text-right' : 'text-left'}`}>
             {language === 'ar' ? 'تصفية النتائج' : 'Filter Results'}
           </Text>
-          <TouchableOpacity onPress={() => setShowFilters(false)}>
-            <Image source={icons.close} className="w-6 h-6" />
+          <TouchableOpacity 
+            onPress={() => setShowFilters(false)}
+            className="p-2 rounded-full bg-gray-50"
+          >
+            <Image source={icons.close} className="w-5 h-5" />
           </TouchableOpacity>
         </View>
 
         {/* Distance Filter */}
-        <View className="mb-4">
-          <Text className={`text-base ${language === 'ar' ? 'font-CairoBold' : 'font-JakartaBold'} mb-2 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+        <View className="mb-6">
+          <Text className={`text-base ${language === 'ar' ? 'font-CairoBold' : 'font-JakartaBold'} mb-3 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
             {language === 'ar' ? 'المسافة (كم)' : 'Distance (km)'}
           </Text>
-          <View className={`flex-row items-center justify-between bg-gray-50 p-2 rounded-xl ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
+          <View className={`flex-row items-center justify-between bg-gray-50 p-3 rounded-xl ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
             <TouchableOpacity
               onPress={() => setFilters(prev => ({ ...prev, distance: Math.max((prev.distance || 0) - 1, MIN_DISTANCE_KM) }))}
               className="bg-primary/10 p-3 rounded-full"
@@ -488,8 +661,8 @@ const Search = () => {
         </View>
 
         {/* Status Filter */}
-        <View className="mb-4">
-          <Text className={`text-base font-CairoBold mb-2 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+        <View className="mb-6">
+          <Text className={`text-base font-CairoBold mb-3 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
             {language === 'ar' ? 'الحالة' : 'Status'}
           </Text>
           <View className="flex-row flex-wrap">
@@ -507,7 +680,7 @@ const Search = () => {
                   }
                   setFilters(prev => ({ ...prev, status: newStatus }))
                 }}
-                className={`px-4 py-2 rounded-full mr-2 mb-2 ${
+                className={`px-4 py-2.5 rounded-full mr-2 mb-2 ${
                   filters.status?.includes(status)
                     ? status === 'all'
                       ? 'bg-orange-500'
@@ -552,31 +725,32 @@ const Search = () => {
         </View>
 
         {/* Date Filter */}
-        <View className="mb-4">
-          <Text className={`text-base font-CairoBold mb-2 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+        <View className="mb-6">
+          <Text className={`text-base font-CairoBold mb-3 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
             {language === 'ar' ? 'التاريخ' : 'Date'}
           </Text>
           <TouchableOpacity
             onPress={() => setShowDatePicker(true)}
-            className="bg-gray-50 p-3 rounded-xl border border-gray-200"
+            className={`bg-gray-50 p-4 rounded-xl border border-gray-200 ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'} items-center justify-between`}
           >
             <Text className={`text-gray-700 font-CairoMedium ${language === 'ar' ? 'text-right' : 'text-left'}`}>
               {filters.date ? filters.date.toLocaleDateString() : language === 'ar' ? 'اختر التاريخ' : 'Select Date'}
             </Text>
+            <Image source={icons.calendar} className="w-5 h-5" tintColor="#6B7280" />
           </TouchableOpacity>
         </View>
 
         {/* Gender Filter */}
-        <View className="mb-4">
-          <Text className={`text-base font-CairoBold mb-2 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+        <View className="mb-6">
+          <Text className={`text-base font-CairoBold mb-3 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
             {language === 'ar' ? 'الجنس' : 'Gender'}
           </Text>
           <View className="flex-row flex-wrap">
             {GENDER_OPTIONS.map((gender) => (
               <TouchableOpacity
                 key={gender}
-                onPress={() => setFilters(prev => ({ ...prev, gender }))}
-                className={`px-4 py-2 rounded-full mr-2 mb-2 ${
+                onPress={() => handleGenderFilter(gender)}
+                className={`px-4 py-2.5 rounded-full mr-2 mb-2 ${
                   filters.gender === gender
                     ? gender === 'any'
                       ? 'bg-orange-500'
@@ -610,52 +784,6 @@ const Search = () => {
           </View>
         </View>
 
-        {/* Recurring Filter */}
-        <View className="mb-4">
-          <Text className={`text-base font-CairoBold mb-2 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
-            {language === 'ar' ? 'تكرار الرحلة' : 'Recurring'}
-          </Text>
-          <View className="flex-row flex-wrap">
-            {RECURRING_OPTIONS.map((option) => (
-              <TouchableOpacity
-                key={option}
-                onPress={() => setFilters(prev => ({ ...prev, recurring: option as 'all' | 'recurring' | 'nonrecurring' }))}
-                className={`px-4 py-2 rounded-full mr-2 mb-2 ${
-                  filters.recurring === option
-                    ? option === 'all'
-                      ? 'bg-orange-500'
-                      : option === 'recurring'
-                      ? 'bg-blue-100'
-                      : 'bg-gray-200'
-                    : 'bg-gray-50'
-                }`}
-              >
-                <Text className={`font-CairoBold ${
-                  filters.recurring === option
-                    ? option === 'all'
-                      ? 'text-white'
-                      : option === 'recurring'
-                      ? 'text-blue-700'
-                      : 'text-gray-700'
-                    : 'text-gray-600'
-                }`}>
-                  {language === 'ar'
-                    ? option === 'all'
-                      ? 'الكل'
-                      : option === 'recurring'
-                      ? 'متكررة'
-                      : 'غير متكررة'
-                    : option === 'all'
-                    ? 'All'
-                    : option === 'recurring'
-                    ? 'Recurring'
-                    : 'Non-Recurring'}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
         {/* Apply Filters Button */}
         <View className={`flex-row space-x-3 mt-4 ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
           <TouchableOpacity
@@ -670,7 +798,7 @@ const Search = () => {
                 status: [],
                 date: null,
                 gender: 'any',
-                recurring: 'all' as 'all',
+                // recurring: 'all' as 'all',
               })
             }}
             className="flex-1 bg-red-50 py-4 rounded-xl border border-red-200"
@@ -784,13 +912,13 @@ const Search = () => {
                   <Text className={`text-sm text-gray-500 ${language === 'ar' ? 'font-CairoMedium' : 'font-JakartaMedium'} ${language === 'ar' ? 'ml-2' : 'mr-2'}`}>
                     {language === 'ar' ? 'من' : 'From'}:
                   </Text>
-                  <Text className={`text-base ${language === 'ar' ? 'font-CairoMedium' : 'font-JakartaMedium'} flex-1 ${language === 'ar' ? 'text-right' : 'text-left'}`} numberOfLines={1}>
+                  <Text className={`text-base ${language === 'ar' ? 'font-CairoMedium mt-2' : 'font-CairoMedium mt-2'} flex-1 ${language === 'ar' ? 'text-right' : 'text-left'}`} numberOfLines={1}>
                     {item.origin}
                   </Text>
                 </View>
 
                 {item.waypoints && item.waypoints.length > 0 && (
-                  <View className="mt-2 mb-2">
+                  <View className="mt-2 mb-2 ">
                      <View className={`flex-row items-center mb-2 ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
                         <Image source={icons.map} resizeMode="contain" tintColor="#F79824" className={`w-5 h-5 ${language === 'ar' ? 'ml-2' : 'mr-2'}`} />
                         <Text className={`text-sm text-gray-500 ${language === 'ar' ? 'font-CairoMedium' : 'font-JakartaMedium'} ${language === 'ar' ? 'ml-2' : 'mr-2'}`}>
@@ -800,10 +928,10 @@ const Search = () => {
                     <View className={`flex-row flex-wrap ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
                       {item.waypoints.map((waypoint, index) => (
                         <View key={index} className={`flex-row items-center ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
-                          <Text className={`text-base ${language === 'ar' ? 'font-CairoMedium' : 'font-JakartaMedium'} ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+                          <Text className={`text-base ${language === 'ar' ? 'font-CairoMedium' : 'font-CairoMedium'} ${language === 'ar' ? 'text-right' : 'text-left'}`}>
                             {waypoint.address}
                           </Text>
-                          {index < item.waypoints.length - 1 && (
+                          {index < item.waypoints!.length - 1 && (
                             <View className={`mx-1 ${language === 'ar' ? 'transform rotate-180' : ''}`}>
                               <MaterialIcons name="arrow-forward" size={18} color="#F79824" />
                             </View>
@@ -819,7 +947,7 @@ const Search = () => {
                   <Text className={`text-sm text-gray-500 ${language === 'ar' ? 'font-CairoMedium' : 'font-JakartaMedium'} ${language === 'ar' ? 'ml-2' : 'mr-2'}`}>
                     {language === 'ar' ? 'إلى' : 'To'}:
                   </Text>
-                  <Text className={`text-base ${language === 'ar' ? 'font-CairoMedium' : 'font-JakartaMedium'} flex-1 ${language === 'ar' ? 'text-right' : 'text-left'}`} numberOfLines={1}>
+                  <Text className={`text-base ${language === 'ar' ? 'font-CairoMedium mt-2' : 'font-CairoMedium mt-2'} flex-1 ${language === 'ar' ? 'text-right' : 'text-left'}`} numberOfLines={1}>
                     {item.destination}
                   </Text>
                 </View>
@@ -1056,6 +1184,23 @@ const Search = () => {
             <Image source={icons.filter} className="w-6 h-6" tintColor="#6B7280" />
           </TouchableOpacity>
         </View>
+
+        {/* Date Filter Buttons */}
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false}
+          className="mt-4"
+        >
+          <View className="flex-row">
+            {renderFilterButton(FILTERS.ALL, language === 'ar' ? 'الكل' : 'All')}
+            {renderFilterButton(FILTERS.TODAY, language === 'ar' ? 'اليوم' : 'Today')}
+            {renderFilterButton(FILTERS.TOMORROW, language === 'ar' ? 'غداً' : 'Tomorrow')}
+            {renderFilterButton(FILTERS.DAY_AFTER_TOMORROW, getFormattedDate(2))}
+            {renderFilterButton(FILTERS.DAY_3, getFormattedDate(3))}
+            {renderFilterButton(FILTERS.DAY_4, getFormattedDate(4))}
+            {renderFilterButton(FILTERS.DAY_5, getFormattedDate(5))}
+          </View>
+        </ScrollView>
       </View>
 
       <View className="flex-1 px-4">
