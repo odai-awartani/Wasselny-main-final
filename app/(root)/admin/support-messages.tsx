@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Alert, ActivityIndicator, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter, Stack } from 'expo-router';
@@ -20,19 +20,22 @@ interface SupportMessage {
   status: 'pending' | 'in_progress' | 'resolved';
 }
 
-const SkeletonMessageCard = () => (
-  <View className="bg-gray-50 rounded-xl p-4 mb-4">
-    <View className="flex-row justify-between items-start mb-2">
-      <View className="h-6 w-32 bg-gray-200 rounded" />
-      <View className="h-6 w-24 bg-gray-200 rounded-full" />
+const SkeletonMessageCard = ({ language }: { language: string }) => {
+  const isRTL = language === 'ar';
+  return (
+    <View className="bg-gray-50 rounded-xl p-4 mb-4 shadow-sm border border-gray-100">
+      <View className={`flex-row justify-between items-start mb-2 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+        <View className={`h-6 w-32 bg-gray-200 rounded ${isRTL ? 'self-end' : 'self-start'}`} />
+        <View className="h-6 w-24 bg-gray-200 rounded-full" />
+      </View>
+      <View className={`h-4 w-48 bg-gray-200 rounded mb-2 ${isRTL ? 'self-end' : 'self-start'}`} />
+      <View className={`h-20 bg-gray-200 rounded mb-4 ${isRTL ? 'self-end' : 'self-start'}`} />
+      <View className={`flex-row justify-end ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+        <View className="h-8 w-32 bg-gray-200 rounded-md" />
+      </View>
     </View>
-    <View className="h-4 w-48 bg-gray-200 rounded mb-2" />
-    <View className="h-20 bg-gray-200 rounded mb-4" />
-    <View className="flex-row justify-end">
-      <View className="h-8 w-32 bg-gray-200 rounded-md" />
-    </View>
-  </View>
-);
+  );
+};
 
 export default function SupportMessages() {
   const router = useRouter();
@@ -143,18 +146,28 @@ export default function SupportMessages() {
         <Header showProfileImage={false} showSideMenu={false} title={language === 'ar' ? 'رسائل الدعم' : 'Support Messages'} />
         {loading ? (
           <ScrollView className="flex-1" contentContainerStyle={{ padding: 16 }}>
-            <SkeletonMessageCard />
-            <SkeletonMessageCard />
-            <SkeletonMessageCard />
-            <SkeletonMessageCard />
-            <SkeletonMessageCard />
+            <SkeletonMessageCard language={language} />
+            <SkeletonMessageCard language={language} />
+            <SkeletonMessageCard language={language} />
+            <SkeletonMessageCard language={language} />
+            <SkeletonMessageCard language={language} />
           </ScrollView>
         ) : (
           <ScrollView className="flex-1" contentContainerStyle={{ padding: 16 }}>
             {messages.map((message) => (
-              <View key={message.id} className="bg-gray-50 rounded-xl p-4 mb-4">
-                <View className="flex-row justify-between items-start mb-2">
-                  <Text className={`font-bold ${language === 'ar' ? 'font-CairoBold' : 'font-JakartaBold'}`}>
+              <View 
+                key={message.id}
+                className="bg-white rounded-xl p-4 mb-4 border border-gray-100"
+                style={{
+                  elevation: Platform.OS === "android" ? 4 : 0,
+                  shadowColor: "#000",
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.1,
+                  shadowRadius: 3,
+                }}
+              >
+                <View className={`flex-row justify-between items-start mb-2 ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
+                  <Text className={`font-bold ${language === 'ar' ? 'font-CairoBold text-right' : 'font-JakartaBold text-left'}`}>
                     {message.userName}
                   </Text>
                   <View className={`px-2 py-1 rounded-full ${getStatusColor(message.status)}`}>
@@ -163,17 +176,17 @@ export default function SupportMessages() {
                     </Text>
                   </View>
                 </View>
-                <Text className={`text-gray-600 mb-2 ${language === 'ar' ? 'font-CairoRegular' : 'font-JakartaRegular'}`}>
+                <Text className={`text-gray-600 mb-2 ${language === 'ar' ? 'font-CairoRegular text-right' : 'font-JakartaRegular text-left'}`}>
                   {message.userEmail}
                 </Text>
-                <Text className={`text-gray-800 mb-4 ${language === 'ar' ? 'font-CairoRegular' : 'font-JakartaRegular'}`}>
+                <Text className={`text-gray-800 mb-4 ${language === 'ar' ? 'font-CairoRegular text-right' : 'font-JakartaRegular text-left'}`}>
                   {message.message}
                 </Text>
-                <View className="flex-row justify-end space-x-2">
+                <View className={`flex-row justify-end space-x-2 ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
                   {message.status === 'pending' && (
                     <TouchableOpacity
                       onPress={() => handleUpdateStatus(message.id, 'in_progress')}
-                      className="bg-blue-500 px-3 py-1 rounded-md"
+                      className={`bg-blue-500 px-3 py-1 rounded-md ${language === 'ar' ? 'ml-2' : 'mr-2'}`}
                     >
                       <Text className="text-white text-sm">
                         {language === 'ar' ? 'بدء المعالجة' : 'Start Processing'}
@@ -183,7 +196,7 @@ export default function SupportMessages() {
                   {message.status === 'in_progress' && (
                     <TouchableOpacity
                       onPress={() => handleUpdateStatus(message.id, 'resolved')}
-                      className="bg-green-500 px-3 py-1 rounded-md"
+                      className={`bg-green-500 px-3 py-1 rounded-md ${language === 'ar' ? 'mr-2' : 'ml-2'}`}
                     >
                       <Text className="text-white text-sm">
                         {language === 'ar' ? 'تم الحل' : 'Mark Resolved'}
