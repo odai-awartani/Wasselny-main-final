@@ -582,44 +582,46 @@ export const sendRideRequestNotification = async (
 // Send location sharing notification (New Function)
 export const sendLocationShareNotification = async (
   recipientId: string,
-  sharerName: string
+  sharerName: string,
+  isRTL: boolean
 ): Promise<boolean> => {
   try {
-    const recipientPushToken = await getUserPushToken(recipientId);
+    const title = isRTL ? 'تمت مشاركة الموقع' : 'Location Shared';
+    const body = isRTL 
+      ? `${sharerName} شارك معك موقعه`
+      : `${sharerName} is sharing their location with you. Check it out!`;
 
-    if (!recipientPushToken) {
-      console.log(`No push token found for recipient ${recipientId}`);
-      return false;
-    }
+    // Use scheduleNotification to send the push notification
+    const notificationId = await scheduleNotification(
+      title,
+      body,
+      new Date(), // Trigger immediately
+      undefined, // No rideId associated with location share
+      recipientId // Target user
+    );
 
-    const message = {
-      to: recipientPushToken,
-      sound: 'default',
-      title: 'Location Shared', // Consider adding language context if needed
-      body: `${sharerName} has shared their location with you. Check it out!`,
-      data: { type: 'location_share' }, // Add any relevant data for navigation/handling
-      priority: 'high',
-    };
-
-    const response = await fetch('https://exp.host/--/api/v2/push/send', {
-      method: 'POST',
-      headers: {
-        'Accept': 'application/json',
-        'Accept-encoding': 'gzip, deflate',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(message),
-    });
-
-    const responseData = await response.json();
-
-    if (responseData.data && responseData.data[0]?.status === 'ok') {
-      console.log(`Location share notification sent to ${recipientId}`);
+    if (notificationId) {
+      // Save notification record to database
+      await saveNotificationToDB({
+        user_id: recipientId,
+        type: 'chat', // Using 'chat' type for now, consider adding 'location_share' type
+        title,
+        message: body,
+        notification_id: notificationId,
+        read: false,
+        data: {
+          type: 'location_share',
+          recipientId: recipientId,
+          sharerId: sharerName // Using name for simplicity, ideally use sharer's actual ID
+        }
+      });
+      console.log(`Location share notification sent and logged for recipient: ${recipientId}`);
       return true;
     } else {
-      console.error(`Failed to send location share notification to ${recipientId}:`, responseData);
+      console.error(`Failed to send or log location share notification for recipient: ${recipientId}`);
       return false;
     }
+
   } catch (error) {
     console.error('Error sending location share notification:', error);
     return false;

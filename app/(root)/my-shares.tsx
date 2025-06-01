@@ -383,7 +383,7 @@ export default function MySharesPage() {
       });
       
       // Send location share notification using the centralized function
-      await sendLocationShareNotification(selectedUser.id, user?.fullName || (isRTL ? 'مستخدم' : 'A user'));
+      await sendLocationShareNotification(selectedUser.id, user?.fullName || (isRTL ? 'مستخدم' : 'A user'), isRTL);
       
       // Close modal and show success
       setActiveModal('none');
