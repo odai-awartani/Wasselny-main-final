@@ -1314,20 +1314,27 @@ const RideDetails = () => {
             {allPassengers.map((passenger) => (
               <View key={passenger.id} className={`flex-row p-3 border-b border-gray-100 ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
                 <View className="w-[40%] min-h-[40px] px-3 flex justify-center">
-                  <View className="flex-row items-center space-x-1">
+                  <View className={`flex-row items-center ${language === 'ar' ? 'flex-row' : 'flex-row-reverse'}`}>
                     <Image
                       source={icons.person}
-                      style={{ width: 24, height: 24, marginRight: 4 }}
+                      style={{
+                        width: 24,
+                        height: 24,
+                        marginLeft: language === 'ar' ? 0 : 4,
+                        marginRight: language === 'ar' ? 4 : 0
+                      }}
                       tintColor="#10B981"
                     />
-                    <Text 
-                      className={`text-gray-700 font-CairoRegular flex-1 ${language === 'ar' ? 'text-right' : 'text-left'}`}
-                      numberOfLines={1}
-                      adjustsFontSizeToFit
-                      minimumFontScale={0.7}
-                    >
-                      {passengerNames[passenger.user_id] || (language === 'ar' ? 'الراكب' : 'Passenger')}
-                    </Text>
+                    <View className="flex-1">
+                      <Text 
+                        className={`text-gray-700 font-CairoRegular ${language === 'ar' ? 'text-right' : 'text-left'}`}
+                        numberOfLines={2}
+                        adjustsFontSizeToFit
+                        minimumFontScale={0.7}
+                      >
+                        {passengerNames[passenger.user_id] || (language === 'ar' ? 'الراكب' : 'Passenger')}
+                      </Text>
+                    </View>
                   </View>
                 </View>
                 <View className="w-[25%] min-h-[40px] px-3 flex items-center justify-center">
@@ -1343,7 +1350,7 @@ const RideDetails = () => {
                 <View className="w-[35%] min-h-[40px] px-3 flex justify-center">
                   <Text 
                     className={`text-gray-700 font-CairoRegular ${language === 'ar' ? 'text-right' : 'text-left'}`}
-                    numberOfLines={1}
+                    numberOfLines={2}
                     adjustsFontSizeToFit
                     minimumFontScale={0.7}
                   >
