@@ -250,7 +250,7 @@ export default function SideMenu(props: DrawerContentComponentProps) {
             <MaterialIcons name="location-searching" size={22} color="#fff" />
           </View>
           <Text className={`text-base font-CairoBold text-gray-800 ${isRTL ? 'text-right' : 'text-left'}`}>
-            {language === 'ar' ? 'تتبع الرحلات' : 'Track Rides'}
+            {language === 'ar' ? 'تتبع رحلاتي' : 'Track Rides'}
           </Text>
         </TouchableOpacity>
 
@@ -266,7 +266,7 @@ export default function SideMenu(props: DrawerContentComponentProps) {
               <MaterialIcons name="qr-code-scanner" size={22} color="#fff" />
             </View>
             <Text className={`text-base font-CairoBold text-gray-800 ${isRTL ? 'text-right' : 'text-left'}`}>
-              {language === 'ar' ? ' مشاركة الموقع' : 'Share Location'}
+              {language === 'ar' ? 'إرسال موقعي' : 'Share My Location'}
             </Text>
           </TouchableOpacity>
 
@@ -284,7 +284,7 @@ export default function SideMenu(props: DrawerContentComponentProps) {
               <MaterialIcons name="add-circle" size={22} color="#fff" />
           </View>
             <Text className={`text-base font-CairoBold text-gray-800 ${isRTL ? 'text-right' : 'text-left'}`}>
-              {language === 'ar' ? 'إنشاء رحلة' : 'Create Ride'}
+              {language === 'ar' ? 'ابدأ رحلة' : 'Create Ride'}
           </Text>
         </TouchableOpacity>
         )}
