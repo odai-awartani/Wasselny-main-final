@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator, FlatList, Alert, Image, TextInput, Animated, StyleSheet, Platform, RefreshControl } from 'react-native';
+import { View, Text, TouchableOpacity, ActivityIndicator, FlatList, Alert, Image, TextInput, Animated, StyleSheet, Platform, RefreshControl, Modal } from 'react-native';
 import { useUser } from '@clerk/clerk-expo';
 import { collection, query, where, onSnapshot, doc, getDoc, updateDoc, addDoc, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -12,6 +12,7 @@ import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import Header from '@/components/Header';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { sendLocationShareNotification } from '@/lib/notifications';
 
 interface Share {
   recipient_id: string;
@@ -35,6 +36,147 @@ interface AppUser {
   profile_image?: string;
 }
 
+interface CustomAlertProps {
+  visible: boolean;
+  title: string;
+  message: string;
+  onConfirm: () => void;
+  onCancel?: () => void;
+  confirmText?: string;
+  cancelText?: string;
+  type?: 'success' | 'error' | 'warning' | 'info';
+}
+
+const CustomAlert = ({ 
+  visible, 
+  title, 
+  message, 
+  onConfirm, 
+  onCancel, 
+  confirmText = 'OK',
+  cancelText = 'Cancel',
+  type = 'info'
+}: CustomAlertProps) => {
+  const scaleAnim = React.useRef(new Animated.Value(0)).current;
+  const opacityAnim = React.useRef(new Animated.Value(0)).current;
+
+  React.useEffect(() => {
+    if (visible) {
+      Animated.parallel([
+        Animated.spring(scaleAnim, {
+          toValue: 1,
+          useNativeDriver: true,
+          tension: 50,
+          friction: 7
+        }),
+        Animated.timing(opacityAnim, {
+          toValue: 1,
+          duration: 200,
+          useNativeDriver: true
+        })
+      ]).start();
+    } else {
+      Animated.parallel([
+        Animated.spring(scaleAnim, {
+          toValue: 0,
+          useNativeDriver: true,
+          tension: 50,
+          friction: 7
+        }),
+        Animated.timing(opacityAnim, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true
+        })
+      ]).start();
+    }
+  }, [visible]);
+
+  const getTypeStyles = () => {
+    switch (type) {
+      case 'success':
+        return {
+          icon: 'check-circle',
+          color: '#22c55e',
+          bgColor: '#dcfce7'
+        };
+      case 'error':
+        return {
+          icon: 'error',
+          color: '#ef4444',
+          bgColor: '#fee2e2'
+        };
+      case 'warning':
+        return {
+          icon: 'warning',
+          color: '#f97316',
+          bgColor: '#ffedd5'
+        };
+      default:
+        return {
+          icon: 'info',
+          color: '#3b82f6',
+          bgColor: '#dbeafe'
+        };
+    }
+  };
+
+  const typeStyles = getTypeStyles();
+
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="none"
+      onRequestClose={onCancel}
+    >
+      <View className="flex-1 justify-center items-center bg-black/50">
+        <Animated.View 
+          className="w-[85%] bg-white rounded-2xl overflow-hidden"
+          style={[
+            { transform: [{ scale: scaleAnim }] },
+            { opacity: opacityAnim }
+          ]}
+        >
+          <View className={`p-6 ${typeStyles.bgColor}`}>
+            <View className="items-center mb-4">
+              <MaterialIcons name={typeStyles.icon as any} size={48} color={typeStyles.color} />
+            </View>
+            <Text className="text-xl font-CairoBold text-gray-800 text-center mb-2">
+              {title}
+            </Text>
+            <Text className="text-base text-gray-600 text-center font-CairoRegular">
+              {message}
+            </Text>
+          </View>
+          
+          <View className="flex-row border-t border-gray-200">
+            {onCancel && (
+              <TouchableOpacity
+                onPress={onCancel}
+                className="flex-1 py-4 border-r border-gray-200"
+              >
+                <Text className="text-base text-gray-600 text-center font-CairoMedium">
+                  {cancelText}
+                </Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity
+              onPress={onConfirm}
+              className={`py-4 ${onCancel ? 'flex-1' : 'w-full'}`}
+              style={{ backgroundColor: typeStyles.color }}
+            >
+              <Text className="text-base text-white text-center font-CairoMedium">
+                {confirmText}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </Animated.View>
+      </View>
+    </Modal>
+  );
+};
+
 export default function MySharesPage() {
   const { user } = useUser();
   const { language } = useLanguage();
@@ -53,6 +195,15 @@ export default function MySharesPage() {
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [scrollY] = useState(new Animated.Value(0));
   const [isUpdatingAll, setIsUpdatingAll] = useState(false);
+  const [alertConfig, setAlertConfig] = useState({
+    visible: false,
+    title: '',
+    message: '',
+    type: 'info' as 'success' | 'error' | 'warning' | 'info',
+    onConfirm: () => {},
+    confirmText: undefined as string | undefined,
+    onCancel: undefined as (() => void) | undefined,
+  });
 
   const handleScroll = Animated.event(
     [{ nativeEvent: { contentOffset: { y: scrollY } } }],
@@ -84,7 +235,7 @@ export default function MySharesPage() {
             id: data.recipient_id,
             name: d.name || d.email || 'User',
             email: d.email,
-            profile_image: d.profile_image,
+            profile_image: d.profile_image_url,
           };
         }
         s.push({ ...data, recipient, docId: docSnap.id });
@@ -179,7 +330,21 @@ export default function MySharesPage() {
     try {
       setStoppingShares(prev => ({ ...prev, [docId]: true }));
       await updateDoc(doc(db, 'location_sharing', docId), { is_active: false });
-      Alert.alert('Stopped', 'Location sharing stopped.');
+
+      // Find the share object to get the recipient's name
+      const stoppedShare = shares.find(share => share.docId === docId);
+      const recipientName = stoppedShare?.recipient?.name || (isRTL ? 'المستخدم' : 'the user');
+
+      // Use custom alert for stop sharing success message
+      setAlertConfig({
+        visible: true,
+        title: isRTL ? 'تم الإيقاف' : 'Stopped',
+        message: isRTL ? `تم إيقاف مشاركة الموقع مع ${recipientName}` : 'Location sharing stopped.',
+        type: 'warning', // Use warning type for orange theme
+        onConfirm: () => setAlertConfig({ ...alertConfig, visible: false }), // Close alert on confirm
+        confirmText: isRTL ? 'حسنا' : 'OK',
+        onCancel: undefined, // No cancel button
+      });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (e) {
       Alert.alert('Error', 'Could not stop sharing.');
@@ -217,16 +382,25 @@ export default function MySharesPage() {
         is_active: true
       });
       
+      // Send location share notification using the centralized function
+      await sendLocationShareNotification(selectedUser.id, user?.fullName || (isRTL ? 'مستخدم' : 'A user'));
+      
       // Close modal and show success
       setActiveModal('none');
       setSelectedUser(null);
       setSearchQuery('');
       setFilteredUsers(appUsers);
       
-      Alert.alert(
-        isRTL ? 'تم بدء المشاركة' : 'Sharing Started',
-        isRTL ? `أنت الآن تشارك موقعك مع ${selectedUser.name}` : `You are now sharing your location with ${selectedUser.name}`
-      );
+      // Use custom alert for success message
+      setAlertConfig({
+        visible: true,
+        title: isRTL ? 'تم بدء المشاركة' : 'Sharing Started',
+        message: isRTL ? `أنت الآن تشارك موقعك مع ${selectedUser.name}` : `You are now sharing your location with ${selectedUser.name}`,
+        type: 'warning', // Use the warning type for orange theme
+        onConfirm: () => setAlertConfig({ ...alertConfig, visible: false }), // Close alert on confirm
+        confirmText: isRTL ? 'حسنا' : 'OK',
+        onCancel: undefined, // No cancel button
+      });
       
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (error) {
@@ -263,7 +437,7 @@ export default function MySharesPage() {
             id: data.recipient_id,
             name: d.name || d.email || 'User',
             email: d.email,
-            profile_image: d.profile_image,
+            profile_image: d.profile_image_url,
           };
         }
         s.push({ ...data, recipient, docId: docSnap.id });
@@ -309,10 +483,16 @@ export default function MySharesPage() {
       await Promise.all(updatePromises);
       
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert(
-        isRTL ? 'تم التحديث' : 'Updated',
-        isRTL ? 'تم تحديث موقعك لجميع المستخدمين' : 'Your location has been updated for all users'
-      );
+      // Use custom alert for update success message
+      setAlertConfig({
+        visible: true,
+        title: isRTL ? 'تم التحديث' : 'Updated',
+        message: isRTL ? 'تم تحديث موقعك لجميع المستخدمين' : 'Your location has been updated for all users',
+        type: 'warning', // Use warning type for orange theme
+        onConfirm: () => setAlertConfig({ ...alertConfig, visible: false }), // Close alert on confirm
+        confirmText: isRTL ? 'حسنا' : 'OK',
+        onCancel: undefined, // No cancel button
+      });
     } catch (error) {
       console.error('Error updating all locations:', error);
       Alert.alert(
@@ -322,154 +502,6 @@ export default function MySharesPage() {
     } finally {
       setIsUpdatingAll(false);
     }
-  };
-
-  // Render search modal
-  const renderSearchModal = () => {
-    if (activeModal !== 'search') return null;
-    
-    return (
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>
-              {isRTL ? 'مشاركة الموقع مع' : 'Share Location With'}
-            </Text>
-            <TouchableOpacity 
-              onPress={() => {
-                setActiveModal('none');
-                setSearchQuery('');
-                setSelectedUser(null);
-              }}
-              style={styles.closeButton}
-            >
-              <AntDesign name="close" size={24} color="#374151" />
-            </TouchableOpacity>
-          </View>
-          
-          <View style={styles.searchContainer}>
-            <AntDesign name="search1" size={20} color="#9ca3af" />
-            <TextInput
-              style={styles.searchInput}
-              placeholder={isRTL ? "بحث عن مستخدم..." : "Search user..."}
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              placeholderTextColor="#9ca3af"
-            />
-            {searchQuery.length > 0 && (
-              <TouchableOpacity 
-                onPress={() => setSearchQuery('')}
-                style={styles.clearButton}
-              >
-                <AntDesign name="close" size={16} color="#9ca3af" />
-              </TouchableOpacity>
-            )}
-          </View>
-          
-          {isSearchLoading ? (
-            <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#f97316" />
-              <Text style={styles.loadingText}>
-                {isRTL ? 'جاري تحميل المستخدمين...' : 'Loading users...'}
-              </Text>
-            </View>
-          ) : (
-            <FlatList
-              data={filteredUsers}
-              renderItem={({ item }) => (
-                <TouchableOpacity 
-                  style={[
-                    styles.userItem,
-                    selectedUser?.id === item.id ? styles.selectedUserItem : null
-                  ]}
-                  onPress={() => {
-                    setSelectedUser(item);
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  }}
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.userAvatar}>
-                    {item.profile_image ? (
-                      <Image 
-                        source={{ uri: item.profile_image }} 
-                        style={styles.avatarImage}
-                      />
-                    ) : (
-                      <Text style={styles.avatarText}>
-                        {(item.name?.charAt(0) || item.email?.charAt(0) || '?').toUpperCase()}
-                      </Text>
-                    )}
-                  </View>
-                  <View style={styles.userInfo}>
-                    <Text style={styles.userName}>
-                      {item.name || 'User'}
-                    </Text>
-                    <Text style={styles.userEmail}>
-                      {item.email}
-                    </Text>
-                  </View>
-                  {selectedUser?.id === item.id && (
-                    <MaterialIcons name="check-circle" size={24} color="#f97316" />
-                  )}
-                </TouchableOpacity>
-              )}
-              keyExtractor={(item) => item.id}
-              ListEmptyComponent={
-                <View style={styles.emptyListContainer}>
-                  <Text style={styles.emptyListText}>
-                    {isRTL ? 'لم يتم العثور على مستخدمين' : 'No users found'}
-                  </Text>
-                </View>
-              }
-              contentContainerStyle={styles.usersList}
-            />
-          )}
-
-          <View style={styles.actionButtons}>
-            <TouchableOpacity 
-              style={[
-                styles.actionButton,
-                styles.cancelButton
-              ]}
-              onPress={() => {
-                setActiveModal('none');
-                setSearchQuery('');
-                setSelectedUser(null);
-              }}
-            >
-              <Text style={styles.cancelButtonText}>
-                {isRTL ? 'إلغاء' : 'Cancel'}
-              </Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={[
-                styles.actionButton,
-                selectedUser ? styles.confirmButton : styles.disabledButton
-              ]}
-              onPress={() => {
-                if (selectedUser) {
-                  startLocationSharing();
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                }
-              }}
-              disabled={!selectedUser || isRefreshing}
-            >
-              {isRefreshing ? (
-                <ActivityIndicator color="white" size="small" />
-              ) : (
-                <Text style={[
-                  styles.confirmButtonText,
-                  !selectedUser && styles.disabledButtonText
-                ]}>
-                  {isRTL ? 'بدء المشاركة' : 'Start Sharing'}
-                </Text>
-              )}
-            </TouchableOpacity>
-          </View>
-        </View>
-      </View>
-    );
   };
 
   // Skeleton loading component
@@ -490,6 +522,15 @@ export default function MySharesPage() {
   if (isInitialLoading) {
     return (
       <SafeAreaView className="flex-1 bg-gray-50">
+        <CustomAlert 
+          visible={alertConfig.visible}
+          title={alertConfig.title}
+          message={alertConfig.message}
+          type={alertConfig.type}
+          onConfirm={alertConfig.onConfirm}
+          confirmText={alertConfig.confirmText}
+          onCancel={alertConfig.onCancel}
+        />
         <Header title={language === 'ar' ? 'مشاركاتي' : 'My Shares'} showSideMenu={false} showProfileImage={false} />
         <View className="flex-row justify-between items-center">
           <View className="flex-1 items-center">
@@ -513,6 +554,15 @@ export default function MySharesPage() {
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
+      <CustomAlert 
+        visible={alertConfig.visible}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        type={alertConfig.type}
+        onConfirm={alertConfig.onConfirm}
+        confirmText={alertConfig.confirmText}
+        onCancel={alertConfig.onCancel}
+      />
       <Header title={language === 'ar' ? 'مشاركاتي' : 'My Shares'} showSideMenu={false} showProfileImage={false} />
       <View className="flex-row justify-between items-center">
         <View className="flex-1 items-center">
@@ -581,46 +631,55 @@ export default function MySharesPage() {
         renderItem={({ item }) => (
           <View className="bg-white rounded-2xl p-4 mb-4 shadow-sm">
             <View className="flex-row items-center">
-              <View className="w-14 h-14 rounded-full bg-gray-100 justify-center items-center mr-4 overflow-hidden">
-              {item.recipient.profile_image ? (
-                  <Image source={{ uri: item.recipient.profile_image }} className="w-14 h-14 rounded-full" />
-              ) : (
+              {/* Profile Image or Initial */}
+              <View className="w-14 h-14 rounded-full bg-gray-200 justify-center items-center mr-4 overflow-hidden">
+                {item.recipient.profile_image ? (
+                  <Image 
+                    source={{ uri: item.recipient.profile_image }}
+                    className="w-14 h-14 rounded-full"
+                    resizeMode="cover"
+                  />
+                ) : (
                   <Text className="text-gray-500 font-bold text-xl">
                     {(item.recipient.name?.charAt(0) || '?').toUpperCase()}
-                </Text>
-              )}
-            </View>
-            <View className="flex-1">
-                <Text className="font-bold text-gray-800 text-base font-CairoBold">
-                  {item.recipient.name || item.recipient.email}
-                </Text>
-                <Text className="text-gray-500 text-sm font-CairoRegular">
-                  {item.recipient.email}
-                </Text>
-                <View className="flex-row items-center mt-1">
-                  <MaterialIcons name="access-time" size={14} color="#9ca3af" />
-                  <Text className="text-xs text-gray-400 ml-1 font-CairoRegular">
-                    {isRTL ? 'آخر تحديث: ' : 'Last updated: '}
-                    {new Date(item.last_updated).toLocaleTimeString()}
-                  </Text>
-                </View>
-            </View>
-            <TouchableOpacity
-                className="bg-red-50 px-4 py-2 rounded-xl min-h-[40px] min-w-[80px] items-center justify-center"
-                onPress={() => {
-                  stopSharing(item.docId);
-                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                }}
-                disabled={stoppingShares[item.docId]}
-              >
-                {stoppingShares[item.docId] ? (
-                  <ActivityIndicator size="small" color="#ef4444" />
-                ) : (
-                  <Text className="text-red-500 font-bold font-CairoBold">
-                    {isRTL ? 'إيقاف' : 'Stop'}
                   </Text>
                 )}
-            </TouchableOpacity>
+              </View>
+
+              {/* User Info */}
+              <View className="flex-1">
+                  <Text className="font-bold text-gray-800 text-base font-CairoBold">
+                    {item.recipient.name || item.recipient.email}
+                  </Text>
+                  <Text className="text-gray-500 text-sm font-CairoRegular">
+                    {item.recipient.email}
+                  </Text>
+                  <View className="flex-row items-center mt-1">
+                    <MaterialIcons name="access-time" size={14} color="#9ca3af" />
+                    <Text className="text-xs text-gray-400 ml-1 font-CairoRegular">
+                      {isRTL ? 'آخر تحديث: ' : 'Last updated: '}
+                      {new Date(item.last_updated).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </Text>
+                  </View>
+              </View>
+
+              {/* Stop Button */}
+              <TouchableOpacity
+                  className="bg-red-50 px-4 py-2 rounded-xl min-h-[40px] min-w-[80px] items-center justify-center"
+                  onPress={() => {
+                    stopSharing(item.docId);
+                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                  }}
+                  disabled={stoppingShares[item.docId]}
+                >
+                  {stoppingShares[item.docId] ? (
+                    <ActivityIndicator size="small" color="#ef4444" />
+                  ) : (
+                    <Text className="text-red-500 font-bold font-CairoBold">
+                      {isRTL ? 'إيقاف' : 'Stop'}
+                    </Text>
+                  )}
+              </TouchableOpacity>
             </View>
           </View>
         )}
@@ -658,7 +717,149 @@ export default function MySharesPage() {
       </TouchableOpacity>
 
       {/* Search Modal */}
-      {renderSearchModal()}
+      {activeModal === 'search' && (
+        <View style={styles.modalOverlay}>
+        <View style={styles.modalContent}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>
+              {isRTL ? 'مشاركة الموقع مع' : 'Share Location With'}
+            </Text>
+            <TouchableOpacity 
+              onPress={() => {
+                setActiveModal('none');
+                setSearchQuery('');
+                setSelectedUser(null);
+              }}
+              style={styles.closeButton}
+            >
+              <AntDesign name="close" size={24} color="#374151" />
+            </TouchableOpacity>
+          </View>
+          
+          <View style={styles.searchContainer}>
+            <AntDesign name="search1" size={20} color="#9ca3af" />
+            <TextInput
+              style={styles.searchInput}
+              placeholder={isRTL ? "بحث عن مستخدم..." : "Search user..."}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholderTextColor="#9ca3af"
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity 
+                onPress={() => setSearchQuery('')}
+                style={styles.clearButton}
+              >
+                <AntDesign name="close" size={16} color="#9ca3af" />
+              </TouchableOpacity>
+            )}
+          </View>
+          
+          {isSearchLoading ? (
+            <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#f97316" />
+              <Text style={styles.loadingText}>
+                {isRTL ? 'جاري تحميل المستخدمين...' : 'Loading users...'}
+              </Text>
+            </View>
+          ) : (
+            <FlatList
+              data={filteredUsers}
+              renderItem={({ item }) => (
+                <TouchableOpacity 
+                  style={[
+                    styles.userItem,
+                    selectedUser?.id === item.id ? styles.selectedUserItem : null
+                  ]}
+                  onPress={() => {
+                    setSelectedUser(item);
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  }}
+                  activeOpacity={0.7}
+                >
+                   <View className="w-14 h-14 rounded-full bg-gray-100 justify-center items-center mr-4 overflow-hidden">
+                    {item.profile_image ? (
+                        <Image 
+                          source={{ uri: item.profile_image }}
+                          className="w-14 h-14 rounded-full"
+                          resizeMode="cover"
+                        />
+                      ) : (
+                       <Text className="text-gray-500 font-bold text-xl">
+                          {(item.name?.charAt(0) || item.email?.charAt(0) || '?').toUpperCase()}
+                        </Text>
+                      )}
+                    </View>
+                   <View className="flex-1">
+                       <Text className="font-bold text-gray-800 text-base font-CairoBold">
+                          {item.name || 'User'}
+                        </Text>
+                       <Text className="text-gray-500 text-sm font-CairoRegular">
+                          {item.email}
+                       </Text>
+                    </View>
+                    {selectedUser?.id === item.id && (
+                     <MaterialIcons name="check-circle" size={24} color="#f97316" />
+                   )}
+                 </TouchableOpacity>
+              )}
+              keyExtractor={(item) => item.id}
+              ListEmptyComponent={
+                <View style={styles.emptyListContainer}>
+                  <Text style={styles.emptyListText}>
+                    {isRTL ? 'لم يتم العثور على مستخدمين' : 'No users found'}
+                  </Text>
+                </View>
+              }
+              contentContainerStyle={styles.usersList}
+            />
+          )}
+
+          <View style={styles.actionButtons}>
+            <TouchableOpacity 
+              style={[
+                styles.actionButton,
+                styles.cancelButton
+              ]}
+              onPress={() => {
+                setActiveModal('none');
+                setSearchQuery('');
+                setSelectedUser(null);
+              }}
+            >
+              <Text style={styles.cancelButtonText}>
+                {isRTL ? 'إلغاء' : 'Cancel'}
+              </Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={[
+                styles.actionButton,
+                selectedUser ? styles.confirmButton : styles.disabledButton
+              ]}
+              onPress={() => {
+                if (selectedUser) {
+                  startLocationSharing();
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                }
+              }}
+              disabled={!selectedUser || isRefreshing}
+            >
+              {isRefreshing ? (
+                <ActivityIndicator color="white" size="small" />
+              ) : (
+                <Text style={[
+                  styles.confirmButtonText,
+                  !selectedUser && styles.disabledButtonText
+                ]}>
+                  {isRTL ? 'بدء المشاركة' : 'Start Sharing'}
+                </Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+      )}
     </SafeAreaView>
   );
 }
