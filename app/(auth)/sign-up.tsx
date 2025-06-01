@@ -11,6 +11,7 @@ import ReactNativeModal from 'react-native-modal'
 import { collection, addDoc, doc, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { StatusBar } from 'expo-status-bar';
+import CustomErrorModal from '@/components/CustomErrorModal';
 
 
 const SignUp = () => {
@@ -19,6 +20,8 @@ const SignUp = () => {
   const [showSuccessModal, setShowSuccessModal] = useState(false); // حالة لعرض نافذة النجاح
   const [isAgreed, setIsAgreed] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [showCustomErrorModal, setShowCustomErrorModal] = useState(false);
+  const [customErrorMessage, setCustomErrorMessage] = useState('');
   const [form, setForm] = useState({
     phoneNumber: '',
     name: '',
@@ -71,33 +74,53 @@ const industryMap = new Map([
   const onSignUpPress = async () => {
     if (!isLoaded) return;
     if (!isAgreed) {
-      Alert.alert(t.error, t.agreeToTermsAlert);
+      // Alert.alert(t.error, t.agreeToTermsAlert);
+      setCustomErrorMessage(t.agreeToTermsAlert);
+      setShowCustomErrorModal(true);
       return;
     }
     
     
     if (!form.email || !form.password || !form.confirmPassword || !form.name || !form.phoneNumber || !form.gender || !form.workIndustry) {
-      Alert.alert(t.error, t.fillAllFields);
+      // Alert.alert(t.error, t.fillAllFields);
+      setCustomErrorMessage(t.fillAllFields);
+      setShowCustomErrorModal(true);
+      return;
+    }
+
+    // Check phone number length (must be exactly 9 digits)
+    if (form.phoneNumber.length !== 9) {
+      const phoneNumberLengthError = language === 'ar'
+        ? 'يجب أن يتكون رقم الهاتف من 9 أرقام بالضبط.'
+        : 'Phone number must be exactly 9 digits.';
+      setCustomErrorMessage(phoneNumberLengthError);
+      setShowCustomErrorModal(true);
       return;
     }
 
     // Check if passwords match
     if (form.password !== form.confirmPassword) {
-      Alert.alert(
-        t.error,
-        language === 'ar' ? 'كلمات المرور غير متطابقة' : 'Passwords do not match'
-      );
+      // Alert.alert(
+      //   t.error,
+      //   language === 'ar' ? 'كلمات المرور غير متطابقة' : 'Passwords do not match'
+      // );
+      setCustomErrorMessage(language === 'ar' ? 'كلمات المرور غير متطابقة' : 'Passwords do not match');
+      setShowCustomErrorModal(true);
       return;
     }
 
     // Check password strength (at least 8 characters, including numbers and letters)
     if (form.password.length < 8 || !/[A-Za-z]/.test(form.password) || !/[0-9]/.test(form.password)) {
-      Alert.alert(
-        t.error,
-        language === 'ar'
-          ? 'يجب أن تتكون كلمة المرور من 8 أحرف على الأقل وتحتوي على أحرف وأرقام'
-          : 'Password must be at least 8 characters long and contain both letters and numbers'
-      );
+      // Alert.alert(
+      //   t.error,
+      //   language === 'ar'
+      //     ? 'يجب أن تتكون كلمة المرور من 8 أحرف على الأقل وتحتوي على أحرف وأرقام'
+      //     : 'Password must be at least 8 characters long and contain both letters and numbers'
+      // );
+      setCustomErrorMessage(language === 'ar'
+        ? 'يجب أن تتكون كلمة المرور من 8 أحرف على الأقل وتحتوي على أحرف وأرقام'
+        : 'Password must be at least 8 characters long and contain both letters and numbers');
+      setShowCustomErrorModal(true);
       return;
     }
     
@@ -135,7 +158,9 @@ const industryMap = new Map([
     } catch (err: any) {
       console.log(JSON.stringify(err, null, 2));
       console.error('Error during sign up:', err);
-      Alert.alert(t.error, err.errors[0].longMessage);
+      // Alert.alert(t.error, err.errors[0].longMessage);
+      setCustomErrorMessage(err.errors[0].longMessage);
+      setShowCustomErrorModal(true);
     } finally {
       setIsLoading(false);
     }
@@ -195,6 +220,9 @@ const industryMap = new Map([
         error: err.errors[0].longMessage,
         state: "failed",
       });
+      // Show custom error modal for verification errors
+      setCustomErrorMessage(err.errors[0].longMessage);
+      setShowCustomErrorModal(true);
     }
   };
   
@@ -217,9 +245,14 @@ const industryMap = new Map([
           {/* حقل رقم الهاتف */}
           <InputField
   label={t.phoneNumber}
-  placeholder=" +972599510287"
+  placeholder=" 599510287"
   value={form.phoneNumber}
-  onChangeText={(text) => setForm({ ...form, phoneNumber: text })}
+  onChangeText={(text) => {
+    const cleanedText = text.replace(/[^0-9]/g, ''); // Remove non-digit characters
+    if (cleanedText.length <= 9) { // Allow typing up to 9 digits
+      setForm({ ...form, phoneNumber: cleanedText });
+    }
+  }}
   keyboardType="phone-pad"
   isPhoneNumber
   labelStyle={language === 'ar' ? 'text-right font-CairoBold text-orange-500' : 'text-left font-JakartaBold text-orange-500'}
@@ -481,6 +514,12 @@ const industryMap = new Map([
   </View>
 </Modal>
 
+{/* Custom Error Modal */}
+<CustomErrorModal
+  visible={showCustomErrorModal}
+  message={customErrorMessage}
+  onClose={() => setShowCustomErrorModal(false)}
+/>
 
       </ScrollView>
       </View>

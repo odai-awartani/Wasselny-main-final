@@ -157,6 +157,7 @@ export default function Rides() {
   const [rideTypeFilter, setRideTypeFilter] = useState<'all' | 'created' | 'registered'>('all');
   const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null);
   const { t, language } = useLanguage();
+  const [allFetchedRides, setAllFetchedRides] = useState<RideWithRequests[]>([]);
 
   // Cache helper functions
   const cacheRidesData = async (data: CachedData) => {
@@ -395,36 +396,75 @@ export default function Rides() {
 
       const allRides = [...driverRides, ...passengerRides];
 
+      console.log('Current time for filtering:', now.toISOString());
+
       const upcoming = allRides.filter((ride) => {
-        if (ride.is_recurring) {
-          console.log(`Recurring ride included: ${ride.id}, ride_datetime: ${ride.ride_datetime}`);
-          return true;
+        console.log(`Processing ride ${ride.id}: ride_datetime=${ride.ride_datetime}, status=${ride.status}`);
+        // A ride is upcoming if its status is NOT completed/finished/ended AND (it is recurring OR its date is in the future)
+        const isCompletedFinishedOrEnded = ride.status === 'completed' || ride.status === 'finished' || ride.status === 'ended';
+
+        console.log(`  Ride ${ride.id}: isCompletedFinishedOrEnded=${isCompletedFinishedOrEnded}, is_recurring=${ride.is_recurring}`);
+
+        if (isCompletedFinishedOrEnded) {
+          console.log(`  Ride ${ride.id}: Status is ${ride.status}, filtering out of upcoming.`);
+          return false; // Completed, finished, or ended rides are never upcoming
         }
+
+        if (ride.is_recurring) {
+          console.log(`  Ride ${ride.id} is recurring, keeping in upcoming.`);
+          return true; // Recurring rides are always upcoming if not completed/finished/ended
+        }
+
         const rideDate = parseRideDateTime(ride.ride_datetime);
         if (!rideDate) {
-          console.log(`Invalid ride_datetime for ride ${ride.id}: ${ride.ride_datetime}`);
+          console.log(`  Ride ${ride.id}: Invalid rideDate from ${ride.ride_datetime}. Filtering out of upcoming.`);
           return false;
         }
-        return rideDate > now;
+
+        const isUpcomingByDate = rideDate > now;
+        console.log(`  Ride ${ride.id}: Parsed date=${rideDate.toISOString()}, isUpcomingByDate=${isUpcomingByDate}`);
+        return isUpcomingByDate;
       });
 
       const past = allRides.filter((ride) => {
-        if (ride.is_recurring) return false;
+        console.log(`Processing ride ${ride.id}: ride_datetime=${ride.ride_datetime}, status=${ride.status}`);
+        const isCompletedFinishedOrEnded = ride.status === 'completed' || ride.status === 'finished' || ride.status === 'ended';
+
+        // A ride is past if its status IS completed/finished/ended OR (it is NOT recurring AND its date is in the past/present)
+        console.log(`  Ride ${ride.id}: isCompletedFinishedOrEnded=${isCompletedFinishedOrEnded}, is_recurring=${ride.is_recurring}`);
+
+        if (isCompletedFinishedOrEnded) {
+          console.log(`  Ride ${ride.id}: Status is ${ride.status}, keeping in past.`);
+          return true; // Completed, finished, or ended rides are always past
+        }
+
+        if (ride.is_recurring) {
+          console.log(`  Ride ${ride.id} is recurring, filtering out of past based on date.`);
+          return false; // Recurring rides are not past based on date alone
+        }
+
         const rideDate = parseRideDateTime(ride.ride_datetime);
-        if (!rideDate) return false;
-        return rideDate <= now;
+         if (!rideDate) {
+            console.log(`  Ride ${ride.id}: Invalid rideDate from ${ride.ride_datetime}. Filtering into past (as status check failed).`);
+           return true; // Treat as past if date is invalid and not completed/finished/ended
+         }
+
+        const isPastByDate = rideDate <= now;
+         console.log(`  Ride ${ride.id}: Parsed date=${rideDate.toISOString()}, isPastByDate=${isPastByDate}`);
+        return isPastByDate;
       });
 
       const pastDriver = past.filter((ride) => ride.driver_id === userId);
       const pastPassenger = past.filter((ride) => ride.driver_id !== userId);
 
-      console.log('Upcoming rides:', upcoming.length, 'Data:', JSON.stringify(upcoming, null, 2));
-      console.log('Past driver rides:', pastDriver.length);
-      console.log('Past passenger rides:', pastPassenger.length);
+      console.log('Filtered Upcoming Rides Count:', upcoming.length);
+      console.log('Filtered Past Driver Rides Count:', pastDriver.length);
+      console.log('Filtered Past Passenger Rides Count:', pastPassenger.length);
 
       setUpcomingRides(upcoming);
       setPastDriverRides(pastDriver);
       setPastPassengerRides(pastPassenger);
+      setAllFetchedRides(allRides);
 
       await cacheRidesData({
         upcomingRides: upcoming,
@@ -569,43 +609,28 @@ export default function Rides() {
 
               {/* Add waypoints display */}
               {item.waypoints && item.waypoints.length > 0 && (
-                item.waypoints.map((waypoint, index) => (
-                  <View key={index} className="flex-row items-center mb-4">
-                    {language === 'ar' ? (
-                      <>
-                        <View className="flex-1">
-                          <Text className="text-base font-CairoMedium text-right" numberOfLines={1}>
-                            {`${t.stop} ${index + 1}: ${waypoint.address}`}
-                          </Text>
-                          {waypoint.street && (
-                            <Text className="text-sm text-gray-500 font-CairoRegular mt-1 text-right" numberOfLines={1}>
-                              {waypoint.street}
-                            </Text>
-                          )}
-                        </View>
-                        <View className="w-8 h-8 rounded-full items-center justify-center ml-3">
-                          <Image source={icons.map} className="w-5 h-5" tintColor="#F79824" />
-                        </View>
-                      </>
-                    ) : (
-                      <>
-                        <View className="w-8 h-8 rounded-full items-center justify-center mr-3">
-                          <Image source={icons.map} className="w-5 h-5" tintColor="#F79824" />
-                        </View>
-                        <View className="flex-1">
-                          <Text className="text-base font-JakartaMedium text-left" numberOfLines={1}>
-                            {`${t.stop} ${index + 1}: ${waypoint.address}`}
-                          </Text>
-                          {waypoint.street && (
-                            <Text className="text-sm text-gray-500 font-JakartaRegular mt-1 text-left" numberOfLines={1}>
-                              {waypoint.street}
-                            </Text>
-                          )}
-                        </View>
-                      </>
-                    )}
+                <View className="mt-2 mb-2">
+                  <View className={`flex-row items-center mb-2 ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
+                    <Image source={icons.map} className={`w-5 h-5 ${language === 'ar' ? 'ml-2' : 'mr-2'}`} tintColor="#F79824" />
+                    <Text className={`text-base text-gray-800 ${language === 'ar' ? 'font-CairoBold' : 'font-JakartaBold'}`}>
+                      {language === 'ar' ? 'نقاط التوقف' : 'Waypoints'}:
+                    </Text>
                   </View>
-                ))
+                  <View className={`flex-row flex-wrap ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
+                    {item.waypoints.map((waypoint, index) => (
+                      <View key={index} className={`flex-row items-center ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
+                        <Text className={`text-base ${language === 'ar' ? 'font-CairoMedium' : 'font-JakartaMedium'} ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+                          {waypoint.address}
+                        </Text>
+                        {index < item.waypoints.length - 1 && (
+                          <View className={`mx-1 ${language === 'ar' ? 'transform rotate-180' : ''}`}>
+                            <MaterialIcons name="arrow-forward" size={18} color="#F79824" />
+                          </View>
+                        )}
+                      </View>
+                    ))}
+                  </View>
+                </View>
               )}
 
               <View className="flex-row items-center mb-4">
@@ -1050,51 +1075,36 @@ export default function Rides() {
         </TouchableOpacity>
       </View>
 
-      {activeTab === 'upcoming' && (
-        <>
-          {renderRideTypeFilter()}
-          {renderStatusFilter()}
-        </>
-      )}
-
-      {loading ? (
-        <View className="flex-1 justify-center items-center">
-          <ActivityIndicator size="large" color="#F87000" />
-        </View>
-      ) : activeTab === 'upcoming' ? (
-        <FlatList
-          data={currentData}
-          renderItem={renderRideCard}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={{ paddingVertical: 16, paddingBottom: 100 }}
-          ListEmptyComponent={renderEmptyState}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#F87000']} tintColor="#F87000" />
-          }
-          initialNumToRender={5}
-          maxToRenderPerBatch={5}
-          windowSize={5}
-          removeClippedSubviews={true}
-          updateCellsBatchingPeriod={50}
-        />
-      ) : (
-        <SectionList
-          sections={pastRidesSections}
-          renderItem={renderRideCard}
-          renderSectionHeader={renderSectionHeader}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={{ paddingVertical: 16, paddingBottom: 100 }}
-          ListEmptyComponent={renderEmptyState}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#F87000']} tintColor="#F87000" />
-          }
-          initialNumToRender={5}
-          maxToRenderPerBatch={5}
-          windowSize={5}
-          removeClippedSubviews={true}
-          updateCellsBatchingPeriod={50}
-        />
-      )}
+      <ScrollView 
+        className="flex-1"
+        contentContainerStyle={{ paddingVertical: 16 }}
+        showsVerticalScrollIndicator={false}
+      >
+        {activeTab === 'upcoming' && (
+          <>
+            {renderStatusFilter()}
+            {renderRideTypeFilter()}
+          </>
+        )}
+        {activeTab === 'past' && (
+          <>
+            {renderSectionHeader({ section: { title: 'الرحلات التي قمت بقيادتها' } })}
+            {renderStatusFilter()}
+            {renderRideTypeFilter()}
+          </>
+        )}
+        {currentData.length > 0 ? (
+          <FlatList
+            data={currentData}
+            keyExtractor={(item) => item.id}
+            renderItem={renderRideCard}
+            contentContainerStyle={{ paddingVertical: 16 }}
+            showsVerticalScrollIndicator={false}
+          />
+        ) : (
+          renderEmptyState()
+        )}
+      </ScrollView>
     </SafeAreaView>
   );
 }

@@ -30,7 +30,7 @@ const GoogleTextInput = ({
     >
       <GooglePlacesAutocomplete
         fetchDetails={true}
-        placeholder="Search"
+        placeholder={placeholder || (language === 'ar' ? 'إلى أين تريد الذهاب؟' : 'Where do you want to go?')}
         debounce={200}
         styles={{
           textInputContainer: {
@@ -47,7 +47,7 @@ const GoogleTextInput = ({
               : "white",
             fontSize: 16,
             fontWeight: "600",
-            fontFamily: language === 'ar' ? 'Cairo-Bold' : 'JakartaBold',
+            fontFamily: 'Cairo-Bold',
             marginTop: 5,
             width: "100%",
             borderRadius: 200,
@@ -92,7 +92,7 @@ const GoogleTextInput = ({
         )}
         textInputProps={{
           placeholderTextColor: "gray",
-          placeholder: initialLocation ?? (language === 'ar' ? 'إلى أين تريد الذهاب؟' : 'Where do you want to go?'),
+          placeholder: placeholder || initialLocation || (language === 'ar' ? 'إلى أين تريد الذهاب؟' : 'Where do you want to go?'),
           underlineColorAndroid: "transparent",
           returnKeyType: returnKeyType,
           autoFocus: autoFocus,
@@ -109,7 +109,7 @@ const GoogleTextInput = ({
         renderRow={(data) => (
           <Text
             style={{
-              fontFamily: language === 'ar' ? 'Cairo-Bold' : 'Jakarta',
+              fontFamily: 'Cairo-Bold',
               fontSize: 12,
               textAlign: language === 'ar' ? 'right' : 'left',
               color: '#222',

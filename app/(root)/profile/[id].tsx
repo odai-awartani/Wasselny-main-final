@@ -1,24 +1,31 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, Image, ScrollView, TouchableOpacity, ActivityIndicator, Linking } from 'react-native';
-import { MaterialCommunityIcons, FontAwesome5, Ionicons } from '@expo/vector-icons';
+import React, { useEffect, useState, useRef } from 'react';
+import { View, Text, Image, ScrollView, TouchableOpacity, ActivityIndicator, Animated, Dimensions, Linking, Modal, I18nManager } from 'react-native';
+import { MaterialCommunityIcons, FontAwesome5, Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { icons } from '@/constants';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useUser } from '@clerk/clerk-expo';
 import { findOrCreateChat } from '@/lib/chat';
+import { useLanguage } from '@/context/LanguageContext';
+import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { formatDistanceToNow } from 'date-fns';
+import { ar, enUS } from 'date-fns/locale';
 
 interface UserProfile {
   name: string;
   profile_image_url: string;
-  gender?: string;
-  phone?: string;
-  email?: string;
+  phone?: string | null;
+  email?: string | null;
+  gender?: string | null;
+  industry?: string | null;
   driver?: {
-    car_type: string;
-    car_seats: number;
-    car_image_url: string;
+    car_type?: string;
+    car_seats?: number;
+    car_image_url?: string;
     rating?: number;
     total_rides?: number;
   };
@@ -49,23 +56,126 @@ interface Ride {
   available_seats: number;
 }
 
+interface ChatUser {
+  id: string;
+  fullName: string;
+  imageUrl: string;
+}
+
 const DEFAULT_PROFILE_IMAGE = 'https://via.placeholder.com/120';
 const DEFAULT_CAR_IMAGE = 'https://via.placeholder.com/200x150';
 
+const { width } = Dimensions.get('window');
+
+const SkeletonLoading = () => {
+  const { language } = useLanguage();
+  const shimmerValue = new Animated.Value(0);
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(shimmerValue, {
+          toValue: 1,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(shimmerValue, {
+          toValue: 0,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+  }, []);
+
+  const opacity = shimmerValue.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.3, 0.7],
+  });
+
+  return (
+    <View className="flex-1 bg-white">
+      <Animated.View style={{ opacity }} className="h-64 bg-gray-200" />
+      <View className={`px-4 -mt-16 ${language === 'ar' ? 'items-end' : 'items-start'}`}>
+        <Animated.View 
+          style={{ opacity }} 
+          className={`h-32 w-32 rounded-full bg-gray-200 border-4 border-white ${language === 'ar' ? 'ml-auto' : 'mr-auto'}`} 
+        />
+        <View className={`mt-4 space-y-4 ${language === 'ar' ? 'items-end' : 'items-start'}`}>
+          <Animated.View 
+            style={{ opacity }} 
+            className={`h-8 bg-gray-200 rounded-lg ${language === 'ar' ? 'w-3/4 ml-auto' : 'w-3/4 mr-auto'}`} 
+          />
+          <Animated.View 
+            style={{ opacity }} 
+            className={`h-6 bg-gray-200 rounded-lg ${language === 'ar' ? 'w-1/2 ml-auto' : 'w-1/2 mr-auto'}`} 
+          />
+          <Animated.View 
+            style={{ opacity }} 
+            className={`h-6 bg-gray-200 rounded-lg ${language === 'ar' ? 'w-2/3 ml-auto' : 'w-2/3 mr-auto'}`} 
+          />
+        </View>
+      </View>
+    </View>
+  );
+};
+
 export default function Profile() {
   const { id } = useLocalSearchParams();
-  const [profile, setProfile] = useState<UserProfile>({} as UserProfile);
+  const router = useRouter();
+  const { t, language, isRTL } = useLanguage();
+  const [user, setUser] = useState<UserProfile | null>(null);
   const [rides, setRides] = useState<Ride[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [messageLoading, setMessageLoading] = useState(false);
   const { user: currentUser } = useUser();
-  const router = useRouter();
   const [ratings, setRatings] = useState<DetailedRating[]>([]);
   const [showRatings, setShowRatings] = useState(false);
+  const insets = useSafeAreaInsets();
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+
+  const textAlign = language === 'ar' ? 'right' : 'left';
+  const flexDirection = language === 'ar' ? 'flex-row-reverse' : 'flex-row';
+  const marginDirection = language === 'ar' ? 'mr' : 'ml';
+  const paddingDirection = language === 'ar' ? 'pr' : 'pl';
+
+  const pastelColors = [
+    '#FFD6E0', '#D6EFFF', '#FFF5D6', '#D6FFD6', '#F0D6FF', '#FFE6D6', '#D6FFF6', '#F9FFD6'
+  ];
+  function getPastelColor(str: string) {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
+    return pastelColors[Math.abs(hash) % pastelColors.length];
+  }
+
+  // Animated expand/collapse
+  const animatedHeight = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.timing(animatedHeight, {
+      toValue: showRatings ? 1 : 0,
+      duration: 350,
+      useNativeDriver: false,
+    }).start();
+  }, [showRatings]);
+
+  const renderStars = (value: number, size = 16) => {
+    const stars = [];
+    for (let i = 1; i <= 5; i++) {
+      stars.push(
+        <MaterialIcons
+          key={i}
+          name={i <= Math.round(value) ? 'star' : 'star-border'}
+          size={size}
+          color={i <= Math.round(value) ? '#F59E42' : '#E5E7EB'}
+        />
+      );
+    }
+    return <View className="flex-row items-center">{stars}</View>;
+  };
 
   useEffect(() => {
-    const fetchProfile = async () => {
+    const fetchUserData = async () => {
       try {
         setLoading(true);
         const userDoc = await getDoc(doc(db, 'users', id as string));
@@ -76,7 +186,9 @@ export default function Profile() {
         }
 
         const userData = userDoc.data();
-        setProfile({
+        console.log('Fetched user data:', userData);
+        
+        setUser({
           name: userData.name || 'مستخدم',
           profile_image_url: userData.profile_image_url || DEFAULT_PROFILE_IMAGE,
           gender: userData.gender,
@@ -93,47 +205,86 @@ export default function Profile() {
 
         // Fetch detailed ratings if user is a driver
         if (userData.driver) {
+          console.log('Fetching ratings for driver:', id);
+          try {
           const ratingsQuery = query(
             collection(db, 'ratings'),
-            where('driver_id', '==', id)
+              where('driver_id', '==', id),
+              orderBy('created_at', 'desc')
           );
           
           const ratingsSnapshot = await getDocs(ratingsQuery);
-          const ratingsData = ratingsSnapshot.docs.map(doc => ({
-            ...doc.data()
-          })) as DetailedRating[];
-          
+            console.log('Ratings query snapshot:', ratingsSnapshot.empty ? 'No ratings found' : 'Ratings found');
+            
+            const ratingsData = ratingsSnapshot.docs.map(doc => {
+              const data = doc.data();
+              console.log('Rating document data:', data);
+              return {
+                id: doc.id,
+                overall: data.overall || 0,
+                driving: data.driving || 0,
+                behavior: data.behavior || 0,
+                punctuality: data.punctuality || 0,
+                cleanliness: data.cleanliness || 0,
+                comment: data.comment || '',
+                passenger_name: data.passenger_name || 'Anonymous',
+                created_at: data.created_at || new Date(),
+                ride_details: {
+                  origin_address: data.ride_details?.origin_address || '',
+                  destination_address: data.ride_details?.destination_address || '',
+                  ride_datetime: data.ride_details?.ride_datetime || ''
+                }
+              } as DetailedRating;
+            });
+            
+            console.log('Processed ratings data:', ratingsData);
           setRatings(ratingsData);
 
           // Calculate average rating
           if (ratingsData.length > 0) {
             const avgRating = ratingsData.reduce((acc, curr) => acc + curr.overall, 0) / ratingsData.length;
-            setProfile(prev => ({
-              ...prev,
+              console.log('Calculated average rating:', avgRating);
+              setUser(prev => ({
+                ...prev!,
               driver: {
-                ...prev.driver!,
+                  ...prev!.driver!,
                 rating: avgRating,
                 total_rides: ratingsData.length
               }
             }));
+            }
+          } catch (error) {
+            console.error('Error fetching ratings:', error);
           }
         }
 
         // Fetch user's rides if they are a driver
         if (userData.driver) {
+          console.log('Fetching rides for driver:', id);
+          try {
           const ridesQuery = query(
             collection(db, 'rides'),
             where('driver_id', '==', id),
-            where('status', 'in', ['active', 'completed'])
+              where('status', 'in', ['available', 'completed', 'active', 'full', 'in-progress'])
           );
           
           const ridesSnapshot = await getDocs(ridesQuery);
-          const ridesData = ridesSnapshot.docs.map(doc => ({
+            console.log('Rides query snapshot:', ridesSnapshot.empty ? 'No rides found' : 'Rides found');
+            
+            const ridesData = ridesSnapshot.docs.map(doc => {
+              const data = doc.data();
+              console.log('Ride document data:', data);
+              return {
             id: doc.id,
-            ...doc.data()
-          })) as Ride[];
+                ...data
+              } as Ride;
+            });
           
+            console.log('Processed rides data:', ridesData);
           setRides(ridesData);
+          } catch (error) {
+            console.error('Error fetching rides:', error);
+          }
         }
 
       } catch (err) {
@@ -145,19 +296,15 @@ export default function Profile() {
     };
 
     if (id) {
-      fetchProfile();
+      fetchUserData();
     }
   }, [id]);
 
   if (loading) {
-    return (
-      <View className="flex-1 justify-center items-center bg-gray-100">
-        <ActivityIndicator size="large" color="#000" />
-      </View>
-    );
+    return <SkeletonLoading />;
   }
 
-  if (error || !profile) {
+  if (error || !user) {
     return (
       <View className="flex-1 justify-center items-center bg-gray-100">
         <Text className="text-red-500 mb-4">{error || 'حدث خطأ غير متوقع'}</Text>
@@ -169,120 +316,148 @@ export default function Profile() {
   }
 
   const renderDetailedRatings = () => {
-    if (!profile.driver || ratings.length === 0) return null;
+    if (!user.driver || ratings.length === 0) return null;
 
     return (
-      <View className="bg-white mx-4 p-4 rounded-xl shadow-sm mb-6">
+      <View className="bg-white py-2 px-1 rounded-2xl shadow-md mb-6">
         <TouchableOpacity 
           onPress={() => setShowRatings(!showRatings)}
-          className="flex-row justify-between items-center mb-4"
+          className={`${flexDirection} justify-between items-center mb-2 bg-orange-50 p-4 rounded-xl`}
+          activeOpacity={0.8}
         >
-          <Text className="text-lg font-CairoBold text-gray-900 text-right">
-            التقييمات التفصيلية
+          <View className={`${flexDirection} items-center`}>
+            <View>
+              <Text className={`text-lg ${language === 'ar' ? 'font-CairoBold text-right' : 'font-JakartaBold text-left'} text-gray-900`}>
+                {language === 'ar' ? 'التقييمات' : 'Ratings'}
+              </Text>
+              <Text className={`text-sm ${language === 'ar' ? 'font-CairoRegular text-right' : 'font-JakartaRegular text-left'} text-gray-500`}>
+                {language === 'ar' ? 'انقر لعرض التقييمات' : 'Tap to view ratings'}
+              </Text>
+            </View>
+          </View>
+          <View className="bg-white px-4 py-2 items-center justify-center rounded-full shadow-sm">
+            <Text className={`text-base ${language === 'ar' ? 'font-CairoBold' : 'font-JakartaBold'} text-orange-500`}>
+              {ratings.length}
           </Text>
-          <MaterialCommunityIcons 
-            name={showRatings ? "chevron-up" : "chevron-down"} 
-            size={24} 
-            color="#374151" 
-          />
+          </View>
         </TouchableOpacity>
 
+        <Animated.View style={{ height: animatedHeight.interpolate({ inputRange: [0, 1], outputRange: [0, ratings.length * 220] }), overflow: 'hidden' }}>
         {showRatings && (
           <View className="space-y-4">
             {ratings.map((rating, index) => (
-              <View key={index} className="bg-gray-50 p-4 rounded-xl">
-                <View className="flex-row justify-between items-center mb-2">
-                  <Text className="text-sm font-CairoRegular text-gray-600">
-                    {rating.passenger_name}
-                  </Text>
-                  <View className="flex-row items-center">
-                    <Text className="text-base font-CairoBold text-gray-900 mr-1">
-                      {rating.overall.toFixed(1)}
+              <View key={index} className="bg-gray-50 rounded-xl overflow-hidden">
+                {/* Orange Gradient Line */}
+                <LinearGradient
+                  colors={["#F59E42", "#FFD6E0"]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={{ height: 4, width: '100%' }}
+                />
+                <View className="p-2">
+                  {/* Passenger Info and Overall Rating */}
+                  <View className={`${flexDirection} justify-between items-center mb-3`}>
+                    <Text className={`text-base ${language === 'ar' ? 'font-CairoBold text-right' : 'font-JakartaBold text-left'} text-gray-800`}>
+                      {rating.passenger_name || 'Anonymous'}
                     </Text>
-                    <Image source={icons.star} style={{ width: 16, height: 16 }} />
+                    <View className={`${flexDirection} items-center`}>
+                      <Text className={`text-lg ${language === 'ar' ? 'font-CairoBold' : 'font-JakartaBold'} text-gray-900 mr-1 ml-1`}>
+                        {rating.overall?.toFixed(1) || '0.0'}
+                      </Text>
+                      {renderStars(rating.overall, 16)}
                   </View>
                 </View>
 
+                  {/* Category Ratings */}
                 <View className="space-y-2">
-                  <View className="flex-row justify-between">
-                    <Text className="text-sm font-CairoRegular text-gray-600">قيادة السيارة</Text>
-                    <Text className="text-sm font-CairoBold text-gray-900">{rating.driving}</Text>
+                    {[
+                      { label: language === 'ar' ? 'قيادة السيارة' : 'Driving', value: rating.driving },
+                      { label: language === 'ar' ? 'الأخلاق والسلوك' : 'Behavior', value: rating.behavior },
+                      { label: language === 'ar' ? 'الالتزام بالمواعيد' : 'Punctuality', value: rating.punctuality },
+                      { label: language === 'ar' ? 'نظافة السيارة' : 'Cleanliness', value: rating.cleanliness }
+                    ].map((cat, i) => (
+                      <View key={i} className={`${flexDirection} justify-between items-center`}>
+                        <Text className={`text-sm ${language === 'ar' ? 'font-CairoRegular text-right' : 'font-JakartaRegular text-left'} text-gray-600`}>
+                          {cat.label}
+                        </Text>
+                        <View className={`${flexDirection} items-center`}>
+                          <Text className={`text-sm ${language === 'ar' ? 'font-CairoBold' : 'font-JakartaBold'} text-gray-900 mr-1 ml-1`}>
+                            {cat.value?.toFixed(1) || '0.0'}
+                          </Text>
+                          {renderStars(cat.value, 12)}
                   </View>
-                  <View className="flex-row justify-between">
-                    <Text className="text-sm font-CairoRegular text-gray-600">الأخلاق والسلوك</Text>
-                    <Text className="text-sm font-CairoBold text-gray-900">{rating.behavior}</Text>
                   </View>
-                  <View className="flex-row justify-between">
-                    <Text className="text-sm font-CairoRegular text-gray-600">الالتزام بالمواعيد</Text>
-                    <Text className="text-sm font-CairoBold text-gray-900">{rating.punctuality}</Text>
-                  </View>
-                  <View className="flex-row justify-between">
-                    <Text className="text-sm font-CairoRegular text-gray-600">نظافة السيارة</Text>
-                    <Text className="text-sm font-CairoBold text-gray-900">{rating.cleanliness}</Text>
-                  </View>
+                    ))}
                 </View>
 
+                  {/* Comment */}
                 {rating.comment && (
-                  <View className="mt-2 p-2 bg-white rounded-lg">
-                    <Text className="text-sm font-CairoRegular text-gray-600 text-right">
+                    <View className="mt-3 bg-white p-3 rounded-lg">
+                      <Text className={`text-sm text-gray-700 ${language === 'ar' ? 'font-CairoRegular text-right' : 'font-JakartaRegular text-left'}`}>
                       {rating.comment}
                     </Text>
                   </View>
                 )}
 
-                <Text className="text-xs font-CairoRegular text-gray-500 mt-2 text-left">
-                  {rating.ride_details.origin_address} → {rating.ride_details.destination_address}
+                  {/* Date */}
+                  <Text className={`text-xs text-gray-400 mt-2 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+                    {formatDistanceToNow(new Date(rating.created_at?.toDate?.() || rating.created_at), { addSuffix: true, locale: language === 'ar' ? ar : enUS })}
                 </Text>
+                </View>
               </View>
             ))}
           </View>
         )}
+        </Animated.View>
       </View>
     );
   };
 
-  return (
-    <SafeAreaView className="flex-1 bg-white ">
-      {/* Back Button */}
-      <View className="flex-row pl-4 bg-white items-center">
-        <TouchableOpacity 
-          onPress={() => router.back()}
-          className="w-10 h-10 bg-gray-50 rounded-full items-center justify-center"
-        >
-          <MaterialCommunityIcons name="arrow-left" size={24} color="#374151" />
-        </TouchableOpacity>
-      </View>
-      {/* Profile Header */}
-      <View className="bg-white pb-2">
-        <View className="items-center">
-          <Image
-            source={{ uri: profile.profile_image_url }}
-            className="w-24 h-24 rounded-full mb-2"
-          />
-          <Text className="text-xl font-CairoBold text-gray-900 mb-1">
-            {profile.name}
-          </Text>
-          {profile.gender && (
-            <Text className="text-xs font-CairoRegular text-gray-600">
-              {profile.gender}
-            </Text>
-          )}
+  const handlePhoneCall = () => {
+    if (user?.phone) {
+      Linking.openURL(`tel:${user.phone}`);
+    }
+  };
 
-          {/* Contact Buttons */}
-          <View className="flex-row justify-center space-x-6 mt-2">
-            <TouchableOpacity 
-              onPress={async () => {
+  const handleEmailPress = () => {
+    if (user?.email) {
+      Linking.openURL(`mailto:${user.email}`);
+    }
+  };
+
+  const handleCreateChat = async () => {
                 if (!currentUser) return;
                 setMessageLoading(true);
                 try {
-                  const chatId = await findOrCreateChat(
-                    { id: currentUser.id, fullName: currentUser.fullName, imageUrl: currentUser.imageUrl },
-                    { id: id as string, fullName: profile.name, imageUrl: profile.profile_image_url }
-                  );
+      const currentUserData = {
+        id: currentUser.id,
+        fullName: currentUser.fullName || 'User',
+        firstName: currentUser.firstName || 'User',
+        lastName: currentUser.lastName || '',
+        emailAddresses: currentUser.emailAddresses?.map(email => email.emailAddress) || [],
+        imageUrl: currentUser.imageUrl || '',
+        unsafeMetadata: currentUser.unsafeMetadata || {},
+        createdAt: currentUser.createdAt?.toISOString() || new Date().toISOString(),
+        updatedAt: currentUser.updatedAt?.toISOString() || new Date().toISOString()
+      };
+
+      const targetUserData = {
+        id: id as string,
+        fullName: user.name,
+        firstName: user.name.split(' ')[0] || '',
+        lastName: user.name.split(' ')[1] || '',
+        emailAddresses: [user.email || ''],
+        imageUrl: user.profile_image_url,
+        unsafeMetadata: {},
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+
+      const chatId = await findOrCreateChat(currentUserData, targetUserData);
                   if (chatId) {
                     router.push({
                       pathname: '/(root)/chat/[id]',
-                      params: { id: chatId, name: profile.name, avatar: profile.profile_image_url }
+          params: { id: chatId, name: user.name, avatar: user.profile_image_url }
                     });
                   }
                 } catch (err) {
@@ -290,126 +465,307 @@ export default function Profile() {
                 } finally {
                   setMessageLoading(false);
                 }
-              }}
-              className="items-center"
-              disabled={messageLoading}
-            >
-              <View className="w-12 h-12 bg-purple-50 rounded-full items-center justify-center mb-1">
-                {messageLoading ? (
-                  <ActivityIndicator color="#A855F7" size="small" />
-                ) : (
-                  <MaterialCommunityIcons name="message-text" size={24} color="#A855F7" />
+  };
+
+  const ImagePreviewModal = () => (
+    <Modal
+      visible={!!selectedImage}
+      transparent={true}
+      animationType="fade"
+      onRequestClose={() => setSelectedImage(null)}
+    >
+      <TouchableOpacity 
+        className="flex-1 bg-black/90 justify-center items-center"
+        activeOpacity={1}
+        onPress={() => setSelectedImage(null)}
+      >
+        <Image
+          source={{ uri: selectedImage || '' }}
+          className="w-full h-96"
+          resizeMode="contain"
+        />
+      </TouchableOpacity>
+    </Modal>
+  );
+
+  const getGenderText = (gender: string | null | undefined) => {
+    if (!gender) return '';
+    if (language === 'ar') {
+      return gender === 'Male' ? 'ذكر' : 'أنثى';
+    }
+    return gender;
+  };
+
+  return (
+    <View className="flex-1 bg-white">
+      {/* Header Section */}
+      <View className="h-56 bg-gray-200 relative">
+        {/* Back Button */}
+        <TouchableOpacity 
+          onPress={() => router.back()}
+          className={`absolute top-12 left-4 z-10 bg-white/80 p-2 rounded-full`}
+        >
+          <MaterialIcons 
+            name="arrow-back" 
+            size={20} 
+            color="#374151" 
+          />
+        </TouchableOpacity>
+
+        {user.driver && (
+          <TouchableOpacity 
+            onPress={() => setSelectedImage(user.driver?.car_image_url || null)}
+            activeOpacity={0.9}
+          >
+            <Image
+              source={{ uri: user.driver.car_image_url }}
+              className="w-full h-full"
+              resizeMode="cover"
+            />
+          </TouchableOpacity>
                 )}
               </View>
-              <Text className="text-xs font-CairoRegular text-gray-600">رسالة</Text>
-            </TouchableOpacity>
 
-            {profile.phone && (
-              <TouchableOpacity 
-                onPress={() => Linking.openURL(`tel:${profile.phone}`)}
-                className="items-center"
-              >
-                <View className="w-12 h-12 bg-blue-50 rounded-full items-center justify-center mb-1">
-                  <MaterialCommunityIcons name="phone" size={24} color="#3B82F6" />
-                </View>
-                <Text className="text-xs font-CairoRegular text-gray-600">اتصال</Text>
-              </TouchableOpacity>
-            )}
-          </View>
+      {/* Profile Content */}
+      <View className={`px-4 -mt-16`}>
+        {/* Profile Image */}
+        <View className={`${language === 'ar' ? 'items-end' : 'items-start'}`}>
+          <TouchableOpacity 
+            onPress={() => setSelectedImage(user.profile_image_url)}
+            activeOpacity={0.9}
+          >
+            <Image
+              source={{ uri: user.profile_image_url }}
+              className="h-28 w-28 rounded-full bg-gray-200 border-4 border-white"
+            />
+            </TouchableOpacity>
         </View>
 
-        {/* Driver Stats */}
-        {profile.driver && (
-          <View className="flex-row justify-between w-full mt-2">
-            <View className="items-center bg-white rounded-xl p-3 flex-1 mx-2 shadow-sm">
-              <Text className="text-xl font-CairoBold">
-                {profile.driver.total_rides || 0}
-              </Text>
-              <Text className="text-gray-500 text-xs font-CairoRegular">
-                عدد الرحلات
-              </Text>
-            </View>
-            <View className="items-center bg-white rounded-xl p-3 flex-1 mx-2 shadow-sm">
-              <View className="flex-row items-center">
-                <Text className="text-xl font-CairoBold mr-1">
-                  {profile.driver.rating?.toFixed(1) || '0.0'}
-                </Text>
-                <Image source={icons.star} style={{ width: 16, height: 16 }} />
-              </View>
-              <Text className="text-gray-500 text-xs font-CairoRegular">
-                التقييم
-              </Text>
-            </View>
-          </View>
-        )}
-      </View>
-      <ScrollView className="pt-4 flex-1 bg-gray-100">
-        {renderDetailedRatings()}
-        {/* Driver Car Details */}
-        {profile.driver && (
-          <View className="bg-white mx-4 p-4 rounded-xl shadow-sm mb-6">
-            <Text className="text-lg font-CairoBold text-gray-900 mb-4 text-right">
-              معلومات السيارة
+        {/* User Info */}
+        <View className={`mt-3 space-y-2 ${language === 'ar' ? 'items-end' : 'items-start'}`}>
+          <Text className={`text-xl ${language === 'ar' ? 'font-CairoBold text-right' : 'font-JakartaBold text-left'} text-gray-900`}>
+            {user.name}
+          </Text>
+          {user.gender && (
+            <Text className={`text-sm ${language === 'ar' ? 'font-CairoRegular text-right' : 'font-JakartaRegular text-left'} text-gray-600`}>
+              {getGenderText(user.gender)}
             </Text>
-            <View className="space-y-4">
-              <View className="flex-row justify-between items-center">
-                <Text className="text-base font-CairoRegular text-gray-900">
-                  {profile.driver.car_type}
+          )}
+          {user.industry && (
+            <Text className={`text-sm ${language === 'ar' ? 'font-CairoRegular text-right' : 'font-JakartaRegular text-left'} text-gray-600`}>
+              {user.industry}
+            </Text>
+          )}
+        </View>
+
+        <ScrollView 
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: 200 }}
+        >
+          {/* Contact Info */}
+          <View className="mt-4 space-y-3">
+            {user.phone && (
+              <TouchableOpacity 
+                onPress={handlePhoneCall}
+                className={`${flexDirection} items-center bg-gray-50 p-3 rounded-lg`}
+              >
+                <View className="w-8 h-8 bg-blue-100 rounded-full items-center justify-center">
+                  <MaterialIcons name="phone" size={16} color="#4f46e5" />
+                </View>
+                <View className={`flex-1 ${language === 'ar' ? 'mr-2' : 'ml-2'}`}>
+                  <Text className={`text-xs ${language === 'ar' ? 'font-CairoRegular text-right' : 'font-JakartaRegular text-left'} text-gray-500`}>
+                    {t.PhoneNumber}
+                  </Text>
+                  <Text className={`text-sm ${language === 'ar' ? 'font-CairoRegular text-right' : 'font-JakartaRegular text-left'} text-gray-900`}>
+                    {user.phone}
+                  </Text>
+                </View>
+                <MaterialIcons 
+                  name={language === 'ar' ? "chevron-left" : "chevron-right"} 
+                  size={20} 
+                  color="#9CA3AF" 
+                />
+              </TouchableOpacity>
+            )}
+
+            {user.email && (
+              <TouchableOpacity 
+                onPress={handleEmailPress}
+                className={`${flexDirection} items-center bg-gray-50 p-3 rounded-lg`}
+              >
+                <View className="w-8 h-8 bg-purple-100 rounded-full items-center justify-center">
+                  <MaterialIcons name="email" size={16} color="#A855F7" />
+          </View>
+                <View className={`flex-1 ${language === 'ar' ? 'mr-2' : 'ml-2'}`}>
+                  <Text className={`text-xs ${language === 'ar' ? 'font-CairoRegular text-right' : 'font-JakartaRegular text-left'} text-gray-500`}>
+                    {t.email}
+              </Text>
+                  <Text className={`text-sm ${language === 'ar' ? 'font-CairoRegular text-right' : 'font-JakartaRegular text-left'} text-gray-900`}>
+                    {user.email}
+              </Text>
+            </View>
+                <MaterialIcons 
+                  name={language === 'ar' ? "chevron-left" : "chevron-right"} 
+                  size={20} 
+                  color="#9CA3AF" 
+                />
+              </TouchableOpacity>
+            )}
+
+            {/* Chat Button */}
+            <TouchableOpacity 
+              onPress={handleCreateChat}
+              className={`${flexDirection} items-center bg-gray-50 p-3 rounded-lg`}
+            >
+              <View className="w-8 h-8 bg-purple-100 rounded-full items-center justify-center">
+                <MaterialIcons name="chat" size={16} color="#A855F7" />
+              </View>
+              <View className={`flex-1 ${language === 'ar' ? 'mr-2' : 'ml-2'}`}>
+                <Text className={`text-xs ${language === 'ar' ? 'font-CairoRegular text-right' : 'font-JakartaRegular text-left'} text-gray-500`}>
+                  {language === 'ar' ? 'الدردشة' : 'Chat'}
                 </Text>
-                <Text className="text-base font-CairoBold text-gray-600">
-                  نوع السيارة
+                <Text className={`text-sm ${language === 'ar' ? 'font-CairoRegular text-right' : 'font-JakartaRegular text-left'} text-gray-900`}>
+                  {language === 'ar' ? 'ابدأ محادثة' : 'Start a conversation'}
                 </Text>
               </View>
-              <View className="flex-row justify-between items-center">
-                <Text className="text-base font-CairoRegular text-gray-900">
-                  {profile.driver.car_seats}
-                </Text>
-                <Text className="text-base font-CairoBold text-gray-600">
-                  عدد المقاعد
-                </Text>
-              </View>
-              <Image
-                source={{ uri: profile.driver.car_image_url }}
-                className="w-full h-40 rounded-xl mt-2"
-                resizeMode="cover"
+              <MaterialIcons 
+                name={language === 'ar' ? "chevron-left" : "chevron-right"} 
+                size={20} 
+                color="#9CA3AF" 
               />
+            </TouchableOpacity>
+          </View>
+
+          
+          {/* Car Details */}
+          {user.driver && (
+            <View className="mt-4 bg-white rounded-lg p-3 shadow-sm">
+              <Text className={`text-base ${language === 'ar' ? 'font-CairoBold text-right' : 'font-JakartaBold text-left'} text-gray-900 mb-2`}>
+                {t.carInformation}
+              </Text>
+              <View className="space-y-2">
+                <View className={`${flexDirection} justify-between items-center`}>
+                  <Text className={`text-sm ${language === 'ar' ? 'font-CairoRegular text-right' : 'font-JakartaRegular text-left'} text-gray-900`}>
+                    {user.driver.car_type}
+                  </Text>
+                  <Text className={`text-sm ${language === 'ar' ? 'font-CairoRegular text-right' : 'font-JakartaRegular text-left'} text-gray-600`}>
+                    {t.CarType}
+                  </Text>
+                </View>
+                <View className={`${flexDirection} justify-between items-center`}>
+                  <Text className={`text-sm ${language === 'ar' ? 'font-CairoRegular text-right' : 'font-JakartaRegular text-left'} text-gray-900`}>
+                    {user.driver.car_seats}
+                  </Text>
+                  <Text className={`text-sm ${language === 'ar' ? 'font-CairoRegular text-right' : 'font-JakartaRegular text-left'} text-gray-600`}>
+                    {t.NumberOfSeats}
+                  </Text>
+                </View>
             </View>
           </View>
         )}
 
-        {/* Driver's Rides */}
-        {profile.driver && rides.length > 0 && (
-          <View className="bg-white mx-4 p-4 rounded-xl shadow-sm mb-6">
-            <Text className="text-lg font-CairoBold text-gray-900 mb-4 text-right">
-              الرحلات النشطة
+          {/* Driver Stats */}
+          {user.driver && (
+            <View className={`mt-4 ${flexDirection} justify-between`}>
+              <View className="items-center bg-gray-100 rounded-lg p-3 flex-1 mx-1 shadow-sm">
+                <Text className="text-xl font-CairoBold text-gray-900">
+                  {user.driver.total_rides || 0}
+                </Text>
+                <Text className={`text-xs ${language === 'ar' ? 'font-CairoRegular text-right' : 'font-JakartaRegular text-left'} text-gray-500`}>
+                  {t.TotalRides}
+                </Text>
+              </View>
+              <View className="items-center bg-gray-100  rounded-lg p-3 flex-1 mx-1 shadow-sm">
+                <View className={`${flexDirection} items-center`}>
+                  <Text className={`text-xl font-CairoBold text-gray-900 ${language === 'ar' ? 'ml-1' : 'mr-1'}`}>
+                    {user.driver.rating?.toFixed(1) || '0.0'}
+                </Text>
+                  <Image source={icons.star} style={{ width: 16, height: 16 }} />
+                </View>
+                <Text className={`text-xs ${language === 'ar' ? 'font-CairoRegular text-right' : 'font-JakartaRegular text-left'} text-gray-500`}>
+                  {t.Rating}
+                </Text>
+            </View>
+          </View>
+        )}
+
+
+          {/* Ratings */}
+          {renderDetailedRatings()}
+
+          {/* Active Rides */}
+          {user.driver && rides.length > 0 && (
+            <View className="mt-4 bg-white rounded-lg p-4 shadow-sm mb-4">
+              <View className={`${flexDirection} justify-between items-center mb-4`}>
+                <Text className={`text-lg ${language === 'ar' ? 'font-CairoBold text-right' : 'font-JakartaBold text-left'} text-gray-900`}>
+                  {t.Rides}
+                </Text>
+                <View className="bg-blue-50 px-3 py-1 rounded-full">
+                  <Text className={`text-sm ${language === 'ar' ? 'font-CairoBold text-right' : 'font-JakartaBold text-left'} text-blue-500`}>
+                    {rides.length}
             </Text>
-            <View className="space-y-4">
+                </View>
+              </View>
+              <View className="space-y-3">
               {rides.map((ride) => (
                 <TouchableOpacity
                   key={ride.id}
                   onPress={() => router.push(`/ride-details/${ride.id}`)}
                   className="bg-gray-50 p-4 rounded-xl"
                 >
-                  <View className="flex-row items-center justify-between mb-2">
-                    <Text className="text-sm font-CairoRegular text-gray-500">
-                      {ride.ride_datetime}
+                    {/* Status and Seats */}
+                    <View className={`${flexDirection} justify-between items-center mb-3`}>
+                      <View className={`${flexDirection} items-center bg-white px-3 py-1 rounded-full`}>
+                        <Text className={`text-xs ${language === 'ar' ? 'font-CairoBold text-right mr-1' : 'font-JakartaBold text-left ml-1'} ${
+                          ride.status === 'available' ? 'text-green-500' :
+                          ride.status === 'completed' ? 'text-blue-500' :
+                          ride.status === 'in-progress' ? 'text-orange-500' :
+                          ride.status === 'full' ? 'text-red-500' :
+                          'text-gray-500'
+                        }`}>
+                          {ride.status === 'available' ? (language === 'ar' ? 'متاح' : 'Available') :
+                           ride.status === 'completed' ? (language === 'ar' ? 'مكتمل' : 'Completed') :
+                           ride.status === 'in-progress' ? (language === 'ar' ? 'قيد التنفيذ' : 'In Progress') :
+                           ride.status === 'full' ? (language === 'ar' ? 'ممتلئ' : 'Full') :
+                           ride.status}
                     </Text>
-                    <View className="flex-row items-center">
-                      <Text className="text-sm font-CairoBold text-gray-900 ml-1">
+                      </View>
+                      <View className={`${flexDirection} items-center bg-white px-3 py-1 rounded-full`}>
+                        <Text className={`text-sm font-CairoBold mt-1.5 text-gray-900 ${language === 'ar' ? 'ml-1' : 'mr-1'}`}>
                         {ride.available_seats}
                       </Text>
+                        <Text className={`text-xs ${language === 'ar' ? 'font-CairoRegular text-right' : 'font-JakartaRegular text-left'} text-gray-500`}>
+                          {t.availableSeats}
+                        </Text>
+                      </View>
                     </View>
-                  </View>
-                  <View className="space-y-2">
-                    <View className="flex-row items-center">
-                      <Image source={icons.point} className="w-4 h-4 ml-2" />
-                      <Text className="text-sm font-CairoRegular text-gray-600 flex-1 text-right">
-                        {ride.origin_address}
+
+                    {/* Date and Time */}
+                    <View className={`${flexDirection} items-center mb-3`}>
+                      <MaterialIcons 
+                        name="event" 
+                        size={16} 
+                        color="#6B7280" 
+                        style={{ marginRight: language === 'ar' ? 0 : 8, marginLeft: language === 'ar' ? 8 : 0 }}
+                      />
+                      <Text className={`text-sm ${language === 'ar' ? 'font-CairoRegular text-right' : 'font-JakartaRegular text-left'} text-gray-600`}>
+                        {ride.ride_datetime}
                       </Text>
                     </View>
-                    <View className="flex-row items-center">
-                      <Image source={icons.map} className="w-4 h-4 ml-2" />
-                      <Text className="text-sm font-CairoRegular text-gray-600 flex-1 text-right">
+
+                    {/* Route Details */}
+                    <View className="space-y-2 bg-white p-3 rounded-lg">
+                      <View className={`${flexDirection} items-center`}>
+                        <Image source={icons.pin} className='w-4 h-4' resizeMode='contain' tintColor={
+                        "green"} style={{ marginRight: language === 'ar' ? 0 : 8, marginLeft: language === 'ar' ? 8 : 0 }} />
+                        <Text className={`text-sm ${language === 'ar' ? 'font-CairoRegular text-right' : 'font-JakartaRegular text-left'} text-gray-600 flex-1`}>
+                          {ride.origin_address}
+                        </Text>
+                      </View>
+                      <View className={`${flexDirection} items-center`}>
+                        <Image source={icons.target} className='w-4 h-4' resizeMode='contain' tintColor={
+                        "red"} style={{ marginRight: language === 'ar' ? 0 : 8, marginLeft: language === 'ar' ? 8 : 0 }} />
+                        <Text className={`text-sm ${language === 'ar' ? 'font-CairoRegular text-right' : 'font-JakartaRegular text-left'} text-gray-600 flex-1`}>
                         {ride.destination_address}
                       </Text>
                     </View>
@@ -420,6 +776,10 @@ export default function Profile() {
           </View>
         )}
       </ScrollView>
-    </SafeAreaView>
+      </View>
+
+      {/* Image Preview Modal */}
+      <ImagePreviewModal />
+    </View>
   );
 }

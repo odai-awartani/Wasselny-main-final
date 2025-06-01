@@ -15,6 +15,7 @@ import DateTimePicker from '@react-native-community/datetimepicker'
 import Modal from 'react-native-modal'
 import debounce from 'lodash/debounce'
 import Animated, { FadeIn } from 'react-native-reanimated'
+import { MaterialIcons } from '@expo/vector-icons'
 
 // Constants
 const MAX_DISTANCE_KM = 500
@@ -787,17 +788,32 @@ const Search = () => {
                     {item.origin}
                   </Text>
                 </View>
-                {item.waypoints && item.waypoints.length > 0 && item.waypoints.map((waypoint, index) => (
-                  <View key={index} className={`flex-row items-center mb-2 ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
-                    <Image source={icons.map} resizeMode="contain" tintColor="#F79824" className={`w-5 h-5 ${language === 'ar' ? 'ml-2' : 'mr-2'}`} />
-                    <Text className={`text-sm text-gray-500 ${language === 'ar' ? 'font-CairoMedium' : 'font-JakartaMedium'} ${language === 'ar' ? 'ml-2' : 'mr-2'}`}>
-                      {language === 'ar' ? 'محطة' : 'Point'} {index + 1}:
-                    </Text>
-                    <Text className={`text-base ${language === 'ar' ? 'font-CairoMedium' : 'font-JakartaMedium'} flex-1 ${language === 'ar' ? 'text-right' : 'text-left'}`} numberOfLines={1}>
-                      {waypoint.address}
-                    </Text>
+
+                {item.waypoints && item.waypoints.length > 0 && (
+                  <View className="mt-2 mb-2">
+                     <View className={`flex-row items-center mb-2 ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
+                        <Image source={icons.map} resizeMode="contain" tintColor="#F79824" className={`w-5 h-5 ${language === 'ar' ? 'ml-2' : 'mr-2'}`} />
+                        <Text className={`text-sm text-gray-500 ${language === 'ar' ? 'font-CairoMedium' : 'font-JakartaMedium'} ${language === 'ar' ? 'ml-2' : 'mr-2'}`}>
+                          {language === 'ar' ? 'نقاط التوقف' : 'Waypoints'}:
+                        </Text>
+                      </View>
+                    <View className={`flex-row flex-wrap ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
+                      {item.waypoints.map((waypoint, index) => (
+                        <View key={index} className={`flex-row items-center ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
+                          <Text className={`text-base ${language === 'ar' ? 'font-CairoMedium' : 'font-JakartaMedium'} ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+                            {waypoint.address}
+                          </Text>
+                          {index < item.waypoints.length - 1 && (
+                            <View className={`mx-1 ${language === 'ar' ? 'transform rotate-180' : ''}`}>
+                              <MaterialIcons name="arrow-forward" size={18} color="#F79824" />
+                            </View>
+                          )}
+                        </View>
+                      ))}
+                    </View>
                   </View>
-                ))}
+                )}
+
                 <View className={`flex-row items-center ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
                   <Image source={icons.target} resizeMode="contain" className={`w-5 h-5 ${language === 'ar' ? 'ml-2' : 'mr-2'}`} />
                   <Text className={`text-sm text-gray-500 ${language === 'ar' ? 'font-CairoMedium' : 'font-JakartaMedium'} ${language === 'ar' ? 'ml-2' : 'mr-2'}`}>
