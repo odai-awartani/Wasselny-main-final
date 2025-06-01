@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, onSnapshot } from 'firebase/firestore';
@@ -107,18 +107,23 @@ const Reports = () => {
     <View className="bg-white rounded-xl p-4 mb-4 shadow-sm">
       <View className={`flex-row items-center justify-between ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
         <View className={`flex-1 ${language === 'ar' ? 'items-end' : 'items-start'}`}>
-          <Text className={`text-2xl ${language === 'ar' ? 'font-CairoBold text-right' : 'font-JakartaBold text-left'} text-${color}-600`}>{value}</Text>
+          <Text className={`text-2xl ${language === 'ar' ? 'font-CairoBold text-right' : 'font-JakartaBold text-left'} text-black`}>{value}</Text>
           <Text className={`text-gray-600 text-sm mt-1 ${language === 'ar' ? 'font-CairoRegular text-right' : 'font-JakartaRegular text-left'}`}>{title}</Text>
         </View>
-        <View className={`bg-${color}-50 p-3 rounded-full ${language === 'ar' ? 'ml-4' : 'mr-4'}`}>
+        <View 
+          className={`bg-white p-3 rounded-full border border-gray-100 ${language === 'ar' ? 'ml-4' : 'mr-4'}`}
+          style={{
+            elevation: Platform.OS === "android" ? 2 : 0,
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 1 },
+            shadowOpacity: 0.08,
+            shadowRadius: 1.5,
+          }}
+        >
           <MaterialCommunityIcons 
             name={icon as any} 
             size={24} 
-            color={color === 'blue' ? '#3B82F6' : 
-                   color === 'green' ? '#22C55E' : 
-                   color === 'orange' ? '#F97316' : 
-                   color === 'red' ? '#EF4444' : 
-                   '#8B5CF6'} 
+            color="#F97316"
           />
         </View>
       </View>
@@ -126,9 +131,19 @@ const Reports = () => {
   );
 
   const StatusCard = ({ title, value, color }: { title: string; value: number; color: string }) => (
-    <View className={`bg-${color}-50 rounded-xl p-4 mb-4 ${language === 'ar' ? 'items-end' : 'items-start'}`}>
-      <Text className={`text-${color}-700 ${language === 'ar' ? 'font-CairoMedium text-right' : 'font-JakartaMedium text-left'} mb-1`}>{title}</Text>
-      <Text className={`text-${color}-900 text-2xl ${language === 'ar' ? 'font-CairoBold text-right' : 'font-JakartaBold text-left'}`}>{value}</Text>
+    <View 
+      className={`bg-${color}-50 rounded-xl p-4 mb-4 border border-gray-100 items-center`}
+      style={{
+        elevation: Platform.OS === "android" ? 4 : 0,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 3,
+      }}
+    >
+      <Text className={`text-orange-500 ${language === 'ar' ? 'font-CairoMedium text-right' : 'font-JakartaMedium text-left'} mb-1 text-center`}>{title}</Text>
+      <View className="h-px bg-gray-300 w-full my-2" />
+      <Text className={`text-${color}-900 text-2xl ${language === 'ar' ? 'font-CairoBold text-right' : 'font-JakartaBold text-left'} text-center`}>{value}</Text>
     </View>
   );
 
@@ -217,23 +232,23 @@ const Reports = () => {
 
           {/* Recent Activity */}
           <View className="mb-6">
-            <Text className={`text-lg mb-4 ${language === 'ar' ? 'font-CairoBold text-right' : 'font-JakartaBold text-left'}`}>
-              {language === 'ar' ? 'النشاط الأخير' : 'Recent Activity'}
-            </Text>
-            <View className="bg-white rounded-xl p-4 shadow-sm">
-              {Object.entries(stats.ridesByDay)
-                .sort((a, b) => new Date(b[0]).getTime() - new Date(a[0]).getTime())
-                .slice(0, 5)
-                .map(([date, count]) => (
-                  <View key={date} className={`flex-row justify-between items-center py-2 border-b border-gray-100 ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
-                    <Text className={`text-gray-600 ${language === 'ar' ? 'font-CairoRegular text-right' : 'font-JakartaRegular text-left'}`}>
-                      {new Date(date).toLocaleDateString(language === 'ar' ? 'ar-SA' : 'en-US')}
-                    </Text>
-                    <Text className={`${language === 'ar' ? 'font-CairoMedium text-right' : 'font-JakartaMedium text-left'} text-blue-600`}>
-                      {count} {language === 'ar' ? 'رحلة' : 'rides'}
-                    </Text>
-                  </View>
-                ))}
+            <View 
+              className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 items-center"
+              style={{
+                elevation: Platform.OS === "android" ? 4 : 0,
+                shadowColor: "#000",
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.1,
+                shadowRadius: 3,
+              }}
+            >
+              <Text className={`text-gray-600 text-center ${language === 'ar' ? 'font-CairoRegular' : 'font-JakartaRegular'}`}>
+                {language === 'ar' ? 'إجمالي الرحلات' : 'Total Rides'}
+              </Text>
+              <View className="h-px bg-gray-300 w-full my-2" />
+              <Text className={`text-2xl font-bold text-center ${language === 'ar' ? 'font-CairoBold' : 'font-JakartaBold'} text-black`}>
+                {stats.totalRides}
+              </Text>
             </View>
           </View>
         </View>
