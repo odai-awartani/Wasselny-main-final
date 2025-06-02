@@ -236,6 +236,11 @@ const BarrierDetails = () => {
           </View>
         ) : barrier ? (
           <View className="px-4 py-4">
+            {/* Section Title */}
+            <Text className={`text-xl mx-2 my-2 font-CairoBold ${language === 'ar' ? 'text-right' : 'text-left'} text-gray-800`}>
+              {language === 'ar' ? 'آخر تحديث' : 'Last Update'}
+            </Text>
+
             {/* Barrier Info */}
             <View className="bg-white p-4 rounded-xl mb-4 border border-gray-200">
               <View className={`flex-row ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'} justify-between items-center mb-3`}>
