@@ -62,7 +62,7 @@ interface ChatUser {
   imageUrl: string;
 }
 
-const DEFAULT_PROFILE_IMAGE = 'https://via.placeholder.com/120';
+const DEFAULT_PROFILE_IMAGE = 'https://www.pngitem.com/pimgs/m/146-1468479_my-profile-icon-blank-profile-picture-circle-hd.png';
 const DEFAULT_CAR_IMAGE = 'https://via.placeholder.com/200x150';
 
 const { width } = Dimensions.get('window');
@@ -497,22 +497,32 @@ export default function Profile() {
   };
 
   return (
-    <View className="flex-1 bg-white">
-      {/* Header Section */}
-      <View className="h-56 bg-gray-200 relative">
-        {/* Back Button */}
-        <TouchableOpacity 
-          onPress={() => router.back()}
-          className={`absolute top-12 left-4 z-10 bg-white/80 p-2 rounded-full`}
-        >
-          <MaterialIcons 
-            name="arrow-back" 
-            size={20} 
-            color="#374151" 
-          />
-        </TouchableOpacity>
+    <SafeAreaView className="flex-1 bg-white">
+      {/* Header Section - Only show if user is a driver */}
+      {user.driver && (
+        <View className="h-56 bg-gray-200 relative">
+          {/* Back Button */}
+          <TouchableOpacity 
+            onPress={() => router.back()}
+            className={`absolute top-12 left-4 z-10 bg-white/80 p-2 rounded-full`}
+            style={{
+              shadowColor: "#000",
+              shadowOffset: {
+                width: 0,
+                height: 2,
+              },
+              shadowOpacity: 0.25,
+              shadowRadius: 3.84,
+              elevation: 5,
+            }}
+          >
+            <MaterialIcons 
+              name="arrow-back" 
+              size={20} 
+              color="#374151" 
+            />
+          </TouchableOpacity>
 
-        {user.driver && (
           <TouchableOpacity 
             onPress={() => setSelectedImage(user.driver?.car_image_url || null)}
             activeOpacity={0.9}
@@ -523,22 +533,46 @@ export default function Profile() {
               resizeMode="cover"
             />
           </TouchableOpacity>
-                )}
-              </View>
+        </View>
+      )}
+
+      {/* Back Button for non-drivers */}
+      {!user.driver && (
+        <TouchableOpacity 
+          onPress={() => router.back()}
+          className={`absolute top-12 left-4 z-10 bg-white/80 p-2 rounded-full`}
+          style={{
+            shadowColor: "#000",
+            shadowOffset: {
+              width: 0,
+              height: 2,
+            },
+            shadowOpacity: 0.25,
+            shadowRadius: 3.84,
+            elevation: 5,
+          }}
+        >
+          <MaterialIcons 
+            name="arrow-back" 
+            size={20} 
+            color="#374151" 
+          />
+        </TouchableOpacity>
+      )}
 
       {/* Profile Content */}
-      <View className={`px-4 -mt-16`}>
+      <View className={`px-4 ${user.driver ? '-mt-16' : 'mt-4'}`}>
         {/* Profile Image */}
         <View className={`${language === 'ar' ? 'items-end' : 'items-start'}`}>
           <TouchableOpacity 
-            onPress={() => setSelectedImage(user.profile_image_url)}
+            onPress={() => setSelectedImage(user.profile_image_url || DEFAULT_PROFILE_IMAGE)}
             activeOpacity={0.9}
           >
             <Image
-              source={{ uri: user.profile_image_url }}
+              source={{ uri: user.profile_image_url || DEFAULT_PROFILE_IMAGE }}
               className="h-28 w-28 rounded-full bg-gray-200 border-4 border-white"
             />
-            </TouchableOpacity>
+          </TouchableOpacity>
         </View>
 
         {/* User Info */}
@@ -763,7 +797,7 @@ export default function Profile() {
                         </Text>
                       </View>
                       <View className={`${flexDirection} items-center`}>
-                        <Image source={icons.target} className='w-4 h-4' resizeMode='contain' tintColor={
+                        <Image source={icons.pin} className='w-4 h-4' resizeMode='contain' tintColor={
                         "red"} style={{ marginRight: language === 'ar' ? 0 : 8, marginLeft: language === 'ar' ? 8 : 0 }} />
                         <Text className={`text-sm ${language === 'ar' ? 'font-CairoRegular text-right' : 'font-JakartaRegular text-left'} text-gray-600 flex-1`}>
                         {ride.destination_address}
@@ -780,6 +814,6 @@ export default function Profile() {
 
       {/* Image Preview Modal */}
       <ImagePreviewModal />
-    </View>
+    </SafeAreaView>
   );
 }

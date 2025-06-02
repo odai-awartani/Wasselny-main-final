@@ -477,13 +477,18 @@ const RideRequests = () => {
       // Get the ride details to check available seats
       const rideDoc = await getDoc(doc(db, 'rides', params.rideId as string));
       const rideData = rideDoc.data();
-      const availableSeats = rideData?.available_seats || 0;
+      console.log('Ride Data:', rideData);
+      
       const totalSeats = rideData?.seats || 0;
+      const currentAvailableSeats = rideData?.available_seats || 0;
+      console.log('Total Seats:', totalSeats);
+      console.log('Current Available Seats:', currentAvailableSeats);
 
       // Get the request details to check requested seats
       const requestDoc = await getDoc(doc(db, 'ride_requests', requestId));
       const requestData = requestDoc.data();
       const requestedSeats = requestData?.requested_seats || 1;
+      console.log('Requested Seats:', requestedSeats);
 
       // Get all current passengers to calculate total seats taken
       const currentPassengersQuery = query(
@@ -498,13 +503,19 @@ const RideRequests = () => {
         const passengerData = doc.data();
         totalSeatsTaken += passengerData.requested_seats || 1;
       });
+      console.log('Total Seats Taken:', totalSeatsTaken);
 
-      // Check if accepting this request would exceed total seats
-      if (totalSeatsTaken + requestedSeats > totalSeats) {
+      // Calculate available seats
+      const availableSeats = Math.max(currentAvailableSeats, totalSeats - totalSeatsTaken);
+      console.log('Calculated Available Seats:', availableSeats);
+
+      // Check if there are enough seats
+      if (requestedSeats > availableSeats) {
+        console.log('Not enough seats. Requested:', requestedSeats, 'Available:', availableSeats);
         showAlert({
           visible: true,
           title: t.insufficientSeats,
-          message: `${t.onlyAvailableSeats} ${totalSeats - totalSeatsTaken} ${totalSeats - totalSeatsTaken === 1 ? t.seat : t.seats}`,
+          message: `${t.onlyAvailableSeats} ${availableSeats} ${availableSeats === 1 ? t.seat : t.seats}`,
           type: 'warning',
           onConfirm: () => setAlertConfig(prev => ({ ...prev, visible: false })),
           confirmText: t.ok
@@ -521,31 +532,31 @@ const RideRequests = () => {
         onConfirm: async () => {
           setAlertConfig(prev => ({ ...prev, visible: false }));
 
-      const passengerNotificationId = await scheduleRideNotification(params.rideId as string, userId, false);
-      const driverNotificationId = await scheduleRideNotification(params.rideId as string, params.driverId as string, true);
+          const passengerNotificationId = await scheduleRideNotification(params.rideId as string, userId, false);
+          const driverNotificationId = await scheduleRideNotification(params.rideId as string, params.driverId as string, true);
 
-      // Update the ride's available seats
-      await updateDoc(doc(db, 'rides', params.rideId as string), {
-        available_seats: availableSeats - requestedSeats,
-        updated_at: serverTimestamp(),
-      });
+          // Update the ride's available seats
+          await updateDoc(doc(db, 'rides', params.rideId as string), {
+            available_seats: availableSeats - requestedSeats,
+            updated_at: serverTimestamp(),
+          });
 
-      await updateDoc(doc(db, 'ride_requests', requestId), {
-        status: 'accepted',
-        updated_at: serverTimestamp(),
-        passenger_name: passengerName,
-        passenger_id: userId,
-        notification_id: passengerNotificationId || null,
-      });
+          await updateDoc(doc(db, 'ride_requests', requestId), {
+            status: 'accepted',
+            updated_at: serverTimestamp(),
+            passenger_name: passengerName,
+            passenger_id: userId,
+            notification_id: passengerNotificationId || null,
+          });
 
-      await sendRideStatusNotification(
-        userId,
-        t.bookingAccepted,
-        `${t.bookingAcceptedForRide} ${params.origin} ${t.to} ${params.destination}`,
-        params.rideId as string
-      );
+          await sendRideStatusNotification(
+            userId,
+            t.bookingAccepted,
+            `${t.bookingAcceptedForRide} ${params.origin} ${t.to} ${params.destination}`,
+            params.rideId as string
+          );
 
-      setRequests(prevRequests => prevRequests.filter(request => request.id !== requestId));
+          setRequests(prevRequests => prevRequests.filter(request => request.id !== requestId));
 
           showAlert({
             visible: true,
