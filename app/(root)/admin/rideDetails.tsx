@@ -423,7 +423,7 @@ const RideDetails = () => {
               className="bg-white/20 p-2 rounded-full"
             >
               <MaterialCommunityIcons 
-                name={language === 'ar' ? "arrow-right" : "arrow-left"} 
+                name="arrow-left" 
                 size={24} 
                 color="white" 
               />
