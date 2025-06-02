@@ -13,6 +13,8 @@ import { db } from "@/lib/firebase";
 import { doc, updateDoc, setDoc, getDoc, collection, addDoc } from "firebase/firestore";
 import { ActivityIndicator } from "react-native";
 import { useLanguage } from "@/context/LanguageContext";
+import { StyleSheet, Dimensions, Animated } from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
 
 interface DriverFormData {
   carType: string;
@@ -30,6 +32,241 @@ interface FirebaseDriverData {
   is_active: boolean;
 }
 
+interface CustomAlertProps {
+  visible: boolean;
+  title: string;
+  message: string;
+  onConfirm: () => void;
+  onCancel?: () => void;
+  confirmText?: string;
+  cancelText?: string;
+  type?: 'success' | 'error' | 'warning' | 'info';
+}
+
+const CustomAlert = ({
+  visible,
+  title,
+  message,
+  onConfirm,
+  onCancel,
+  confirmText = 'OK',
+  cancelText = 'Cancel',
+  type = 'info'
+}: CustomAlertProps) => {
+  const scaleAnim = React.useRef(new Animated.Value(0)).current;
+  const opacityAnim = React.useRef(new Animated.Value(0)).current;
+
+  React.useEffect(() => {
+    if (visible) {
+      Animated.parallel([
+        Animated.spring(scaleAnim, {
+          toValue: 1,
+          useNativeDriver: true,
+          tension: 50,
+          friction: 7
+        }),
+        Animated.timing(opacityAnim, {
+          toValue: 1,
+          duration: 200,
+          useNativeDriver: true
+        })
+      ]).start();
+    } else {
+      Animated.parallel([
+        Animated.timing(opacityAnim, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true
+        }),
+        Animated.spring(scaleAnim, {
+          toValue: 0,
+          useNativeDriver: true,
+          tension: 50,
+          friction: 7
+        })
+      ]).start();
+    }
+  }, [visible]);
+
+  const handleConfirm = () => {
+    onConfirm();
+  };
+
+  const handleCancel = () => {
+    if (onCancel) {
+      onCancel();
+    }
+  };
+
+  const getTypeStyles = () => {
+    switch (type) {
+      case 'success':
+        return {
+          icon: 'check-circle',
+          color: '#22c55e',
+          bgColor: '#dcfce7'
+        };
+      case 'error':
+        return {
+          icon: 'error',
+          color: '#ef4444',
+          bgColor: '#fee2e2'
+        };
+      case 'warning':
+        return {
+          icon: 'warning',
+          color: '#f97316',
+          bgColor: '#ffedd5'
+        };
+      default:
+        return {
+          icon: 'info',
+          color: '#3b82f6',
+          bgColor: '#dbeafe'
+        };
+    }
+  };
+
+  const typeStyles = getTypeStyles();
+
+  if (!visible) return null;
+
+  return (
+    <View style={styles.alertRoot}>
+      <TouchableOpacity
+        style={styles.alertOverlay}
+        activeOpacity={1}
+        onPress={handleCancel}
+      >
+        <TouchableOpacity
+          activeOpacity={1}
+          onPress={(e) => e.stopPropagation()}
+          style={styles.alertContent}
+        >
+          <Animated.View
+            style={[
+              styles.alertContainer,
+              { transform: [{ scale: scaleAnim }] },
+              { opacity: opacityAnim }
+            ]}
+          >
+            <View style={[styles.alertHeader, { backgroundColor: typeStyles.bgColor }]}>
+              <View style={styles.iconContainer}>
+                <MaterialIcons name={typeStyles.icon as any} size={48} color={typeStyles.color} />
+              </View>
+              <Text className="text-xl font-CairoBold text-gray-800 text-center mb-2">
+                {title}
+              </Text>
+              <Text className="text-base text-gray-600 text-center font-CairoRegular">
+                {message}
+              </Text>
+            </View>
+
+            <View style={styles.alertButtons}>
+              {onCancel && (
+                <TouchableOpacity
+                  onPress={handleCancel}
+                  style={styles.alertCancelButton}
+                >
+                  <Text style={styles.alertCancelButtonText}>
+                    {cancelText}
+                  </Text>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity
+                onPress={handleConfirm}
+                style={[
+                  styles.alertConfirmButton,
+                  { backgroundColor: typeStyles.color },
+                  onCancel ? { flex: 1 } : { width: '100%' }
+                ]}
+              >
+                <Text style={styles.alertConfirmButtonText}>
+                  {confirmText}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </Animated.View>
+        </TouchableOpacity>
+      </TouchableOpacity>
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  alertRoot: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 9999,
+  },
+  alertOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  alertContent: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  alertContainer: {
+    width: '85%',
+    backgroundColor: 'white',
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  alertHeader: {
+    padding: 24,
+  },
+  iconContainer: {
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  alertTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#1f2937',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  alertMessage: {
+    fontSize: 16,
+    color: '#4b5563',
+    textAlign: 'center',
+  },
+  alertButtons: {
+    flexDirection: 'row',
+    borderTopWidth: 1,
+    borderTopColor: '#e5e7eb',
+  },
+  alertCancelButton: {
+    flex: 1,
+    paddingVertical: 16,
+    borderRightWidth: 1,
+    borderRightColor: '#e5e7eb',
+  },
+  alertConfirmButton: {
+    paddingVertical: 16,
+  },
+  alertCancelButtonText: {
+    fontSize: 16,
+    color: '#4b5563',
+    textAlign: 'center',
+    fontWeight: '500',
+  },
+  alertConfirmButtonText: {
+    fontSize: 16,
+    color: 'white',
+    textAlign: 'center',
+    fontWeight: '500',
+  },
+});
+
 const driverInfo = () => {
   const { user } = useUser();
   const router = useRouter();
@@ -43,6 +280,16 @@ const driverInfo = () => {
   
   const [isLoading, setIsLoading] = useState(false);
   const [isDriverChecked, setIsDriverChecked] = useState(false);
+  const [alertConfig, setAlertConfig] = useState<CustomAlertProps>({
+    visible: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+    onCancel: undefined,
+    confirmText: 'OK',
+    cancelText: 'Cancel',
+    type: 'info',
+  });
 
   const checkDriverStatus = useCallback(async () => {
     try {
@@ -61,17 +308,31 @@ const driverInfo = () => {
         // Check if user has driver data
         if (userData.driver) {
           if (userData.driver.status === 'pending') {
-            Alert.alert(
-              t.alert,
-              t.pendingDriverRequest
-            );
-            router.replace("/(root)/(tabs)/home");
+            setAlertConfig({
+              visible: true,
+              title: t.alert,
+              message: t.pendingDriverRequest,
+              type: 'warning',
+              onConfirm: () => {
+                setAlertConfig(prev => ({ ...prev, visible: false }));
+                router.replace("/(root)/(tabs)/home");
+              },
+              confirmText: t.ok,
+              onCancel: undefined,
+            });
             return;
           } else if (userData.driver.status === 'rejected') {
-            Alert.alert(
-              t.alert,
-              `${t.rejectedDriverRequest}\n${userData.driver.rejection_reason || t.noReasonSpecified}\n\n${t.editAndResubmit}`
-            );
+            setAlertConfig({
+              visible: true,
+              title: t.alert,
+              message: `${t.rejectedDriverRequest}\n${userData.driver.rejection_reason || t.noReasonSpecified}\n\n${t.editAndResubmit}`,
+              type: 'warning',
+              onConfirm: () => {
+                setAlertConfig(prev => ({ ...prev, visible: false }));
+              },
+              confirmText: t.ok,
+              onCancel: undefined,
+            });
             // Pre-fill the form with existing data
             setDriverFormData({
               carType: userData.driver.car_type || "",
@@ -83,7 +344,7 @@ const driverInfo = () => {
             console.log("User is a driver, redirecting to locationInfo");
             await AsyncStorage.setItem('driverData', JSON.stringify(userData.driver));
             router.replace({
-              pathname: "/(root)/locationInfo",
+              pathname: "/(root)/location",
               params: { driverId: user.id },
             });
             return;
@@ -94,11 +355,27 @@ const driverInfo = () => {
       console.log("User is not a driver, requesting media permissions");
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== "granted") {
-        Alert.alert(t.alert, t.mediaPermissionRequired);
+        setAlertConfig({
+          visible: true,
+          title: t.alert,
+          message: t.mediaPermissionRequired,
+          type: 'warning',
+          onConfirm: () => setAlertConfig(prev => ({ ...prev, visible: false })),
+          confirmText: t.ok,
+          onCancel: undefined,
+        });
       }
     } catch (error: any) {
       console.error("Error checking driver status:", error);
-      Alert.alert(t.error, t.driverStatusCheckError);
+      setAlertConfig({
+        visible: true,
+        title: t.error,
+        message: t.driverStatusCheckError,
+        type: 'error',
+        onConfirm: () => setAlertConfig(prev => ({ ...prev, visible: false })),
+        confirmText: t.ok,
+        onCancel: undefined,
+      });
     } finally {
       setIsDriverChecked(true);
     }
@@ -134,12 +411,28 @@ const driverInfo = () => {
       // تحقق إضافي من نوع الملف
       const fileExtension = asset.uri.split('.').pop()?.toLowerCase();
       if (!['jpg', 'jpeg', 'png'].includes(fileExtension || '')) {
-        Alert.alert(t.error, t.invalidImageFormat);
+        setAlertConfig({
+          visible: true,
+          title: t.error,
+          message: t.invalidImageFormat,
+          type: 'error',
+          onConfirm: () => setAlertConfig(prev => ({ ...prev, visible: false })),
+          confirmText: t.ok,
+          onCancel: undefined,
+        });
         return;
       }
 
       if ((asset.fileSize || 0) > 5 * 1024 * 1024) {
-        Alert.alert(t.error, t.imageSizeLimit);
+        setAlertConfig({
+          visible: true,
+          title: t.error,
+          message: t.imageSizeLimit,
+          type: 'error',
+          onConfirm: () => setAlertConfig(prev => ({ ...prev, visible: false })),
+          confirmText: t.ok,
+          onCancel: undefined,
+        });
         return;
       }
 
@@ -149,7 +442,15 @@ const driverInfo = () => {
       }));
     } catch (error) {
       console.error("Image picker error:", error);
-      Alert.alert(t.error, t.imagePickError);
+      setAlertConfig({
+        visible: true,
+        title: t.error,
+        message: t.imagePickError,
+        type: 'error',
+        onConfirm: () => setAlertConfig(prev => ({ ...prev, visible: false })),
+        confirmText: t.ok,
+        onCancel: undefined,
+      });
     }
   }, [t]);
 
@@ -222,12 +523,29 @@ const driverInfo = () => {
       // Save to AsyncStorage for local access
       await AsyncStorage.setItem('driverData', JSON.stringify(driverData));
 
-      Alert.alert(t.success, t.driverRequestSuccess, [
-        { text: t.ok, onPress: () => router.push("/(root)/(tabs)/home")}
-      ]);
+      setAlertConfig({
+        visible: true,
+        title: t.success,
+        message: t.driverRequestSuccess,
+        type: 'success',
+        onConfirm: () => {
+          setAlertConfig(prev => ({ ...prev, visible: false }));
+          router.push("/(root)/(tabs)/home");
+        },
+        confirmText: t.ok,
+        onCancel: undefined,
+      });
     } catch (error: any) {
       console.error("Registration error:", error);
-      Alert.alert(t.error, error.message || t.registrationError);
+      setAlertConfig({
+        visible: true,
+        title: t.error,
+        message: error.message || t.registrationError,
+        type: 'error',
+        onConfirm: () => setAlertConfig(prev => ({ ...prev, visible: false })),
+        confirmText: t.ok,
+        onCancel: undefined,
+      });
     } finally {
       setIsLoading(false);
     }
@@ -341,6 +659,16 @@ const driverInfo = () => {
           />
         </View>
       </ScrollView>
+      <CustomAlert
+        visible={alertConfig.visible}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        type={alertConfig.type}
+        onConfirm={alertConfig.onConfirm}
+        onCancel={alertConfig.onCancel}
+        confirmText={alertConfig.confirmText}
+        cancelText={alertConfig.cancelText}
+      />
     </SafeAreaView>
   );
 };
