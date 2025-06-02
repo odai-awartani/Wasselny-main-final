@@ -1,4 +1,360 @@
-export const translations = {
+export interface TranslationKeys {
+  chooseLanguage: string;
+  next: string;
+  skip: string;
+  getStarted: string;
+  CreateAcc: string;
+  Search: string;
+  searchDrivers: string;
+  onboarding: { title: string; description: string; }[];
+  signUp: string;
+  signIn: string;
+  signUpButton: string;
+  phoneNumber: string;
+  fullName: string;
+  enterYourName: string;
+  email: string;
+  password: string;
+  gender: string;
+  selectGender: string;
+  workIndustry: string;
+  selectIndustry: string;
+  agreeToTerms: string;
+  cancel: string;
+  signUpHint: string;
+  enterPhone: string;
+  enterEmail: string;
+  enterPassword: string;
+  enterConfirmPassword: string;
+  enterVerificationCode: string;
+  verifyEmailHint: string;
+  navigateToHomeHint: string;
+  loading: string;
+  genders: string[];
+  industries: string[];
+  other: string;
+  login: string;
+  forgotPassword: string;
+  noAccount: string;
+  agreeToTermsAlert: string;
+  alreadyHaveAccount: string;
+  logIn: string;
+  verificationSent: string;
+  code: string;
+  verifyEmail: string;
+  verified: string;
+  verificationSuccess: string;
+  browseHome: string;
+  error: string;
+  fillAllFields: string;
+  verificationFailed: string;
+  SendVCode: string;
+  Verification: string;
+  Code: string;
+  VerifyEmail: string;
+  signInFailed: string;
+  welcome: string;
+  forgotPasswordDescription: string;
+  sendResetLink: string;
+  backToSignIn: string;
+  fillEmailField: string;
+  resetPasswordLinkSent: string;
+  success: string;
+  resetPassword: string;
+  resetPasswordDescription: string;
+  verificationCode: string;
+  newPassword: string;
+  passwordResetSuccess: string;
+  passwordResetFailed: string;
+  confirmPassward: string;
+  resetPasswordButton: string;
+  resetPasswordCodeSent: string;
+  passwordResetSuccessDescription: string;
+  barriers: string;
+  barriersDescription: string;
+  explore: string;
+  userName: string;
+  newRide: string;
+  suggestedRides: string;
+  createRide: string;
+  logout: string;
+  currentLocation: string;
+  becomeDriver: string;
+  earnMoney: string;
+  register: string;
+  searchPlaceholder: string;
+  searchError: string;
+  registerDriver: string;
+  carType: string;
+  carTypePlaceholder: string;
+  carSeats: string;
+  carSeatsPlaceholder: string;
+  uploadCarImage: string;
+  selectCarImage: string;
+  uploadProfileImage: string;
+  selectProfileImage: string;
+  registerDriverButton: string;
+  registering: string;
+  checkingData: string;
+  pleaseWait: string;
+  alert: string;
+  pendingDriverRequest: string;
+  rejectedDriverRequest: string;
+  noReasonSpecified: string;
+  editAndResubmit: string;
+  mediaPermissionRequired: string;
+  driverStatusCheckError: string;
+  invalidImageFormat: string;
+  imageSizeLimit: string;
+  imagePickError: string;
+  invalidCarSeats: string;
+  imageUploadFailed: string;
+  newDriverRequestTitle: string;
+  newDriverRequestMessage: string;
+  driverRequestSuccess: string;
+  registrationError: string;
+  ok: string;
+  userNotAuthenticated: string;
+  failedToLoadRides: string;
+  ended: string;
+  pending: string;
+  available: string;
+  from: string;
+  to: string;
+  user: string;
+  seats: string;
+  retry: string;
+  noRidesAvailable: string;
+  Home: string;
+  Rides: string;
+  Chat: string;
+  Barrier: string;
+  Profile: string;
+  Settings: string;
+  Help: string;
+  Logout: string;
+  Notifications: string;
+  Language: string;
+  Theme: string;
+  About: string;
+  Terms: string;
+  Privacy: string;
+  Contact: string;
+  Feedback: string;
+  Rate: string;
+  Share: string;
+  april: string;
+  may: string;
+  june: string;
+  july: string;
+  august: string;
+  september: string;
+  october: string;
+  november: string;
+  december: string;
+  january: string;
+  february: string;
+  march: string;
+  DriverInformation: string;
+  CarType: string;
+  NumberOfSeats: string;
+  DriverStatus: string;
+  RegistrationDate: string;
+  CarImage: string;
+  AccountInformation: string;
+  PhoneNumber: string;
+  MemberSince: string;
+  Active: string;
+  Inactive: string;
+  TotalRides: string;
+  Rating: string;
+  BecomeDriver: string;
+  EarnMoney: string;
+  AdminDashboard: string;
+  DriverApplications: string;
+  ManageDriverRequests: string;
+  Nablus: string;
+  Hebron: string;
+  Ramallah: string;
+  Jerusalem: string;
+  Bethlehem: string;
+  Jenin: string;
+  Tulkarm: string;
+  Qalqilya: string;
+  Salfit: string;
+  Tubas: string;
+  editProfile: string;
+  language: string;
+  notifications: string;
+  location: string;
+  support: string;
+  shareApp: string;
+  shareAppMessage: string;
+  rateUs: string;
+  privacyPolicy: string;
+  helpAndSupport: string;
+  account: string;
+  edit: string;
+  delete: string;
+  deleteAccount: string;
+  deleteAccountDescription: string;
+  trackRide: string;
+  driver: string;
+  inProgress: string;
+  completed: string;
+  contactDriver: string;
+  emergencyContact: string;
+  emergencyContactDescription: string;
+  callEmergency: string;
+  rideInProgress: string;
+  rideDelayed: string;
+  rideAlert: string;
+  estimatedArrival: string;
+  setParentEmail: string;
+  parentEmailPlaceholder: string;
+  saveParentEmail: string;
+  parentEmailSet: string;
+  parentEmailError: string;
+  checkIn: string;
+  checkOut: string;
+  checkInSuccess: string;
+  checkInError: string;
+  checkOutSuccess: string;
+  checkOutError: string;
+  upcoming: string;
+  past: string;
+  all: string;
+  allRides: string;
+  myRides: string;
+  registeredRides: string;
+  cancelled: string;
+  noUpcomingRides: string;
+  noPastRides: string;
+  upcomingRidesWillAppearHere: string;
+  pastRidesWillAppearHere: string;
+  ridesYouDrove: string;
+  ridesYouJoined: string;
+  recurringTrip: string;
+  availableSeats: string;
+  youAreTheDriver: string;
+  theDriver: string;
+  daysNotSpecified: string;
+  stop: string;
+  passenger: string;
+  rideOrDriverDataMissing: string;
+  bookingAccepted: string;
+  bookingAcceptedForRide: string;
+  bookingAcceptedSuccess: string;
+  bookingAcceptedFor: string;
+  errorAcceptingRequest: string;
+  bookingRejected: string;
+  bookingRejectedForRide: string;
+  bookingRejectedSuccess: string;
+  bookingRejectedFor: string;
+  errorRejectingRequest: string;
+  loadingBookingRequests: string;
+  bookingRequests: string;
+  noPendingRequests: string;
+  unspecified: string;
+  stopPoint: string;
+  startingPoint: string;
+  requestedSeats: string;
+  seat: string;
+  accept: string;
+  reject: string;
+  home: string;
+  search: string;
+  barrier: string;
+  rides: string;
+  chat: string;
+  profile: string;
+  settings: string;
+  help: string;
+  about: string;
+  insufficientSeats: string;
+  onlyAvailableSeats: string;
+  cancelBooking: string;
+  cancelBookingConfirmation: string;
+  yes: string;
+  no: string;
+  bookingCancelled: string;
+  bookingCancelledByDriver: string;
+  bookingCancelledSuccess: string;
+  bookingCancelledFor: string;
+  errorCancellingBooking: string;
+  confirmAcceptRequest: string;
+  acceptRequestFor: string;
+  confirmRejectRequest: string;
+  rejectRequestFor: string;
+  tryAgainLater: string;
+  driverProfile: string;
+  firstName: string;
+  lastName: string;
+  notFound: string;
+  driverInformation: string;
+  carInformation: string;
+  noCarImage: string;
+  tapToClose: string;
+  CompletedRides: string;
+  AverageRating: string;
+  driverNotFound: string;
+  locationSharingActive: string;
+  sharingLocationWith: string;
+  cannotShareLocation: string;
+  failedToStartSharing: string;
+  lastUpdated: string;
+  view: string;
+  shareLocationWith: string;
+  searchUserPlaceholder: string;
+  noUsersFound: string;
+  startSharing: string;
+  locationRequests: string;
+  noActiveLocationRequests: string;
+  myShares: string;
+  updateLocationForAll: string;
+  updated: string;
+  locationUpdatedForAll: string;
+  failedToUpdateLocation: string;
+  noActiveShares: string;
+  sharingLocationWithUser: string;
+  failedToStopSharing: string;
+  locationSharingStopped: string;
+  refreshing: string;
+  findRide: string;
+  findNow: string;
+  selectBothLocations: string;
+  confirmRide: string;
+  matchingRides: string;
+  currency: string;
+  ride: string;
+  price: string;
+  departureTime: string;
+  filter: string;
+  selectRide: string;
+  noSmoking: string;
+  noMusic: string;
+  noChildren: string;
+  sortByTime: string;
+  sortByPrice: string;
+  sortByRating: string;
+  trackLocation: string;
+  locationPermissionRequired: string;
+  locationPermissionNotGranted: string;
+  locationError: string;
+  getLocationError: string;
+  secondsAgo: string;
+  secondAgo: string;
+  minutesAgo: string;
+  minuteAgo: string;
+  locationUpdatedSuccessfully: string;
+}
+
+export interface Translations {
+  ar: TranslationKeys;
+  en: TranslationKeys;
+}
+
+export const translations: Translations = {
   ar: {
     chooseLanguage: "اختار اللغة",
     next: "التالي",
@@ -35,14 +391,14 @@ export const translations = {
     selectIndustry: "اختر مجال العمل",
     agreeToTerms: "أوافق على الشروط والأحكام",
     cancel: "إلغاء",
-    signUpHint: "اضغط لإكمال التسجيل",
+    signUpHint: "<TRANSLATE_signUpHint>",
     enterPhone: "أدخل رقم الهاتف",
     enterEmail: "أدخل البريد الإلكتروني",
     enterPassword: "أدخل كلمة المرور",
     enterConfirmPassword: "أدخل تأكيد كلمة المرور",
     enterVerificationCode: "أدخل رمز التحقق",
-    verifyEmailHint: "تحقق من بريدك الإلكتروني",
-    navigateToHomeHint: "انتقل إلى الصفحة الرئيسية",
+    verifyEmailHint: "<TRANSLATE_verifyEmailHint>",
+    navigateToHomeHint: "<TRANSLATE_navigateToHomeHint>",
     loading: "جاري التحميل...",
     genders: ['ذكر', 'أنثى'],
     industries: [
@@ -61,7 +417,7 @@ export const translations = {
     login: "تسجيل الدخول",
     forgotPassword: "نسيت كلمة السر؟",
     noAccount: "لا يوجد حساب؟",
-    agreeToTermsAlert: "يرجى الموافقة على الشروط والأحكام",
+    agreeToTermsAlert: "<TRANSLATE_agreeToTermsAlert>",
     alreadyHaveAccount: "هل لديك حساب بالفعل؟",
     logIn: "تسجيل الدخول",
     verificationSent: "تم إرسال رمز التحقق إلى",
@@ -147,7 +503,6 @@ export const translations = {
     from: 'من',
     to: 'إلى',
     user: "المستخدم",
-
     seats: 'مقاعد',
     retry: 'أعد المحاولة',
     noRidesAvailable: 'لا توجد رحلات متاحة',
@@ -181,6 +536,23 @@ export const translations = {
     january: 'يناير',
     february: 'فبراير',
     march: 'مارس',
+    findRide: "البحث عن رحلة",
+    findNow: "ابحث الآن",
+    selectBothLocations: "الرجاء تحديد نقطة البداية والوجهة",
+    confirmRide: "تأكيد الرحلة",
+    matchingRides: "الرحلات المطابقة",
+    currency: "ريال سعودي",
+    ride: "رحلة",
+    price: "السعر",
+    departureTime: "وقت المغادرة",
+    filter: "تصفية",
+    selectRide: "اختر رحلة",
+    noSmoking: "ممنوع التدخين",
+    noMusic: "ممنوع الموسيقى",
+    noChildren: "ممنوع الأطفال",
+    sortByTime: "الترتيب حسب الوقت",
+    sortByPrice: "الترتيب حسب السعر",
+    sortByRating: "الترتيب حسب التقييم",
     DriverInformation: 'معلومات السائق',
     CarType: 'نوع السيارة',
     NumberOfSeats: 'عدد المقاعد',
@@ -324,6 +696,38 @@ export const translations = {
     CompletedRides: "الرحلات المكتملة",
     AverageRating: "متوسط التقييم",
     driverNotFound: "لم يتم العثور على السائق",
+    locationSharingActive: "مشاركة الموقع نشطة",
+    sharingLocationWith: "أنت الآن تشارك موقعك مع",
+    cannotShareLocation: "لا يمكن مشاركة الموقع، يرجى تحديث موقعك واختيار مستخدم",
+    failedToStartSharing: "فشل في بدء مشاركة الموقع",
+    lastUpdated: "آخر تحديث:",
+    view: "عرض",
+    shareLocationWith: "مشاركة الموقع مع",
+    searchUserPlaceholder: "بحث عن مستخدم...",
+    noUsersFound: "لم يتم العثور على مستخدمين",
+    startSharing: "بدء المشاركة",
+    locationRequests: "طلبات الموقع",
+    noActiveLocationRequests: "لا توجد طلبات موقع نشطة",
+    myShares: "مشاركاتي",
+    updateLocationForAll: "تحديث الموقع للجميع",
+    updated: "تم التحديث",
+    locationUpdatedForAll: "تم تحديث موقعك لجميع المستخدمين",
+    failedToUpdateLocation: "فشل في تحديث الموقع",
+    noActiveShares: "لا توجد مشاركات نشطة",
+    sharingLocationWithUser: "مشاركة الموقع مع {userName}",
+    failedToStopSharing: "فشل في إيقاف مشاركة المشاركة",
+    locationSharingStopped: "تم إيقاف مشاركة الموقع",
+    refreshing: "جاري التحديث...",
+    trackLocation: "تتبع الموقع",
+    locationPermissionRequired: "إذن الموقع مطلوب",
+    locationPermissionNotGranted: "لم يتم منح إذن الموقع",
+    locationError: "خطأ في الموقع",
+    getLocationError: "حدث خطأ أثناء الحصول على موقعك",
+    secondsAgo: "ثواني مضت",
+    secondAgo: "ثانية مضت",
+    minutesAgo: "دقائق مضت",
+    minuteAgo: "دقيقة مضت",
+    locationUpdatedSuccessfully: "تم تحديث الموقع بنجاح",
   },
   en: {
     chooseLanguage: "Choose Language",
@@ -347,7 +751,9 @@ export const translations = {
         description: "Don't be late! Check if the road is clear or blocked before you leave home."
       }
     ],
-    signUp: "Create Your Account",
+    signUp: "Sign Up",
+    signIn: "Sign In",
+    signUpButton: "Sign Up",
     phoneNumber: "Phone Number",
     fullName: "Full Name",
     enterYourName: "Enter your name",
@@ -359,6 +765,15 @@ export const translations = {
     selectIndustry: "Select Industry",
     agreeToTerms: "I agree to the terms and conditions",
     cancel: "Cancel",
+    signUpHint: "Sign up hint",
+    enterPhone: "Enter phone number",
+    enterEmail: "Enter email",
+    enterPassword: "Enter password",
+    enterConfirmPassword: "Enter confirm password",
+    enterVerificationCode: "Enter verification code",
+    verifyEmailHint: "Verify email hint",
+    navigateToHomeHint: "Navigate to home hint",
+    loading: "Loading...",
     genders: ['Male', 'Female'],
     industries: [
       'Student',
@@ -372,15 +787,11 @@ export const translations = {
       'Merchant',
       'Healthcare Worker',
     ],
-    explore: "Explore",
-    user: "User",
-
     other: "Other",
     login: "Login",
     forgotPassword: "Forgot Password?",
     noAccount: "Don't have an account?",
     agreeToTermsAlert: "Please agree to the terms and conditions",
-    signUpButton: "Sign Up",
     alreadyHaveAccount: "Already have an account?",
     logIn: "Log In",
     verificationSent: "We've sent a verification code to",
@@ -417,18 +828,8 @@ export const translations = {
     logout: "Logout",
     barriers: "Barriers",
     barriersDescription: "Learn about the impact of checkpoints in Palestine",
+    explore: "Explore",
     userName: "User",
-    home: "Home",
-    search: "Search",
-    rides: "Rides",
-    chat: "Chat",
-    profile: "Profile",
-    settings: "Settings",
-    help: "Help",
-    about: "About",
-    barrier: "Barriers",
-    
-
     newRide: "New Ride",
     suggestedRides: "Suggested Rides",
     createRide: "Create Ride",
@@ -475,10 +876,28 @@ export const translations = {
     available: 'Available',
     from: 'From',
     to: 'To',
+    user: "User",
     seats: 'seats',
     retry: 'Retry',
     noRidesAvailable: 'No rides available',
     Home: 'Home',
+    Rides: 'Rides',
+    Chat: 'Chat',
+    Barrier: 'Barriers',
+    Profile: 'Profile',
+    Settings: 'Settings',
+    Help: 'Help',
+    Logout: 'Logout',
+    Notifications: 'Notifications',
+    Language: 'Language',
+    Theme: 'Theme',
+    About: 'About',
+    Terms: 'Terms',
+    Privacy: 'Privacy',
+    Contact: 'Contact',
+    Feedback: 'Feedback',
+    Rate: 'Rate',
+    Share: 'Share',
     april: 'April',
     may: 'May',
     june: 'June',
@@ -491,24 +910,52 @@ export const translations = {
     january: 'January',
     february: 'February',
     march: 'March',
-    findRide: 'Find a Ride',
-findNow: 'Find Now',
-    selectBothLocations: 'Please select both origin and destination locations',
-    confirmRide: 'Confirm Ride',
-    matchingRides: 'Matching Rides',
-    currency: 'SAR', 
-    ride: 'Ride',
-    price: 'Price',
-departureTime: 'Departure Time',
-filter: 'Filter',
-selectRide: 'Select Ride',
-noSmoking: 'No Smoking',
-noMusic: 'No Music',
-noChildren: 'No Children',
-sortByTime: 'Sort by Time',
-sortByPrice: 'Sort by Price',
-sortByRating: 'Sort by Rating',
-editProfile: "Edit Profile",
+    findRide: "Find a Ride",
+    findNow: "Find Now",
+    selectBothLocations: "Please select both origin and destination locations",
+    confirmRide: "Confirm Ride",
+    matchingRides: "Matching Rides",
+    currency: "SAR",
+    ride: "Ride",
+    price: "Price",
+    departureTime: "Departure Time",
+    filter: "Filter",
+    selectRide: "Select Ride",
+    noSmoking: "No Smoking",
+    noMusic: "No Music",
+    noChildren: "No Children",
+    sortByTime: "Sort by Time",
+    sortByPrice: "Sort by Price",
+    sortByRating: "Sort by Rating",
+    DriverInformation: "Driver Information",
+    CarType: "Car Type",
+    NumberOfSeats: "Number of Seats",
+    DriverStatus: "Driver Status",
+    RegistrationDate: "Registration Date",
+    CarImage: "Car Image",
+    AccountInformation: "Account Information",
+    PhoneNumber: "Phone Number",
+    MemberSince: "Member Since",
+    Active: "Active",
+    Inactive: "Inactive",
+    TotalRides: "Total Rides",
+    Rating: "Rating",
+    BecomeDriver: "Become a Driver",
+    EarnMoney: "Earn money by providing rides",
+    AdminDashboard: "Admin Dashboard",
+    DriverApplications: "Driver Applications",
+    ManageDriverRequests: "Manage Driver Registration Requests",
+    Nablus: "Nablus",
+    Hebron: "Hebron",
+    Ramallah: "Ramallah",
+    Jerusalem: "Jerusalem",
+    Bethlehem: "Bethlehem",
+    Jenin: "Jenin",
+    Tulkarm: "Tulkarm",
+    Qalqilya: "Qalqilya",
+    Salfit: "Salfit",
+    Tubas: "Tubas",
+    editProfile: "Edit Profile",
     language: "Change the Language to",
     notifications: "Notifications",
     location: "Location",
@@ -523,96 +970,6 @@ editProfile: "Edit Profile",
     delete: "Delete",
     deleteAccount: "Delete Account",
     deleteAccountDescription: "Confirm Delete Account",
-    Rides: 'Rides',
-
-    Chat: 'Chat',
-
-    Barrier: 'Barriers',
-
-    Profile: 'Profile',
-
-    Settings: 'Settings',
-
-    Help: 'Help',
-
-    Logout: 'Logout',
-
-    Notifications: 'Notifications',
-
-    Language: 'Language',
-
-    Theme: 'Theme',
-
-    About: 'About',
-
-    Terms: 'Terms',
-
-    Privacy: 'Privacy',
-
-    Contact: 'Contact',
-
-    Feedback: 'Feedback',
-
-    Rate: 'Rate App',
-
-    Share: 'Share App',
-
-    DriverInformation: "Driver Information",
-
-    CarType: "Car Type",
-
-    NumberOfSeats: "Number of Seats",
-
-    DriverStatus: "Driver Status",
-
-    RegistrationDate: "Registration Date",
-
-    CarImage: "Car Image",
-
-    AccountInformation: "Account Information",
-
-    PhoneNumber: "Phone Number",
-
-    MemberSince: "Member Since",
-
-    Active: "Active",
-
-    Inactive: "Inactive",
-
-    TotalRides: "Total Rides",
-
-    Rating: "Rating",
-
-    BecomeDriver: "Become a Driver",
-
-    EarnMoney: "Earn money by providing rides",
-
-    AdminDashboard: "Admin Dashboard",
-
-    DriverApplications: "Driver Applications",
-
-    ManageDriverRequests: "Manage Driver Registration Requests",
-
-    Nablus: "Nablus",
-
-    Hebron: "Hebron",
-
-    Ramallah: "Ramallah",
-
-    Jerusalem: "Jerusalem",
-
-    Bethlehem: "Bethlehem",
-
-    Jenin: "Jenin",
-
-    Tulkarm: "Tulkarm",
-
-    Qalqilya: "Qalqilya",
-
-    Salfit: "Salfit",
-
-    Tubas: "Tubas",
-
     trackRide: "Track Ride",
     driver: "Driver",
     inProgress: "In Progress",
@@ -677,6 +1034,15 @@ editProfile: "Edit Profile",
     seat: "seat",
     accept: "Accept",
     reject: "Reject",
+    home: "Home",
+    search: "Search",
+    barrier: "Barriers",
+    rides: "Rides",
+    chat: "Chat",
+    profile: "Profile",
+    settings: "Settings",
+    help: "Help",
+    about: "About",
     insufficientSeats: "Insufficient Seats",
     onlyAvailableSeats: "Sorry, there are only",
     cancelBooking: "Cancel Booking",
@@ -704,5 +1070,37 @@ editProfile: "Edit Profile",
     CompletedRides: "Completed Rides",
     AverageRating: "Average Rating",
     driverNotFound: "Driver not found",
+    locationSharingActive: "Location Sharing Active",
+    sharingLocationWith: "You are now sharing your location with",
+    cannotShareLocation: "Cannot share location, please refresh your location and select a user",
+    failedToStartSharing: "Failed to start location sharing",
+    lastUpdated: "Last updated:",
+    view: "View",
+    shareLocationWith: "Share Location With",
+    searchUserPlaceholder: "Search user...",
+    noUsersFound: "No users found",
+    startSharing: "Start Sharing",
+    locationRequests: "Location Requests",
+    noActiveLocationRequests: "No active location requests",
+    myShares: "My Shares",
+    updateLocationForAll: "Update Location for All",
+    updated: "Updated",
+    locationUpdatedForAll: "Your location has been updated for all users",
+    failedToUpdateLocation: "Failed to update location",
+    noActiveShares: "No active shares",
+    sharingLocationWithUser: "Sharing location with {userName}",
+    failedToStopSharing: "Failed to stop sharing",
+    locationSharingStopped: "Location sharing stopped",
+    refreshing: "Refreshing...",
+    trackLocation: "Location Tracking",
+    locationPermissionRequired: "Location Permission Required",
+    locationPermissionNotGranted: "Location permission not granted",
+    locationError: "Location Error",
+    getLocationError: "An error occurred while getting your location",
+    secondsAgo: "seconds ago",
+    secondAgo: "second ago",
+    minutesAgo: "minutes ago",
+    minuteAgo: "minute ago",
+    locationUpdatedSuccessfully: "Location updated successfully",
   },
 };

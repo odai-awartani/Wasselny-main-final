@@ -315,7 +315,7 @@ export default function BarriersScreen() {
                 shadowRadius: 3,
               }}
             >
-              <View className="flex-row justify-between items-center">
+              <View className={`flex-row justify-between items-center ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
                 <Text className={`text-xl ${language === 'ar' ? 'font-CairoBold text-right' : 'font-JakartaBold text-left'} text-gray-800`}>
                   {language === 'ar' ? data.ar : city}
                 </Text>

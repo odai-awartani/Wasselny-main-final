@@ -5,7 +5,7 @@ if (__DEV__ && (global as any)._REANIMATED_VERSION_3) {
   }
   
   import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-  import { View, Text, TouchableOpacity, StyleSheet, Platform, ActivityIndicator, Alert, FlatList, Image, Dimensions, Modal, TextInput, RefreshControl } from 'react-native';
+  import { View, Text, TouchableOpacity, StyleSheet, Platform, ActivityIndicator, Alert, FlatList, Image, Dimensions, Modal, TextInput, RefreshControl, Animated } from 'react-native';
   import { SafeAreaView } from 'react-native-safe-area-context';
   import { useUser } from '@clerk/clerk-expo';
   import { router } from 'expo-router';
@@ -20,6 +20,150 @@ if (__DEV__ && (global as any)._REANIMATED_VERSION_3) {
   import { GestureHandlerRootView } from 'react-native-gesture-handler';
   import * as Haptics from 'expo-haptics';
 import Header from '@/components/Header';
+import { translations } from '@/constants/languages';
+  
+  // Interface for CustomAlertProps
+  interface CustomAlertProps {
+    visible: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    onCancel?: () => void;
+    confirmText?: string;
+    cancelText?: string;
+    type?: 'success' | 'error' | 'warning' | 'info';
+  }
+  
+  // CustomAlert component (copied from my-shares.tsx)
+  const CustomAlert = ({
+    visible,
+    title,
+    message,
+    onConfirm,
+    onCancel,
+    confirmText = 'OK',
+    cancelText = 'Cancel',
+    type = 'info'
+  }: CustomAlertProps) => {
+    const scaleAnim = React.useRef(new Animated.Value(0)).current;
+    const opacityAnim = React.useRef(new Animated.Value(0)).current;
+  
+    React.useEffect(() => {
+      if (visible) {
+        Animated.parallel([
+          Animated.spring(scaleAnim, {
+            toValue: 1,
+            useNativeDriver: true,
+            tension: 50,
+            friction: 7
+          }),
+          Animated.timing(opacityAnim, {
+            toValue: 1,
+            duration: 200,
+            useNativeDriver: true
+          })
+        ]).start();
+      } else {
+        Animated.parallel([
+          Animated.timing(opacityAnim, {
+            toValue: 0,
+            duration: 200,
+            useNativeDriver: true
+          }),
+          Animated.spring(scaleAnim, {
+            toValue: 0,
+            useNativeDriver: true,
+            tension: 50,
+            friction: 7
+          })
+        ]).start();
+      }
+    }, [visible]);
+  
+    const getTypeStyles = () => {
+      switch (type) {
+        case 'success':
+          return {
+            icon: 'check-circle',
+            color: '#22c55e',
+            bgColor: '#dcfce7'
+          };
+        case 'error':
+          return {
+            icon: 'error',
+            color: '#ef4444',
+            bgColor: '#fee2e2'
+          };
+        case 'warning':
+          return {
+            icon: 'warning',
+            color: '#f97316',
+            bgColor: '#ffedd5'
+          };
+        default:
+          return {
+            icon: 'info',
+            color: '#3b82f6',
+            bgColor: '#dbeafe'
+          };
+      }
+    };
+  
+    const typeStyles = getTypeStyles();
+  
+    return (
+      <Modal
+        visible={visible}
+        transparent
+        animationType="none"
+        onRequestClose={onCancel}
+      >
+        <View className="flex-1 justify-center items-center bg-black/50">
+          <Animated.View
+            className="w-[85%] bg-white rounded-2xl overflow-hidden"
+            style={[
+              { transform: [{ scale: scaleAnim }] },
+              { opacity: opacityAnim }
+            ]}
+          >
+            <View className={`p-6 ${typeStyles.bgColor}`}>
+              <View className="items-center mb-4">
+                <MaterialIcons name={typeStyles.icon as any} size={48} color={typeStyles.color} />
+              </View>
+              <Text className="text-xl font-CairoBold text-gray-800 text-center mb-2">
+                {title}
+              </Text>
+              <Text className="text-base text-gray-600 text-center font-CairoRegular">
+                {message}
+              </Text>
+            </View>
+  
+            <View className="flex-row border-t border-gray-200">
+              {onCancel && (
+                <TouchableOpacity
+                  onPress={onCancel}
+                  className="flex-1 py-4 border-r border-gray-200"
+                >
+                  <Text className="text-base text-gray-600 text-center font-CairoMedium">
+                    {cancelText}
+                  </Text>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity
+                onPress={onConfirm}
+                className={`py-4 ${onCancel ? 'flex-1' : 'w-full'}`}
+                style={{ backgroundColor: typeStyles.color }}
+              >
+                <Text className="text-base text-white text-center font-CairoMedium">
+                  {confirmText}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </Animated.View>
+        </View>
+      </Modal>
+    );
+  };
   
   // Types
   interface AppUser {
@@ -71,6 +215,15 @@ import Header from '@/components/Header';
     const [isInitialLoading, setIsInitialLoading] = useState(true);
     const [stoppingShares, setStoppingShares] = useState<Set<string>>(new Set());
     const [isUpdatingAll, setIsUpdatingAll] = useState(false);
+    const [alertConfig, setAlertConfig] = useState({
+      visible: false,
+      title: '',
+      message: '',
+      type: 'error',
+      onConfirm: () => setAlertConfig(prev => ({ ...prev, visible: false })),
+      confirmText: '',
+      onCancel: undefined,
+    });
   
     // Timer for updating times
     useEffect(() => {
@@ -87,10 +240,16 @@ import Header from '@/components/Header';
           setIsInitialLoading(true);
           let { status } = await Location.requestForegroundPermissionsAsync();
           if (status !== 'granted') {
-            Alert.alert(
-              'Location Permission',
-              'Location permission is required to use the tracking features.'
-            );
+            setAlertConfig({
+              visible: true,
+              title: isRTL ? translations.ar.locationPermissionRequired : translations.en.locationPermissionRequired,
+              message: isRTL ? translations.ar.locationPermissionNotGranted : translations.en.locationPermissionNotGranted,
+              type: 'error',
+              onConfirm: () => setAlertConfig(prev => ({ ...prev, visible: false })),
+              confirmText: isRTL ? translations.ar.ok : translations.en.ok,
+              onCancel: undefined,
+            });
+            setIsRefreshing(false);
             return;
           }
           
@@ -254,16 +413,20 @@ import Header from '@/components/Header';
   
     // Format elapsed time
     const formatTimeElapsed = (timestamp: string) => {
-      if (!timestamp) return "Never";
-      
+      if (!timestamp) return isRTL ? translations.ar.notFound : translations.en.notFound;
+
       const lastUpdated = new Date(timestamp);
       const seconds = Math.floor((now.getTime() - lastUpdated.getTime()) / 1000);
-      
+
       if (seconds < 60) {
-        return `${seconds} second${seconds !== 1 ? 's' : ''} ago`;
+        return isRTL
+          ? `${seconds} ${seconds !== 1 ? translations.ar.secondsAgo : translations.ar.secondAgo}`
+          : `${seconds} second${seconds !== 1 ? 's' : ''} ago`;
       } else if (seconds < 3600) {
         const minutes = Math.floor(seconds / 60);
-        return `${minutes} minute${minutes !== 1 ? 's' : ''} ago`;
+        return isRTL
+          ? `${minutes} ${minutes !== 1 ? translations.ar.minutesAgo : translations.ar.minuteAgo}`
+          : `${minutes} minute${minutes !== 1 ? 's' : ''} ago`;
       } else {
         return lastUpdated.toLocaleTimeString();
       }
@@ -276,10 +439,30 @@ import Header from '@/components/Header';
         setStoppingShares(prev => new Set(prev).add(docId));
         
         await updateDoc(doc(db, 'location_sharing', docId), { is_active: false });
-        Alert.alert('Success', 'Location sharing stopped');
+
+        // Replace Alert.alert with custom alert state update for success
+        setAlertConfig({
+          visible: true,
+          title: isRTL ? translations.ar.success : translations.en.success,
+          message: isRTL ? translations.ar.locationSharingStopped : translations.en.locationSharingStopped,
+          type: 'warning', // Assuming stopping is a success state, changing to warning for orange theme
+          onConfirm: () => setAlertConfig(prev => ({ ...prev, visible: false })),
+          confirmText: isRTL ? translations.ar.ok : translations.en.ok,
+          onCancel: undefined,
+        });
+
       } catch (error) {
         console.error('Error stopping sharing:', error);
-        Alert.alert('Error', 'Could not stop sharing location');
+        // Replace Alert.alert with custom alert state update for error
+        setAlertConfig({
+          visible: true,
+          title: isRTL ? translations.ar.error : translations.en.error,
+          message: isRTL ? translations.ar.failedToStopSharing : translations.en.failedToStopSharing,
+          type: 'error',
+          onConfirm: () => setAlertConfig(prev => ({ ...prev, visible: false })),
+          confirmText: isRTL ? translations.ar.ok : translations.en.ok,
+          onCancel: undefined,
+        });
       } finally {
         // Remove the share from stopping state
         setStoppingShares(prev => {
@@ -320,10 +503,15 @@ import Header from '@/components/Header';
         // Request location permissions
         let { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== 'granted') {
-          Alert.alert(
-            isRTL ? 'تنبيه الموقع' : 'Location Alert',
-            isRTL ? 'لم يتم منح إذن الوصول إلى الموقع' : 'Location permission was not granted'
-          );
+          setAlertConfig({
+            visible: true,
+            title: isRTL ? translations.ar.locationPermissionRequired : translations.en.locationPermissionRequired,
+            message: isRTL ? translations.ar.locationPermissionNotGranted : translations.en.locationPermissionNotGranted,
+            type: 'error',
+            onConfirm: () => setAlertConfig(prev => ({ ...prev, visible: false })),
+            confirmText: isRTL ? translations.ar.ok : translations.en.ok,
+            onCancel: undefined,
+          });
           setIsRefreshing(false);
           return;
         }
@@ -364,12 +552,30 @@ import Header from '@/components/Header';
         
         setIsRefreshing(false);
         setLoading(false);
+        
+        // Show success message using custom alert
+        setAlertConfig({
+          visible: true,
+          title: isRTL ? translations.ar.updated : translations.en.updated,
+          message: isRTL ? translations.ar.locationUpdatedSuccessfully : translations.en.locationUpdatedSuccessfully,
+          type: 'warning', // Using warning type for orange theme
+          onConfirm: () => setAlertConfig(prev => ({ ...prev, visible: false })),
+          confirmText: isRTL ? translations.ar.ok : translations.en.ok,
+          onCancel: undefined,
+        });
+
       } catch (error) {
         console.error('Error getting location:', error);
-        Alert.alert(
-          isRTL ? 'خطأ في الموقع' : 'Location Error',
-          isRTL ? 'حدث خطأ أثناء محاولة الحصول على موقعك' : 'An error occurred while trying to get your location'
-        );
+        // Replace Alert.alert with custom alert for error
+        setAlertConfig({
+          visible: true,
+          title: isRTL ? translations.ar.locationError : translations.en.locationError,
+          message: isRTL ? translations.ar.getLocationError : translations.en.getLocationError,
+          type: 'error', // Using error type for error theme
+          onConfirm: () => setAlertConfig(prev => ({ ...prev, visible: false })),
+          confirmText: isRTL ? translations.ar.ok : translations.en.ok,
+          onCancel: undefined,
+        });
         setIsRefreshing(false);
         setLoading(false);
       }
@@ -408,10 +614,16 @@ import Header from '@/components/Header';
       try {
         // Validate required data
         if (!selectedUser || !userLocation || !user?.id) {
-          Alert.alert(
-            isRTL ? 'خطأ' : 'Error',
-            isRTL ? 'لا يمكن مشاركة الموقع، يرجى تحديث موقعك واختيار مستخدم' : 'Cannot share location, please refresh your location and select a user'
-          );
+          // Replace Alert.alert with custom alert
+          setAlertConfig({
+            visible: true,
+            title: isRTL ? translations.ar.error : translations.en.error,
+            message: isRTL ? translations.ar.cannotShareLocation : translations.en.cannotShareLocation,
+            type: 'error',
+            onConfirm: () => setAlertConfig(prev => ({ ...prev, visible: false })),
+            confirmText: isRTL ? translations.ar.ok : translations.en.ok,
+            onCancel: undefined,
+          });
           return;
         }
 
@@ -473,21 +685,34 @@ import Header from '@/components/Header';
         
         // Close modal and show success message
         setActiveModal('none');
-        
-        Alert.alert(
-          isRTL ? 'مشاركة الموقع نشطة' : 'Location Sharing Active',
-          isRTL ? `أنت الآن تشارك موقعك مع ${selectedUser.name}` : `You are now sharing your location with ${selectedUser.name}`
-        );
+
+        // Replace Alert.alert with custom alert for success
+        setAlertConfig({
+          visible: true,
+          title: isRTL ? translations.ar.locationSharingActive : translations.en.locationSharingActive,
+          message: `${isRTL ? translations.ar.sharingLocationWith : translations.en.sharingLocationWith} ${selectedUser.name || (isRTL ? translations.ar.user : translations.en.user)}`,
+          type: 'warning',
+          onConfirm: () => setAlertConfig(prev => ({ ...prev, visible: false })),
+          confirmText: isRTL ? translations.ar.ok : translations.en.ok,
+          onCancel: undefined,
+        });
+
       } catch (error) {
         console.error('Error starting location sharing:', error);
         
         // Hide loading indicator
         setIsRefreshing(false);
         
-        Alert.alert(
-          isRTL ? 'خطأ' : 'Error',
-          isRTL ? 'فشل في بدء مشاركة الموقع' : 'Failed to start location sharing'
-        );
+        // Replace Alert.alert with custom alert for error
+        setAlertConfig({
+          visible: true,
+          title: isRTL ? translations.ar.error : translations.en.error,
+          message: isRTL ? translations.ar.failedToStartSharing : translations.en.failedToStartSharing,
+          type: 'error',
+          onConfirm: () => setAlertConfig(prev => ({ ...prev, visible: false })),
+          confirmText: isRTL ? translations.ar.ok : translations.en.ok,
+          onCancel: undefined,
+        });
       }
     };
   
@@ -563,10 +788,10 @@ import Header from '@/components/Header';
           </Text>
         </View>
         <View style={styles.viewButton}>
-          <Text style={styles.viewButtonText}>View</Text>
+          <Text style={styles.viewButtonText}>{isRTL ? translations.ar.view : translations.en.view}</Text>
         </View>
       </TouchableOpacity>
-    ), [viewSharerLocation, formatTimeElapsed]);
+    ), [viewSharerLocation, formatTimeElapsed, isRTL, translations]);
   
     // Render search user modal
     const renderSearchModal = () => {
@@ -575,11 +800,11 @@ import Header from '@/components/Header';
       return (
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>
-                {isRTL ? 'مشاركة الموقع مع' : 'Share Location With'}
+            <View style={[styles.modalHeader, isRTL && {flexDirection: 'row-reverse'}]}>
+              <Text style={[styles.modalTitle, isRTL && {textAlign: 'right'}]}>
+                {isRTL ? translations.ar.shareLocationWith : translations.en.shareLocationWith}
               </Text>
-              <TouchableOpacity 
+              <TouchableOpacity
                 onPress={() => {
                   setActiveModal('none');
                   setSearchQuery('');
@@ -590,11 +815,11 @@ import Header from '@/components/Header';
               </TouchableOpacity>
             </View>
             
-            <View style={styles.searchContainer}>
+            <View style={[styles.searchContainer, isRTL && {flexDirection: 'row-reverse'}]}>
               <AntDesign name="search1" size={20} color="#9ca3af" />
               <TextInput
-                style={styles.searchInput}
-                placeholder={isRTL ? "بحث عن مستخدم..." : "Search user..."}
+                style={[styles.searchInput, isRTL && {textAlign: 'right'}]}
+                placeholder={isRTL ? translations.ar.searchUserPlaceholder : translations.en.searchUserPlaceholder}
                 value={searchQuery}
                 onChangeText={setSearchQuery}
               />
@@ -608,10 +833,11 @@ import Header from '@/components/Header';
             <FlatList
               data={filteredUsers}
               renderItem={({ item }) => (
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={[
                     styles.userItem,
-                    selectedUser?.id === item.id ? styles.selectedUserItem : null
+                    selectedUser?.id === item.id ? styles.selectedUserItem : null,
+                    isRTL && {flexDirection: 'row-reverse'}
                   ]}
                   onPress={() => {
                     setSelectedUser(item);
@@ -619,21 +845,21 @@ import Header from '@/components/Header';
                   }}
                   activeOpacity={0.7}
                 >
-                  <View style={styles.userAvatar}>
+                  <View style={[styles.userAvatar, isRTL && {marginLeft: 12, marginRight: 0}]}>
                     {item.profile_image ? (
-                      <Image 
-                        source={{ uri: item.profile_image }} 
+                      <Image
+                        source={{ uri: item.profile_image }}
                         style={styles.avatarImage}
                       />
                     ) : (
                       <Text style={styles.avatarText}>
-                        {(item.name?.charAt(0) || item.email?.charAt(0) || '?').toUpperCase()}
+                        {(item.name?.charAt(0) || item.email?.charAt(0) || (isRTL ? translations.ar.user : translations.en.user).charAt(0) || '?').toUpperCase()}
                       </Text>
                     )}
                   </View>
-                  <View style={styles.userInfo}>
-                    <Text style={styles.userName}>{item.name || item.email || 'User'}</Text>
-                    <Text style={styles.userEmail}>{item.email}</Text>
+                  <View style={[styles.userInfo, isRTL && {alignItems: 'flex-end'}]}>
+                    <Text style={[styles.userName, isRTL && {textAlign: 'right'}]}>{item.name || item.email || (isRTL ? translations.ar.user : translations.en.user)}</Text>
+                    <Text style={[styles.userEmail, isRTL && {textAlign: 'right'}]}>{item.email}</Text>
                   </View>
                   {selectedUser?.id === item.id && (
                     <MaterialIcons name="check-circle" size={24} color="#f97316" />
@@ -641,21 +867,22 @@ import Header from '@/components/Header';
                 </TouchableOpacity>
               )}
               keyExtractor={(item) => item.id}
-              ListEmptyComponent={
+              ListEmptyComponent={(
                 <View style={styles.emptyListContainer}>
-                  <Text style={styles.emptyListText}>
-                    {isRTL ? 'لم يتم العثور على مستخدمين' : 'No users found'}
+                  <Text style={[styles.emptyListText, isRTL && {textAlign: 'right'}]}>
+                    {isRTL ? translations.ar.noUsersFound : translations.en.noUsersFound}
                   </Text>
                 </View>
-              }
+              )}
               contentContainerStyle={styles.usersList}
             />
 
-            <View style={styles.actionButtons}>
-              <TouchableOpacity 
+            <View style={[styles.actionButtons, isRTL && {flexDirection: 'row-reverse'}]}>
+              <TouchableOpacity
                 style={[
                   styles.actionButton,
-                  styles.cancelButton
+                  styles.cancelButton,
+                  isRTL && {marginLeft: 8, marginRight: 0}
                 ]}
                 onPress={() => {
                   setActiveModal('none');
@@ -663,11 +890,11 @@ import Header from '@/components/Header';
                 }}
               >
                 <Text style={styles.cancelButtonText}>
-                  {isRTL ? 'إلغاء' : 'Cancel'}
+                  {isRTL ? translations.ar.cancel : translations.en.cancel}
                 </Text>
               </TouchableOpacity>
               
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={[
                   styles.actionButton,
                   selectedUser ? styles.confirmButton : styles.disabledButton
@@ -687,7 +914,7 @@ import Header from '@/components/Header';
                     styles.confirmButtonText,
                     !selectedUser && styles.disabledButtonText
                   ]}>
-                    {isRTL ? 'بدء المشاركة' : 'Start Sharing'}
+                    {isRTL ? translations.ar.startSharing : translations.en.startSharing}
                   </Text>
                 )}
               </TouchableOpacity>
@@ -737,16 +964,29 @@ import Header from '@/components/Header';
         }
         
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        Alert.alert(
-          isRTL ? 'تم التحديث' : 'Updated',
-          isRTL ? 'تم تحديث موقعك لجميع المستخدمين' : 'Your location has been updated for all users'
-        );
+        // Use custom alert for update success message
+        setAlertConfig({
+          visible: true,
+          title: isRTL ? translations.ar.updated : translations.en.updated,
+          message: isRTL ? translations.ar.locationUpdatedForAll : translations.en.locationUpdatedForAll,
+          type: 'warning', // Use warning type for orange theme
+          onConfirm: () => setAlertConfig({ ...alertConfig, visible: false }), // Close alert on confirm
+          confirmText: isRTL ? translations.ar.ok : translations.en.ok,
+          onCancel: undefined, // No cancel button
+        });
+
       } catch (error) {
         console.error('Error updating all locations:', error);
-        Alert.alert(
-          isRTL ? 'خطأ' : 'Error',
-          isRTL ? 'فشل في تحديث الموقع' : 'Failed to update location'
-        );
+        // Replace Alert.alert with custom alert for error
+        setAlertConfig({
+          visible: true,
+          title: isRTL ? translations.ar.error : translations.en.error,
+          message: isRTL ? translations.ar.failedToUpdateLocation : translations.en.failedToUpdateLocation,
+          type: 'error', // Using error type for error theme
+          onConfirm: () => setAlertConfig(prev => ({ ...prev, visible: false })),
+          confirmText: isRTL ? translations.ar.ok : translations.en.ok,
+          onCancel: undefined,
+        });
       } finally {
         setIsUpdatingAll(false);
       }
@@ -759,9 +999,9 @@ import Header from '@/components/Header';
       return (
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>My Shares</Text>
-              <TouchableOpacity 
+            <View style={[styles.modalHeader, isRTL && {flexDirection: 'row-reverse'}]}>
+              <Text style={[styles.modalTitle, isRTL && {textAlign: 'right'}]}>{isRTL ? translations.ar.myShares : translations.en.myShares}</Text>
+              <TouchableOpacity
                 onPress={() => setActiveModal('none')}
                 style={styles.closeButton}
               >
@@ -779,7 +1019,7 @@ import Header from '@/components/Header';
                   <ActivityIndicator size="small" color="white" />
                 ) : (
                   <Text style={styles.updateAllButtonText}>
-                    {isRTL ? 'تحديث الموقع للجميع' : 'Update Location for All'}
+                    {isRTL ? translations.ar.updateLocationForAll : translations.en.updateLocationForAll}
                   </Text>
                 )}
               </TouchableOpacity>
@@ -789,30 +1029,31 @@ import Header from '@/components/Header';
               data={myShares}
               keyExtractor={item => item.docId}
               renderItem={({ item }) => (
-                <View style={styles.shareItem}>
-                  <View style={styles.userAvatar}>
+                <View style={[styles.shareItem, isRTL && {flexDirection: 'row-reverse'}]}>
+                  <View style={[styles.userAvatar, isRTL && {marginLeft: 12, marginRight: 0}]}>
                     {item.recipient.profile_image ? (
-                      <Image 
-                        source={{ uri: item.recipient.profile_image }} 
+                      <Image
+                        source={{ uri: item.recipient.profile_image }}
                         style={styles.avatarImage}
                       />
                     ) : (
                       <Text style={styles.avatarText}>
-                        {(item.recipient.name?.charAt(0) || '?').toUpperCase()}
+                        {(item.recipient.name?.charAt(0) || (isRTL ? translations.ar.user : translations.en.user).charAt(0) || '?').toUpperCase()}
                       </Text>
                     )}
                   </View>
-                  <View style={styles.userInfo}>
-                    <Text style={styles.userName}>{item.recipient.name}</Text>
-                    <Text style={styles.userEmail}>{item.recipient.email}</Text>
-                    <Text style={styles.lastUpdated}>
-                      Last updated: {formatTimeElapsed(item.last_updated)}
+                  <View style={[styles.userInfo, isRTL && {alignItems: 'flex-end'}]}>
+                    <Text style={[styles.userName, isRTL && {textAlign: 'right'}]}>{item.recipient.name || (isRTL ? translations.ar.user : translations.en.user)}</Text>
+                    <Text style={[styles.userEmail, isRTL && {textAlign: 'right'}]}>{item.recipient.email}</Text>
+                    <Text style={[styles.lastUpdated, isRTL && {textAlign: 'right'}]}>
+                      {`${isRTL ? translations.ar.lastUpdated : translations.en.lastUpdated}: ${formatTimeElapsed(item.last_updated)}`}
                     </Text>
                   </View>
                   <TouchableOpacity
                     style={[
                       styles.stopButton,
-                      stoppingShares.has(item.docId) && styles.stopButtonDisabled
+                      stoppingShares.has(item.docId) && styles.stopButtonDisabled,
+                      isRTL && {marginLeft: 12, marginRight: 0}
                     ]}
                     onPress={() => {
                       stopSharing(item.docId);
@@ -823,18 +1064,18 @@ import Header from '@/components/Header';
                     {stoppingShares.has(item.docId) ? (
                       <ActivityIndicator size="small" color="white" />
                     ) : (
-                      <Text style={styles.stopButtonText}>Stop</Text>
+                      <Text style={styles.stopButtonText}>{isRTL ? translations.ar.stop : translations.en.stop}</Text>
                     )}
                   </TouchableOpacity>
                 </View>
               )}
-              ListEmptyComponent={
+              ListEmptyComponent={(
                 <View style={styles.emptyListContainer}>
-                  <Text style={styles.emptyListText}>
-                    {isRTL ? 'لا توجد مشاركات نشطة' : 'No active shares'}
+                  <Text style={[styles.emptyListText, isRTL && {textAlign: 'right'}]}>
+                    {isRTL ? translations.ar.noActiveShares : translations.en.noActiveShares}
                   </Text>
                 </View>
-              }
+              )}
               contentContainerStyle={styles.sharesList}
             />
           </View>
@@ -912,7 +1153,7 @@ import Header from '@/components/Header';
                     latitude: userLocation.latitude,
                     longitude: userLocation.longitude
                   }}
-                  title="Your Location"
+                  title={isRTL ? translations.ar.currentLocation : translations.en.currentLocation}
                   pinColor="blue"
                 />
               )}
@@ -932,7 +1173,7 @@ import Header from '@/components/Header';
             </MapView>
   
             {/* Map Actions */}
-            <View className="absolute top-4 right-4 space-y-2 z-10">
+            <View className={`absolute top-4 space-y-2 z-10 ${isRTL ? 'left-4' : 'right-4'}`}>
               <TouchableOpacity
                 className="bg-white w-14 h-14 rounded-full items-center justify-center shadow-lg"
                 onPress={fetchUserLocation}
@@ -964,7 +1205,7 @@ import Header from '@/components/Header';
 
             {/* Floating Action Button for sharing location */}
             <TouchableOpacity
-              className="absolute bottom-6 right-6 w-16 h-16 bg-orange-500 rounded-full items-center justify-center shadow-lg"
+              className={`absolute bottom-6 w-16 h-16 bg-orange-500 rounded-full items-center justify-center shadow-lg ${isRTL ? 'left-6' : 'right-6'}`}
               onPress={() => {
                 setSelectedUser(null);
                 setSearchQuery('');
@@ -984,10 +1225,10 @@ import Header from '@/components/Header';
             </TouchableOpacity>
 
             {/* Location sharing status */}
-            {isLocationSharing && (
-              <View className="absolute bottom-32 left-4 right-4 bg-white p-3 rounded-lg shadow-md">
-                <Text className="text-center font-bold text-green-600">
-                  Sharing location with {selectedUser?.name}
+            {isLocationSharing && selectedUser && (
+              <View className={`absolute bottom-32 p-3 rounded-lg shadow-md ${isRTL ? 'left-4 right-16' : 'left-4 right-4'} bg-white`}>
+                <Text className={`text-center font-bold text-green-600 ${isRTL ? 'text-right' : 'text-left'}`}>
+                  {`${isRTL ? translations.ar.sharingLocationWith : translations.en.sharingLocationWith} ${selectedUser?.name || (isRTL ? translations.ar.user : translations.en.user)}`}
                 </Text>
               </View>
             )}
@@ -1002,7 +1243,7 @@ import Header from '@/components/Header';
             handleIndicatorStyle={{ backgroundColor: '#9ca3af', width: 50 }}
           >
             <View style={styles.bottomSheetContainer}>
-              <Text style={styles.bottomSheetTitle}>Location Requests</Text>
+              <Text style={[styles.bottomSheetTitle, isRTL && {textAlign: 'right'}]}>{isRTL ? translations.ar.locationRequests : translations.en.locationRequests}</Text>
               {loading ? (
                 <View style={styles.bottomSheetContent}>
                   {[1, 2, 3].map((_, index) => (
@@ -1019,7 +1260,7 @@ import Header from '@/components/Header';
                 </View>
               ) : trackRequests.length === 0 ? (
                 <View style={styles.emptyListContainer}>
-                  <Text style={styles.emptyListText}>No active location requests</Text>
+                  <Text style={[styles.emptyListText, isRTL && {textAlign: 'right'}]}>{isRTL ? translations.ar.noActiveLocationRequests : translations.en.noActiveLocationRequests}</Text>
                 </View>
               ) : (
                 <BottomSheetFlatList
@@ -1036,7 +1277,7 @@ import Header from '@/components/Header';
                       onRefresh={fetchUserLocation}
                       colors={['#f97316']}
                       tintColor="#f97316"
-                      title={isRTL ? 'جاري التحديث...' : 'Refreshing...'}
+                      title={isRTL ? translations.ar.refreshing : translations.en.refreshing}
                       titleColor="#f97316"
                       progressViewOffset={20}
                     />

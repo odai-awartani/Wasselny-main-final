@@ -507,11 +507,11 @@ const Profile = () => {
 
           {/* Action Icons */}
           <View className={`flex-row justify-center ${language === 'ar' ? 'space-x-reverse' : 'space-x-8'} space-x-8`}>
-            <TouchableOpacity 
+            <TouchableOpacity
               onPress={() => router.push('/(root)/profilePageEdit')}
               className="items-center"
             >
-              <View className="bg-gray-100 p-3 rounded-full">
+              <View className="bg-white p-3 rounded-full" style={Platform.OS === 'android' ? styles.androidShadow : styles.iosShadow}>
                 <MaterialIcons name="edit" size={20} color="#374151" />
               </View>
               <Text className={`text-xs text-gray-600 mt-2 ${language === 'ar' ? 'font-CairoBold' : 'font-Jakartab'}`}>
@@ -523,7 +523,7 @@ const Profile = () => {
               onPress={() => router.push('/(root)/track' as any)}
               className="items-center"
             >
-              <View className="bg-gray-100 p-3 rounded-full">
+              <View className="bg-white p-3 rounded-full" style={Platform.OS === 'android' ? styles.androidShadow : styles.iosShadow}>
                 <MaterialCommunityIcons name="map-marker-path" size={20} color="#374151" />
               </View>
               <Text className={`text-xs text-gray-600 mt-2 ${language === 'ar' ? 'font-CairoBold' : 'font-Jakartab'}`}>
@@ -536,7 +536,7 @@ const Profile = () => {
                 onPress={() => router.push('/(root)/admin' as any)}
                 className="items-center"
               >
-                <View className="bg-gray-100 p-3 rounded-full relative">
+                <View className="bg-white p-3 rounded-full relative" style={Platform.OS === 'android' ? styles.androidShadow : styles.iosShadow}>
                   <MaterialCommunityIcons name="shield-account" size={20} color="#374151" />
                   {pendingApplicationsCount > 0 && (
                     <View className="absolute -top-1 -right-1 bg-red-500 rounded-full min-w-[20px] h-5 items-center justify-center px-1">
@@ -556,7 +556,7 @@ const Profile = () => {
               onPress={handleSignOut}
               className="items-center"
             >
-              <View className="bg-red-50 p-3 rounded-full">
+              <View className="bg-white p-3 rounded-full" style={Platform.OS === 'android' ? styles.androidShadow : styles.iosShadow}>
                 <MaterialCommunityIcons name="logout" size={20} color="#EF4444" />
               </View>
               <Text className={`text-xs text-gray-600 mt-2 ${language === 'ar' ? 'font-CairoBold' : 'font-Jakartab'}`}>
