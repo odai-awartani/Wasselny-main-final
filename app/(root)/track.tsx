@@ -168,23 +168,17 @@ const CustomAlert = ({
               { opacity: opacityAnim }
             ]}
           >
-            <View style={[styles.alertHeader, { backgroundColor: typeStyles.bgColor }]}>
-              <View style={styles.iconContainer}>
-                <MaterialIcons name={typeStyles.icon as any} size={48} color={typeStyles.color} />
-              </View>
-              <Text style={[
-                styles.alertTitle,
-                { fontFamily: isRTL ? 'CairoBold' : 'System' }
-              ]}>
-                {title}
-              </Text>
-              <Text style={[
-                styles.alertMessage,
-                { fontFamily: isRTL ? 'CairoRegular' : 'System' }
-              ]}>
-                {message}
-              </Text>
-            </View>
+           <View className={`p-6 ${typeStyles.bgColor}`}>
+          <View className="items-center mb-4">
+            <MaterialIcons name={typeStyles.icon as any} size={48} color={typeStyles.color} />
+          </View>
+          <Text className="text-xl font-CairoBold text-gray-800 text-center mb-2">
+            {title}
+          </Text>
+          <Text className="text-base text-gray-600 text-center font-CairoRegular">
+            {message}
+          </Text>
+        </View>
             
             <View style={[
               styles.alertButtons,
@@ -467,8 +461,8 @@ export default function Track() {
       setFilteredUsers(appUsers);
     } else {
       const filtered = appUsers.filter(user => 
-        user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        user.email.toLowerCase().includes(searchQuery.toLowerCase())
+        (user.name?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+        (user.email?.toLowerCase() || '').includes(searchQuery.toLowerCase())
       );
       setFilteredUsers(filtered);
     }
@@ -902,10 +896,12 @@ export default function Track() {
           <View className="flex-row items-center bg-gray-100 rounded-3xl px-4 py-2 mb-4">
             <AntDesign name="search1" size={20} color="#9ca3af" />
             <TextInput
-              className="flex-1 ml-2 text-gray-800 text-base"
+              className="flex-1 ml-2 text-gray-800 text-base font-CairoRegular"
               placeholder={isRTL ? "بحث عن مستخدم..." : "Search user..."}
               value={searchQuery}
               onChangeText={setSearchQuery}
+              placeholderTextColor="#9ca3af"
+
             />
             {searchQuery.length > 0 && (
               <TouchableOpacity onPress={() => setSearchQuery('')}>

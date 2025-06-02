@@ -286,8 +286,7 @@ export default function MySharesPage() {
     }
     
     const filtered = appUsers.filter(user => 
-      (user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchQuery.toLowerCase())) &&
+      ((user.name?.toLowerCase() || '') || (user.email?.toLowerCase() || '')).includes(searchQuery.toLowerCase()) &&
       !shares.some(share => share.recipient.id === user.id)
     );
     setFilteredUsers(filtered);
@@ -632,7 +631,7 @@ export default function MySharesPage() {
           {isUpdatingAll ? (
             <ActivityIndicator size="small" color="white" />
           ) : (
-            <Text className="text-white font-bold font-CairoBold text-base">
+            <Text className="text-white font-CairoBold text-base">
               {isRTL ? 'تحديث الموقع للجميع' : 'Update Location for All'}
             </Text>
           )}
@@ -687,7 +686,7 @@ export default function MySharesPage() {
 
               {/* User Info */}
               <View className="flex-1">
-                  <Text className="font-bold text-gray-800 text-base font-CairoBold">
+                  <Text className="text-gray-800 text-base font-CairoBold">
                     {item.recipient.name || item.recipient.email}
                   </Text>
                   <Text className="text-gray-500 text-sm font-CairoRegular">
@@ -714,7 +713,7 @@ export default function MySharesPage() {
                   {stoppingShares[item.docId] ? (
                     <ActivityIndicator size="small" color="#ef4444" />
                   ) : (
-                    <Text className="text-red-500 font-bold font-CairoBold">
+                    <Text className="text-red-500 font-CairoBold">
                       {isRTL ? 'إيقاف' : 'Stop'}
                     </Text>
                   )}
@@ -758,146 +757,124 @@ export default function MySharesPage() {
       {/* Search Modal */}
       {activeModal === 'search' && (
         <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>
-              {isRTL ? 'مشاركة الموقع مع' : 'Share Location With'}
-            </Text>
-            <TouchableOpacity 
-              onPress={() => {
-                setActiveModal('none');
-                setSearchQuery('');
-                setSelectedUser(null);
-              }}
-              style={styles.closeButton}
-            >
-              <AntDesign name="close" size={24} color="#374151" />
-            </TouchableOpacity>
-          </View>
-          
-          <View style={styles.searchContainer}>
-            <AntDesign name="search1" size={20} color="#9ca3af" />
-            <TextInput
-              style={styles.searchInput}
-              placeholder={isRTL ? "بحث عن مستخدم..." : "Search user..."}
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              placeholderTextColor="#9ca3af"
-            />
-            {searchQuery.length > 0 && (
-              <TouchableOpacity 
-                onPress={() => setSearchQuery('')}
-                style={styles.clearButton}
-              >
-                <AntDesign name="close" size={16} color="#9ca3af" />
-              </TouchableOpacity>
-            )}
-          </View>
-          
-          {isSearchLoading ? (
-            <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#f97316" />
-              <Text style={styles.loadingText}>
-                {isRTL ? 'جاري تحميل المستخدمين...' : 'Loading users...'}
+          <View style={styles.modalContent}>
+            <View className={`${language === 'ar' ? 'flex-row' : 'flex-row'} justify-between items-center mb-4`}>
+              <Text className="text-xl font-CairoBold text-gray-800">
+                {isRTL ? 'مشاركة الموقع مع' : 'Share Location With'}
               </Text>
+              <TouchableOpacity 
+                onPress={() => {
+                  setActiveModal('none');
+                  setSearchQuery('');
+                }}
+                className="p-1"
+              >
+                <AntDesign name="close" size={24} color="#374151" />
+              </TouchableOpacity>
             </View>
-          ) : (
-            <FlatList
-              data={filteredUsers}
-              renderItem={({ item }) => (
-                <TouchableOpacity 
-                  style={[
-                    styles.userItem,
-                    selectedUser?.id === item.id ? styles.selectedUserItem : null
-                  ]}
-                  onPress={() => {
-                    setSelectedUser(item);
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  }}
-                  activeOpacity={0.7}
-                >
-                   <View className="w-14 h-14 rounded-full bg-gray-100 justify-center items-center mr-4 overflow-hidden">
-                    {item.profile_image ? (
+            
+            <View className="flex-row items-center bg-gray-100 rounded-3xl px-4 py-2 mb-4">
+              <AntDesign name="search1" size={20} color="#9ca3af" />
+              <TextInput
+                className="flex-1 ml-2 text-gray-800 text-base font-CairoRegular"
+                placeholder={isRTL ? "بحث عن مستخدم..." : "Search user..."}
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholderTextColor="#9ca3af"
+              />
+              {searchQuery.length > 0 && (
+                <TouchableOpacity onPress={() => setSearchQuery('')}>
+                  <AntDesign name="close" size={16} color="#9ca3af" />
+                </TouchableOpacity>
+              )}
+            </View>
+            
+            {isSearchLoading ? (
+              <View className="flex-1 justify-center items-center p-6">
+                <ActivityIndicator size="large" color="#f97316" />
+                <Text className="text-gray-500 mt-4 font-CairoRegular">
+                  {isRTL ? 'جاري تحميل المستخدمين...' : 'Loading users...'}
+                </Text>
+              </View>
+            ) : (
+              <FlatList
+                data={filteredUsers}
+                renderItem={({ item }) => (
+                  <TouchableOpacity 
+                    className={`flex-row items-center p-3 border-b border-gray-100 ${selectedUser?.id === item.id ? 'bg-orange-50' : ''}`}
+                    onPress={() => {
+                      setSelectedUser(item);
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <View className="w-10 h-10 rounded-full bg-gray-200 justify-center items-center mr-3">
+                      {item.profile_image ? (
                         <Image 
-                          source={{ uri: item.profile_image }}
-                          className="w-14 h-14 rounded-full"
-                          resizeMode="cover"
+                          source={{ uri: item.profile_image }} 
+                          className="w-10 h-10 rounded-full"
                         />
                       ) : (
-                       <Text className="text-gray-500 font-bold text-xl">
+                        <Text className="text-gray-500 font-CairoBold">
                           {(item.name?.charAt(0) || item.email?.charAt(0) || '?').toUpperCase()}
                         </Text>
                       )}
                     </View>
-                   <View className="flex-1">
-                       <Text className="font-bold text-gray-800 text-base font-CairoBold">
-                          {item.name || 'User'}
-                        </Text>
-                       <Text className="text-gray-500 text-sm font-CairoRegular">
-                          {item.email}
-                       </Text>
+                    <View className="flex-1">
+                      <Text className="text-base font-CairoBold text-gray-800">{item.name || item.email || 'User'}</Text>
+                      <Text className="text-sm font-CairoRegular text-gray-500">{item.email}</Text>
                     </View>
                     {selectedUser?.id === item.id && (
-                     <MaterialIcons name="check-circle" size={24} color="#f97316" />
-                   )}
-                 </TouchableOpacity>
-              )}
-              keyExtractor={(item) => item.id}
-              ListEmptyComponent={
-                <View style={styles.emptyListContainer}>
-                  <Text style={styles.emptyListText}>
-                    {isRTL ? 'لم يتم العثور على مستخدمين' : 'No users found'}
-                  </Text>
-                </View>
-              }
-              contentContainerStyle={styles.usersList}
-            />
-          )}
-
-          <View style={styles.actionButtons}>
-            <TouchableOpacity 
-              style={[
-                styles.actionButton,
-                styles.cancelButton
-              ]}
-              onPress={() => {
-                setActiveModal('none');
-                setSearchQuery('');
-                setSelectedUser(null);
-              }}
-            >
-              <Text style={styles.cancelButtonText}>
-                {isRTL ? 'إلغاء' : 'Cancel'}
-              </Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={[
-                styles.actionButton,
-                selectedUser ? styles.confirmButton : styles.disabledButton
-              ]}
-              onPress={() => {
-                if (selectedUser) {
-                  startLocationSharing();
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      <MaterialIcons name="check-circle" size={24} color="#f97316" />
+                    )}
+                  </TouchableOpacity>
+                )}
+                keyExtractor={(item) => item.id}
+                ListEmptyComponent={
+                  <View className="p-6 items-center">
+                    <Text className="text-gray-500 font-CairoRegular text-center">
+                      {isRTL ? 'لم يتم العثور على مستخدمين' : 'No users found'}
+                    </Text>
+                  </View>
                 }
-              }}
-              disabled={!selectedUser || isRefreshing}
-            >
-              {isRefreshing ? (
-                <ActivityIndicator color="white" size="small" />
-              ) : (
-                <Text style={[
-                  styles.confirmButtonText,
-                  !selectedUser && styles.disabledButtonText
-                ]}>
-                  {isRTL ? 'بدء المشاركة' : 'Start Sharing'}
+                contentContainerStyle={{ flexGrow: 1 }}
+              />
+            )}
+
+            <View className="flex-row mt-4">
+              <TouchableOpacity 
+                className="flex-1 bg-gray-100 py-3 rounded-xl mr-2 items-center justify-center"
+                onPress={() => {
+                  setActiveModal('none');
+                  setSearchQuery('');
+                }}
+              >
+                <Text className="text-gray-800 font-CairoMedium text-base">
+                  {isRTL ? 'إلغاء' : 'Cancel'}
                 </Text>
-              )}
-            </TouchableOpacity>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                className={`flex-1 py-3 rounded-xl items-center justify-center ${selectedUser ? 'bg-orange-500' : 'bg-gray-300'}`}
+                onPress={() => {
+                  if (selectedUser) {
+                    startLocationSharing();
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  }
+                }}
+                disabled={!selectedUser || isRefreshing}
+              >
+                {isRefreshing ? (
+                  <ActivityIndicator size="small" color="white" />
+                ) : (
+                  <Text className={`font-CairoMedium text-base ${selectedUser ? 'text-white' : 'text-gray-500'}`}>
+                    {isRTL ? 'بدء المشاركة' : 'Start Sharing'}
+                  </Text>
+                )}
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
-      </View>
       )}
     </SafeAreaView>
   );

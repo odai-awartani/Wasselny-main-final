@@ -1462,18 +1462,37 @@ const RideDetails = () => {
         updated_at: serverTimestamp(),
       });
 
+      // Send notifications to all passengers
       for (const passenger of allPassengers) {
+        // Send immediate notification
         await sendRideStatusNotification(
           passenger.user_id,
-          'بدأت الرحلة!',
-          `بدأ السائق رحلتك من ${ride.origin_address} إلى ${ride.destination_address}`,
+          language === 'ar' ? 'بدأت الرحلة!' : 'Ride Started!',
+          language === 'ar' 
+            ? `بدأ السائق رحلتك من ${ride.origin_address} إلى ${ride.destination_address}. يرجى الاستعداد في نقطة التوقف الخاصة بك.`
+            : `The driver has started your ride from ${ride.origin_address} to ${ride.destination_address}. Please be ready at your stop point.`,
           ride.id
         );
+
+        // Schedule a reminder notification for 5 minutes later
+        const reminderNotificationId = await scheduleRideNotification(
+          ride.id,
+          passenger.user_id,
+          false // false because it's for a passenger
+        );
+
+        // Update the ride request with the reminder notification ID
+        if (reminderNotificationId) {
+          await updateDoc(doc(db, 'ride_requests', passenger.id), {
+            reminder_notification_id: reminderNotificationId,
+            updated_at: serverTimestamp()
+          });
+        }
       }
 
       showAlert({
         title: language === 'ar' ? "تم بدء الرحلة" : "Ride Started",
-        message: language === 'ar' ? "تم بدء الرحلة بنجاح" : "Ride started successfully",
+        message: language === 'ar' ? "تم بدء الرحلة بنجاح وتم إخطار جميع الركاب" : "Ride started successfully and all passengers have been notified",
         type: 'success'
       });
     } catch (error) {
