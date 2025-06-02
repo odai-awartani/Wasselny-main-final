@@ -5,7 +5,7 @@ if (__DEV__ && (global as any)._REANIMATED_VERSION_3) {
   }
   
   import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-  import { View, Text, TouchableOpacity, StyleSheet, Platform, ActivityIndicator, Alert, FlatList, Image, Dimensions, Modal, TextInput, RefreshControl, Animated } from 'react-native';
+  import { View, Text, TouchableOpacity, StyleSheet, Platform, ActivityIndicator, Alert, FlatList, Image, Dimensions, Modal, TextInput, RefreshControl } from 'react-native';
   import { SafeAreaView } from 'react-native-safe-area-context';
   import { useUser } from '@clerk/clerk-expo';
   import { router } from 'expo-router';
@@ -20,9 +20,33 @@ if (__DEV__ && (global as any)._REANIMATED_VERSION_3) {
   import { GestureHandlerRootView } from 'react-native-gesture-handler';
   import * as Haptics from 'expo-haptics';
 import Header from '@/components/Header';
-import { translations } from '@/constants/languages';
+import * as Notifications from 'expo-notifications';
+import { sendLocationUpdateNotification } from '@/lib/notifications';
+import { Animated } from 'react-native';
   
-  // Interface for CustomAlertProps
+  // Types
+  interface AppUser {
+    id: string;
+    name: string;
+    email: string;
+    profile_image?: string;
+  }
+  
+  interface Share {
+    recipient_id: string;
+    sharer_id: string;
+    latitude: number;
+    longitude: number;
+    last_updated: string;
+    is_active: boolean;
+    docId?: string;
+  }
+  
+  interface UserLocation {
+    latitude: number;
+    longitude: number;
+  }
+
   interface CustomAlertProps {
     visible: boolean;
     title: string;
@@ -33,21 +57,20 @@ import { translations } from '@/constants/languages';
     cancelText?: string;
     type?: 'success' | 'error' | 'warning' | 'info';
   }
-  
-  // CustomAlert component (copied from my-shares.tsx)
-  const CustomAlert = ({
-    visible,
-    title,
-    message,
-    onConfirm,
-    onCancel,
+
+  const CustomAlert = ({ 
+    visible, 
+    title, 
+    message, 
+    onConfirm, 
+    onCancel, 
     confirmText = 'OK',
     cancelText = 'Cancel',
     type = 'info'
   }: CustomAlertProps) => {
     const scaleAnim = React.useRef(new Animated.Value(0)).current;
     const opacityAnim = React.useRef(new Animated.Value(0)).current;
-  
+
     React.useEffect(() => {
       if (visible) {
         Animated.parallel([
@@ -65,21 +88,31 @@ import { translations } from '@/constants/languages';
         ]).start();
       } else {
         Animated.parallel([
-          Animated.timing(opacityAnim, {
-            toValue: 0,
-            duration: 200,
-            useNativeDriver: true
-          }),
           Animated.spring(scaleAnim, {
             toValue: 0,
             useNativeDriver: true,
             tension: 50,
             friction: 7
+          }),
+          Animated.timing(opacityAnim, {
+            toValue: 0,
+            duration: 200,
+            useNativeDriver: true
           })
         ]).start();
       }
     }, [visible]);
-  
+
+    const handleConfirm = () => {
+      onConfirm();
+    };
+
+    const handleCancel = () => {
+      if (onCancel) {
+        onCancel();
+      }
+    };
+
     const getTypeStyles = () => {
       switch (type) {
         case 'success':
@@ -108,85 +141,72 @@ import { translations } from '@/constants/languages';
           };
       }
     };
-  
+
     const typeStyles = getTypeStyles();
-  
+
+    if (!visible) return null;
+
     return (
-      <Modal
-        visible={visible}
-        transparent
-        animationType="none"
-        onRequestClose={onCancel}
-      >
-        <View className="flex-1 justify-center items-center bg-black/50">
-          <Animated.View
-            className="w-[85%] bg-white rounded-2xl overflow-hidden"
-            style={[
-              { transform: [{ scale: scaleAnim }] },
-              { opacity: opacityAnim }
-            ]}
+      <View style={styles.alertRoot}>
+        <TouchableOpacity 
+          style={styles.alertOverlay}
+          activeOpacity={1}
+          onPress={handleCancel}
+        >
+          <TouchableOpacity 
+            activeOpacity={1}
+            onPress={(e) => e.stopPropagation()}
+            style={styles.alertContent}
           >
-            <View className={`p-6 ${typeStyles.bgColor}`}>
-              <View className="items-center mb-4">
-                <MaterialIcons name={typeStyles.icon as any} size={48} color={typeStyles.color} />
-              </View>
-              <Text className="text-xl font-CairoBold text-gray-800 text-center mb-2">
-                {title}
-              </Text>
-              <Text className="text-base text-gray-600 text-center font-CairoRegular">
-                {message}
-              </Text>
-            </View>
-  
-            <View className="flex-row border-t border-gray-200">
-              {onCancel && (
+            <Animated.View 
+              style={[
+                styles.alertContainer,
+                { transform: [{ scale: scaleAnim }] },
+                { opacity: opacityAnim }
+              ]}
+            >
+              <View style={[styles.alertHeader, { backgroundColor: typeStyles.bgColor }]}>
+                <View style={styles.iconContainer}>
+                  <MaterialIcons name={typeStyles.icon as any} size={48} color={typeStyles.color} />
+                </View>
+                <Text className="text-xl font-CairoBold text-gray-800 text-center mb-2">
+              {title}
+            </Text>
+            <Text className="text-base text-gray-600 text-center font-CairoRegular">
+              {message}
+            </Text>
+          </View>
+              
+              <View style={styles.alertButtons}>
+                {onCancel && (
+                  <TouchableOpacity
+                    onPress={handleCancel}
+                    style={styles.alertCancelButton}
+                  >
+                    <Text style={styles.alertCancelButtonText}>
+                      {cancelText}
+                    </Text>
+                  </TouchableOpacity>
+                )}
                 <TouchableOpacity
-                  onPress={onCancel}
-                  className="flex-1 py-4 border-r border-gray-200"
+                  onPress={handleConfirm}
+                  style={[
+                    styles.alertConfirmButton,
+                    { backgroundColor: typeStyles.color },
+                    onCancel ? { flex: 1 } : { width: '100%' }
+                  ]}
                 >
-                  <Text className="text-base text-gray-600 text-center font-CairoMedium">
-                    {cancelText}
+                  <Text style={styles.alertConfirmButtonText}>
+                    {confirmText}
                   </Text>
                 </TouchableOpacity>
-              )}
-              <TouchableOpacity
-                onPress={onConfirm}
-                className={`py-4 ${onCancel ? 'flex-1' : 'w-full'}`}
-                style={{ backgroundColor: typeStyles.color }}
-              >
-                <Text className="text-base text-white text-center font-CairoMedium">
-                  {confirmText}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </Animated.View>
-        </View>
-      </Modal>
+              </View>
+            </Animated.View>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </View>
     );
   };
-  
-  // Types
-  interface AppUser {
-    id: string;
-    name: string;
-    email: string;
-    profile_image?: string;
-  }
-  
-  interface Share {
-    recipient_id: string;
-    sharer_id: string;
-    latitude: number;
-    longitude: number;
-    last_updated: string;
-    is_active: boolean;
-    docId?: string;
-  }
-  
-  interface UserLocation {
-    latitude: number;
-    longitude: number;
-  }
   
   export default function Track() {
     // Context and state
@@ -215,14 +235,21 @@ import { translations } from '@/constants/languages';
     const [isInitialLoading, setIsInitialLoading] = useState(true);
     const [stoppingShares, setStoppingShares] = useState<Set<string>>(new Set());
     const [isUpdatingAll, setIsUpdatingAll] = useState(false);
-    const [alertConfig, setAlertConfig] = useState({
+    const [alertConfig, setAlertConfig] = useState<{
+      visible: boolean;
+      title: string;
+      message: string;
+      type: 'success' | 'error' | 'warning' | 'info';
+      onConfirm: () => void;
+      confirmText?: string;
+      onCancel?: () => void;
+      cancelText?: string;
+    }>({
       visible: false,
       title: '',
       message: '',
-      type: 'error',
-      onConfirm: () => setAlertConfig(prev => ({ ...prev, visible: false })),
-      confirmText: '',
-      onCancel: undefined,
+      type: 'info',
+      onConfirm: () => {},
     });
   
     // Timer for updating times
@@ -242,14 +269,12 @@ import { translations } from '@/constants/languages';
           if (status !== 'granted') {
             setAlertConfig({
               visible: true,
-              title: isRTL ? translations.ar.locationPermissionRequired : translations.en.locationPermissionRequired,
-              message: isRTL ? translations.ar.locationPermissionNotGranted : translations.en.locationPermissionNotGranted,
-              type: 'error',
+              title: isRTL ? 'تنبيه الموقع' : 'Location Alert',
+              message: isRTL ? 'يجب منح إذن للوصول إلى الموقع لاستخدام ميزات التتبع' : 'Location permission is required to use the tracking features.',
+              type: 'warning',
               onConfirm: () => setAlertConfig(prev => ({ ...prev, visible: false })),
-              confirmText: isRTL ? translations.ar.ok : translations.en.ok,
-              onCancel: undefined,
+              confirmText: isRTL ? 'حسنا' : 'OK'
             });
-            setIsRefreshing(false);
             return;
           }
           
@@ -263,6 +288,14 @@ import { translations } from '@/constants/languages';
           });
         } catch (error) {
           console.error('Error getting location:', error);
+          setAlertConfig({
+            visible: true,
+            title: isRTL ? 'خطأ في الموقع' : 'Location Error',
+            message: isRTL ? 'حدث خطأ أثناء محاولة الحصول على موقعك' : 'An error occurred while trying to get your location',
+            type: 'error',
+            onConfirm: () => setAlertConfig(prev => ({ ...prev, visible: false })),
+            confirmText: isRTL ? 'حسنا' : 'OK'
+          });
         } finally {
           setIsInitialLoading(false);
           setLoading(false);
@@ -367,17 +400,17 @@ import { translations } from '@/constants/languages';
           const usersSnapshot = await getDocs(usersRef);
           const usersList: AppUser[] = [];
           
-          // Get all active shares where current user is the recipient
+          // Get all active shares where current user is the sharer
           const sharesQuery = query(
             collection(db, 'location_sharing'),
-            where('recipient_id', '==', user.id),
+            where('sharer_id', '==', user.id),
             where('is_active', '==', true)
           );
           const sharesSnapshot = await getDocs(sharesQuery);
-          const activeSharers = new Set(sharesSnapshot.docs.map(doc => doc.data().sharer_id));
+          const activeRecipients = new Set(sharesSnapshot.docs.map(doc => doc.data().recipient_id));
           
           usersSnapshot.forEach(doc => {
-            if (doc.id !== user.id && !activeSharers.has(doc.id)) {
+            if (doc.id !== user.id && !activeRecipients.has(doc.id)) {
               const userData = doc.data();
               usersList.push({
                 id: doc.id,
@@ -413,20 +446,16 @@ import { translations } from '@/constants/languages';
   
     // Format elapsed time
     const formatTimeElapsed = (timestamp: string) => {
-      if (!timestamp) return isRTL ? translations.ar.notFound : translations.en.notFound;
-
+      if (!timestamp) return "Never";
+      
       const lastUpdated = new Date(timestamp);
       const seconds = Math.floor((now.getTime() - lastUpdated.getTime()) / 1000);
-
+      
       if (seconds < 60) {
-        return isRTL
-          ? `${seconds} ${seconds !== 1 ? translations.ar.secondsAgo : translations.ar.secondAgo}`
-          : `${seconds} second${seconds !== 1 ? 's' : ''} ago`;
+        return `${seconds} second${seconds !== 1 ? 's' : ''} ago`;
       } else if (seconds < 3600) {
         const minutes = Math.floor(seconds / 60);
-        return isRTL
-          ? `${minutes} ${minutes !== 1 ? translations.ar.minutesAgo : translations.ar.minuteAgo}`
-          : `${minutes} minute${minutes !== 1 ? 's' : ''} ago`;
+        return `${minutes} minute${minutes !== 1 ? 's' : ''} ago`;
       } else {
         return lastUpdated.toLocaleTimeString();
       }
@@ -435,36 +464,29 @@ import { translations } from '@/constants/languages';
     // Stop sharing location with a recipient
     const stopSharing = async (docId: string) => {
       try {
-        // Add the share to stopping state
         setStoppingShares(prev => new Set(prev).add(docId));
-        
         await updateDoc(doc(db, 'location_sharing', docId), { is_active: false });
-
-        // Replace Alert.alert with custom alert state update for success
+        const stoppedShare = myShares.find(share => share.docId === docId);
+        const recipientName = stoppedShare?.recipient?.name || (isRTL ? 'المستخدم' : 'the user');
         setAlertConfig({
           visible: true,
-          title: isRTL ? translations.ar.success : translations.en.success,
-          message: isRTL ? translations.ar.locationSharingStopped : translations.en.locationSharingStopped,
-          type: 'warning', // Assuming stopping is a success state, changing to warning for orange theme
+          title: isRTL ? 'تم الايقاف' : 'Stopped',
+          message: isRTL ? `تم إيقاف مشاركة الموقع مع ${recipientName}` : `Location sharing stopped with ${recipientName}`,
+          type: 'success',
           onConfirm: () => setAlertConfig(prev => ({ ...prev, visible: false })),
-          confirmText: isRTL ? translations.ar.ok : translations.en.ok,
-          onCancel: undefined,
+          confirmText: isRTL ? 'حسنا' : 'OK'
         });
-
       } catch (error) {
         console.error('Error stopping sharing:', error);
-        // Replace Alert.alert with custom alert state update for error
         setAlertConfig({
           visible: true,
-          title: isRTL ? translations.ar.error : translations.en.error,
-          message: isRTL ? translations.ar.failedToStopSharing : translations.en.failedToStopSharing,
+          title: isRTL ? 'خطأ' : 'Error',
+          message: isRTL ? 'فشل في إيقاف مشاركة الموقع' : 'Could not stop sharing location',
           type: 'error',
           onConfirm: () => setAlertConfig(prev => ({ ...prev, visible: false })),
-          confirmText: isRTL ? translations.ar.ok : translations.en.ok,
-          onCancel: undefined,
+          confirmText: isRTL ? 'حسنا' : 'OK'
         });
       } finally {
-        // Remove the share from stopping state
         setStoppingShares(prev => {
           const newSet = new Set(prev);
           newSet.delete(docId);
@@ -505,12 +527,11 @@ import { translations } from '@/constants/languages';
         if (status !== 'granted') {
           setAlertConfig({
             visible: true,
-            title: isRTL ? translations.ar.locationPermissionRequired : translations.en.locationPermissionRequired,
-            message: isRTL ? translations.ar.locationPermissionNotGranted : translations.en.locationPermissionNotGranted,
-            type: 'error',
+            title: isRTL ? 'تنبيه الموقع' : 'Location Alert',
+            message: isRTL ? 'يجب منح إذن للوصول إلى الموقع لاستخدام ميزات التتبع' : 'Location permission is required to use the tracking features.',
+            type: 'warning',
             onConfirm: () => setAlertConfig(prev => ({ ...prev, visible: false })),
-            confirmText: isRTL ? translations.ar.ok : translations.en.ok,
-            onCancel: undefined,
+            confirmText: isRTL ? 'حسنا' : 'OK'
           });
           setIsRefreshing(false);
           return;
@@ -552,34 +573,41 @@ import { translations } from '@/constants/languages';
         
         setIsRefreshing(false);
         setLoading(false);
-        
-        // Show success message using custom alert
-        setAlertConfig({
-          visible: true,
-          title: isRTL ? translations.ar.updated : translations.en.updated,
-          message: isRTL ? translations.ar.locationUpdatedSuccessfully : translations.en.locationUpdatedSuccessfully,
-          type: 'warning', // Using warning type for orange theme
-          onConfirm: () => setAlertConfig(prev => ({ ...prev, visible: false })),
-          confirmText: isRTL ? translations.ar.ok : translations.en.ok,
-          onCancel: undefined,
-        });
-
       } catch (error) {
         console.error('Error getting location:', error);
-        // Replace Alert.alert with custom alert for error
         setAlertConfig({
           visible: true,
-          title: isRTL ? translations.ar.locationError : translations.en.locationError,
-          message: isRTL ? translations.ar.getLocationError : translations.en.getLocationError,
-          type: 'error', // Using error type for error theme
+          title: isRTL ? 'خطأ في الموقع' : 'Location Error',
+          message: isRTL ? 'حدث خطأ أثناء محاولة الحصول على موقعك' : 'An error occurred while trying to get your location',
+          type: 'error',
           onConfirm: () => setAlertConfig(prev => ({ ...prev, visible: false })),
-          confirmText: isRTL ? translations.ar.ok : translations.en.ok,
-          onCancel: undefined,
+          confirmText: isRTL ? 'حسنا' : 'OK'
         });
         setIsRefreshing(false);
         setLoading(false);
       }
     };
+  
+    // Handle notification press
+    const handleNotification = (notification: Notifications.NotificationResponse) => {
+      const data = notification.notification.request.content.data;
+      
+      if (data.type === 'location_share' || data.type === 'location_update') {
+        // Navigate to track user page
+        router.push(`/track-user/${data.sharerId}`);
+      }
+    };
+
+    // Set up notification response listener
+    useEffect(() => {
+      const responseListener = Notifications.addNotificationResponseReceivedListener((response) => {
+        handleNotification(response);
+      });
+
+      return () => {
+        Notifications.removeNotificationSubscription(responseListener);
+      };
+    }, []);
   
     // Update shared location in Firestore
     const updateSharedLocation = async (latitude: number, longitude: number) => {
@@ -595,6 +623,14 @@ import { translations } from '@/constants/languages';
           last_updated: new Date().toISOString(),
           is_active: true
         }, { merge: true });
+
+        // Send location update notification
+        await sendLocationUpdateNotification(
+          selectedUser.id,
+          user?.fullName || (isRTL ? 'مستخدم' : 'A user'),
+          isRTL,
+          user.id
+        );
       } catch (error) {
         console.error('Error updating shared location:', error);
       }
@@ -614,15 +650,13 @@ import { translations } from '@/constants/languages';
       try {
         // Validate required data
         if (!selectedUser || !userLocation || !user?.id) {
-          // Replace Alert.alert with custom alert
           setAlertConfig({
             visible: true,
-            title: isRTL ? translations.ar.error : translations.en.error,
-            message: isRTL ? translations.ar.cannotShareLocation : translations.en.cannotShareLocation,
+            title: isRTL ? 'خطأ' : 'Error',
+            message: isRTL ? 'لا يمكن مشاركة الموقع، يرجى تحديث موقعك واختيار مستخدم' : 'Cannot share location, please refresh your location and select a user',
             type: 'error',
             onConfirm: () => setAlertConfig(prev => ({ ...prev, visible: false })),
-            confirmText: isRTL ? translations.ar.ok : translations.en.ok,
-            onCancel: undefined,
+            confirmText: isRTL ? 'حسنا' : 'OK'
           });
           return;
         }
@@ -685,33 +719,28 @@ import { translations } from '@/constants/languages';
         
         // Close modal and show success message
         setActiveModal('none');
-
-        // Replace Alert.alert with custom alert for success
+        
         setAlertConfig({
           visible: true,
-          title: isRTL ? translations.ar.locationSharingActive : translations.en.locationSharingActive,
-          message: `${isRTL ? translations.ar.sharingLocationWith : translations.en.sharingLocationWith} ${selectedUser.name || (isRTL ? translations.ar.user : translations.en.user)}`,
-          type: 'warning',
+          title: isRTL ? 'مشاركة الموقع نشطة' : 'Location Sharing Active',
+          message: isRTL ? `أنت الآن تشارك موقعك مع ${selectedUser.name}` : `You are now sharing your location with ${selectedUser.name}`,
+          type: 'success',
           onConfirm: () => setAlertConfig(prev => ({ ...prev, visible: false })),
-          confirmText: isRTL ? translations.ar.ok : translations.en.ok,
-          onCancel: undefined,
+          confirmText: isRTL ? 'حسنا' : 'OK'
         });
-
       } catch (error) {
         console.error('Error starting location sharing:', error);
         
         // Hide loading indicator
         setIsRefreshing(false);
         
-        // Replace Alert.alert with custom alert for error
         setAlertConfig({
           visible: true,
-          title: isRTL ? translations.ar.error : translations.en.error,
-          message: isRTL ? translations.ar.failedToStartSharing : translations.en.failedToStartSharing,
+          title: isRTL ? 'خطأ' : 'Error',
+          message: isRTL ? 'فشل في بدء مشاركة الموقع' : 'Failed to start location sharing',
           type: 'error',
           onConfirm: () => setAlertConfig(prev => ({ ...prev, visible: false })),
-          confirmText: isRTL ? translations.ar.ok : translations.en.ok,
-          onCancel: undefined,
+          confirmText: isRTL ? 'حسنا' : 'OK'
         });
       }
     };
@@ -788,10 +817,10 @@ import { translations } from '@/constants/languages';
           </Text>
         </View>
         <View style={styles.viewButton}>
-          <Text style={styles.viewButtonText}>{isRTL ? translations.ar.view : translations.en.view}</Text>
+          <Text style={styles.viewButtonText}>View</Text>
         </View>
       </TouchableOpacity>
-    ), [viewSharerLocation, formatTimeElapsed, isRTL, translations]);
+    ), [viewSharerLocation, formatTimeElapsed]);
   
     // Render search user modal
     const renderSearchModal = () => {
@@ -800,11 +829,11 @@ import { translations } from '@/constants/languages';
       return (
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <View style={[styles.modalHeader, isRTL && {flexDirection: 'row-reverse'}]}>
-              <Text style={[styles.modalTitle, isRTL && {textAlign: 'right'}]}>
-                {isRTL ? translations.ar.shareLocationWith : translations.en.shareLocationWith}
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>
+                {isRTL ? 'مشاركة الموقع مع' : 'Share Location With'}
               </Text>
-              <TouchableOpacity
+              <TouchableOpacity 
                 onPress={() => {
                   setActiveModal('none');
                   setSearchQuery('');
@@ -815,11 +844,11 @@ import { translations } from '@/constants/languages';
               </TouchableOpacity>
             </View>
             
-            <View style={[styles.searchContainer, isRTL && {flexDirection: 'row-reverse'}]}>
+            <View style={styles.searchContainer}>
               <AntDesign name="search1" size={20} color="#9ca3af" />
               <TextInput
-                style={[styles.searchInput, isRTL && {textAlign: 'right'}]}
-                placeholder={isRTL ? translations.ar.searchUserPlaceholder : translations.en.searchUserPlaceholder}
+                style={styles.searchInput}
+                placeholder={isRTL ? "بحث عن مستخدم..." : "Search user..."}
                 value={searchQuery}
                 onChangeText={setSearchQuery}
               />
@@ -833,11 +862,10 @@ import { translations } from '@/constants/languages';
             <FlatList
               data={filteredUsers}
               renderItem={({ item }) => (
-                <TouchableOpacity
+                <TouchableOpacity 
                   style={[
                     styles.userItem,
-                    selectedUser?.id === item.id ? styles.selectedUserItem : null,
-                    isRTL && {flexDirection: 'row-reverse'}
+                    selectedUser?.id === item.id ? styles.selectedUserItem : null
                   ]}
                   onPress={() => {
                     setSelectedUser(item);
@@ -845,21 +873,21 @@ import { translations } from '@/constants/languages';
                   }}
                   activeOpacity={0.7}
                 >
-                  <View style={[styles.userAvatar, isRTL && {marginLeft: 12, marginRight: 0}]}>
+                  <View style={styles.userAvatar}>
                     {item.profile_image ? (
-                      <Image
-                        source={{ uri: item.profile_image }}
+                      <Image 
+                        source={{ uri: item.profile_image }} 
                         style={styles.avatarImage}
                       />
                     ) : (
                       <Text style={styles.avatarText}>
-                        {(item.name?.charAt(0) || item.email?.charAt(0) || (isRTL ? translations.ar.user : translations.en.user).charAt(0) || '?').toUpperCase()}
+                        {(item.name?.charAt(0) || item.email?.charAt(0) || '?').toUpperCase()}
                       </Text>
                     )}
                   </View>
-                  <View style={[styles.userInfo, isRTL && {alignItems: 'flex-end'}]}>
-                    <Text style={[styles.userName, isRTL && {textAlign: 'right'}]}>{item.name || item.email || (isRTL ? translations.ar.user : translations.en.user)}</Text>
-                    <Text style={[styles.userEmail, isRTL && {textAlign: 'right'}]}>{item.email}</Text>
+                  <View style={styles.userInfo}>
+                    <Text style={styles.userName}>{item.name || item.email || 'User'}</Text>
+                    <Text style={styles.userEmail}>{item.email}</Text>
                   </View>
                   {selectedUser?.id === item.id && (
                     <MaterialIcons name="check-circle" size={24} color="#f97316" />
@@ -867,22 +895,21 @@ import { translations } from '@/constants/languages';
                 </TouchableOpacity>
               )}
               keyExtractor={(item) => item.id}
-              ListEmptyComponent={(
+              ListEmptyComponent={
                 <View style={styles.emptyListContainer}>
-                  <Text style={[styles.emptyListText, isRTL && {textAlign: 'right'}]}>
-                    {isRTL ? translations.ar.noUsersFound : translations.en.noUsersFound}
+                  <Text style={styles.emptyListText}>
+                    {isRTL ? 'لم يتم العثور على مستخدمين' : 'No users found'}
                   </Text>
                 </View>
-              )}
+              }
               contentContainerStyle={styles.usersList}
             />
 
-            <View style={[styles.actionButtons, isRTL && {flexDirection: 'row-reverse'}]}>
-              <TouchableOpacity
+            <View style={styles.actionButtons}>
+              <TouchableOpacity 
                 style={[
                   styles.actionButton,
-                  styles.cancelButton,
-                  isRTL && {marginLeft: 8, marginRight: 0}
+                  styles.cancelButton
                 ]}
                 onPress={() => {
                   setActiveModal('none');
@@ -890,11 +917,11 @@ import { translations } from '@/constants/languages';
                 }}
               >
                 <Text style={styles.cancelButtonText}>
-                  {isRTL ? translations.ar.cancel : translations.en.cancel}
+                  {isRTL ? 'إلغاء' : 'Cancel'}
                 </Text>
               </TouchableOpacity>
               
-              <TouchableOpacity
+              <TouchableOpacity 
                 style={[
                   styles.actionButton,
                   selectedUser ? styles.confirmButton : styles.disabledButton
@@ -914,7 +941,7 @@ import { translations } from '@/constants/languages';
                     styles.confirmButtonText,
                     !selectedUser && styles.disabledButtonText
                   ]}>
-                    {isRTL ? translations.ar.startSharing : translations.en.startSharing}
+                    {isRTL ? 'بدء المشاركة' : 'Start Sharing'}
                   </Text>
                 )}
               </TouchableOpacity>
@@ -964,28 +991,23 @@ import { translations } from '@/constants/languages';
         }
         
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        // Use custom alert for update success message
         setAlertConfig({
           visible: true,
-          title: isRTL ? translations.ar.updated : translations.en.updated,
-          message: isRTL ? translations.ar.locationUpdatedForAll : translations.en.locationUpdatedForAll,
-          type: 'warning', // Use warning type for orange theme
-          onConfirm: () => setAlertConfig({ ...alertConfig, visible: false }), // Close alert on confirm
-          confirmText: isRTL ? translations.ar.ok : translations.en.ok,
-          onCancel: undefined, // No cancel button
+          title: isRTL ? 'تم التحديث' : 'Updated',
+          message: isRTL ? 'تم تحديث موقعك لجميع المستخدمين' : 'Your location has been updated for all users',
+          type: 'success',
+          onConfirm: () => setAlertConfig(prev => ({ ...prev, visible: false })),
+          confirmText: isRTL ? 'حسنا' : 'OK'
         });
-
       } catch (error) {
         console.error('Error updating all locations:', error);
-        // Replace Alert.alert with custom alert for error
         setAlertConfig({
           visible: true,
-          title: isRTL ? translations.ar.error : translations.en.error,
-          message: isRTL ? translations.ar.failedToUpdateLocation : translations.en.failedToUpdateLocation,
-          type: 'error', // Using error type for error theme
+          title: isRTL ? 'خطأ' : 'Error',
+          message: isRTL ? 'فشل في تحديث الموقع' : 'Failed to update location',
+          type: 'error',
           onConfirm: () => setAlertConfig(prev => ({ ...prev, visible: false })),
-          confirmText: isRTL ? translations.ar.ok : translations.en.ok,
-          onCancel: undefined,
+          confirmText: isRTL ? 'حسنا' : 'OK'
         });
       } finally {
         setIsUpdatingAll(false);
@@ -999,9 +1021,9 @@ import { translations } from '@/constants/languages';
       return (
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <View style={[styles.modalHeader, isRTL && {flexDirection: 'row-reverse'}]}>
-              <Text style={[styles.modalTitle, isRTL && {textAlign: 'right'}]}>{isRTL ? translations.ar.myShares : translations.en.myShares}</Text>
-              <TouchableOpacity
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>My Shares</Text>
+              <TouchableOpacity 
                 onPress={() => setActiveModal('none')}
                 style={styles.closeButton}
               >
@@ -1019,7 +1041,7 @@ import { translations } from '@/constants/languages';
                   <ActivityIndicator size="small" color="white" />
                 ) : (
                   <Text style={styles.updateAllButtonText}>
-                    {isRTL ? translations.ar.updateLocationForAll : translations.en.updateLocationForAll}
+                    {isRTL ? 'تحديث الموقع للجميع' : 'Update Location for All'}
                   </Text>
                 )}
               </TouchableOpacity>
@@ -1029,31 +1051,30 @@ import { translations } from '@/constants/languages';
               data={myShares}
               keyExtractor={item => item.docId}
               renderItem={({ item }) => (
-                <View style={[styles.shareItem, isRTL && {flexDirection: 'row-reverse'}]}>
-                  <View style={[styles.userAvatar, isRTL && {marginLeft: 12, marginRight: 0}]}>
+                <View style={styles.shareItem}>
+                  <View style={styles.userAvatar}>
                     {item.recipient.profile_image ? (
-                      <Image
-                        source={{ uri: item.recipient.profile_image }}
+                      <Image 
+                        source={{ uri: item.recipient.profile_image }} 
                         style={styles.avatarImage}
                       />
                     ) : (
                       <Text style={styles.avatarText}>
-                        {(item.recipient.name?.charAt(0) || (isRTL ? translations.ar.user : translations.en.user).charAt(0) || '?').toUpperCase()}
+                        {(item.recipient.name?.charAt(0) || '?').toUpperCase()}
                       </Text>
                     )}
                   </View>
-                  <View style={[styles.userInfo, isRTL && {alignItems: 'flex-end'}]}>
-                    <Text style={[styles.userName, isRTL && {textAlign: 'right'}]}>{item.recipient.name || (isRTL ? translations.ar.user : translations.en.user)}</Text>
-                    <Text style={[styles.userEmail, isRTL && {textAlign: 'right'}]}>{item.recipient.email}</Text>
-                    <Text style={[styles.lastUpdated, isRTL && {textAlign: 'right'}]}>
-                      {`${isRTL ? translations.ar.lastUpdated : translations.en.lastUpdated}: ${formatTimeElapsed(item.last_updated)}`}
+                  <View style={styles.userInfo}>
+                    <Text style={styles.userName}>{item.recipient.name}</Text>
+                    <Text style={styles.userEmail}>{item.recipient.email}</Text>
+                    <Text style={styles.lastUpdated}>
+                      Last updated: {formatTimeElapsed(item.last_updated)}
                     </Text>
                   </View>
                   <TouchableOpacity
                     style={[
                       styles.stopButton,
-                      stoppingShares.has(item.docId) && styles.stopButtonDisabled,
-                      isRTL && {marginLeft: 12, marginRight: 0}
+                      stoppingShares.has(item.docId) && styles.stopButtonDisabled
                     ]}
                     onPress={() => {
                       stopSharing(item.docId);
@@ -1064,18 +1085,18 @@ import { translations } from '@/constants/languages';
                     {stoppingShares.has(item.docId) ? (
                       <ActivityIndicator size="small" color="white" />
                     ) : (
-                      <Text style={styles.stopButtonText}>{isRTL ? translations.ar.stop : translations.en.stop}</Text>
+                      <Text style={styles.stopButtonText}>Stop</Text>
                     )}
                   </TouchableOpacity>
                 </View>
               )}
-              ListEmptyComponent={(
+              ListEmptyComponent={
                 <View style={styles.emptyListContainer}>
-                  <Text style={[styles.emptyListText, isRTL && {textAlign: 'right'}]}>
-                    {isRTL ? translations.ar.noActiveShares : translations.en.noActiveShares}
+                  <Text style={styles.emptyListText}>
+                    {isRTL ? 'لا توجد مشاركات نشطة' : 'No active shares'}
                   </Text>
                 </View>
-              )}
+              }
               contentContainerStyle={styles.sharesList}
             />
           </View>
@@ -1153,7 +1174,7 @@ import { translations } from '@/constants/languages';
                     latitude: userLocation.latitude,
                     longitude: userLocation.longitude
                   }}
-                  title={isRTL ? translations.ar.currentLocation : translations.en.currentLocation}
+                  title="Your Location"
                   pinColor="blue"
                 />
               )}
@@ -1173,7 +1194,7 @@ import { translations } from '@/constants/languages';
             </MapView>
   
             {/* Map Actions */}
-            <View className={`absolute top-4 space-y-2 z-10 ${isRTL ? 'left-4' : 'right-4'}`}>
+            <View className="absolute top-4 right-4 space-y-2 z-10">
               <TouchableOpacity
                 className="bg-white w-14 h-14 rounded-full items-center justify-center shadow-lg"
                 onPress={fetchUserLocation}
@@ -1205,7 +1226,7 @@ import { translations } from '@/constants/languages';
 
             {/* Floating Action Button for sharing location */}
             <TouchableOpacity
-              className={`absolute bottom-6 w-16 h-16 bg-orange-500 rounded-full items-center justify-center shadow-lg ${isRTL ? 'left-6' : 'right-6'}`}
+              className="absolute bottom-6 right-6 w-16 h-16 bg-orange-500 rounded-full items-center justify-center shadow-lg"
               onPress={() => {
                 setSelectedUser(null);
                 setSearchQuery('');
@@ -1225,10 +1246,10 @@ import { translations } from '@/constants/languages';
             </TouchableOpacity>
 
             {/* Location sharing status */}
-            {isLocationSharing && selectedUser && (
-              <View className={`absolute bottom-32 p-3 rounded-lg shadow-md ${isRTL ? 'left-4 right-16' : 'left-4 right-4'} bg-white`}>
-                <Text className={`text-center font-bold text-green-600 ${isRTL ? 'text-right' : 'text-left'}`}>
-                  {`${isRTL ? translations.ar.sharingLocationWith : translations.en.sharingLocationWith} ${selectedUser?.name || (isRTL ? translations.ar.user : translations.en.user)}`}
+            {isLocationSharing && (
+              <View className="absolute bottom-32 left-4 right-4 bg-white p-3 rounded-lg shadow-md">
+                <Text className="text-center font-bold text-green-600">
+                  Sharing location with {selectedUser?.name}
                 </Text>
               </View>
             )}
@@ -1243,7 +1264,7 @@ import { translations } from '@/constants/languages';
             handleIndicatorStyle={{ backgroundColor: '#9ca3af', width: 50 }}
           >
             <View style={styles.bottomSheetContainer}>
-              <Text style={[styles.bottomSheetTitle, isRTL && {textAlign: 'right'}]}>{isRTL ? translations.ar.locationRequests : translations.en.locationRequests}</Text>
+              <Text style={styles.bottomSheetTitle}>Location Requests</Text>
               {loading ? (
                 <View style={styles.bottomSheetContent}>
                   {[1, 2, 3].map((_, index) => (
@@ -1260,7 +1281,7 @@ import { translations } from '@/constants/languages';
                 </View>
               ) : trackRequests.length === 0 ? (
                 <View style={styles.emptyListContainer}>
-                  <Text style={[styles.emptyListText, isRTL && {textAlign: 'right'}]}>{isRTL ? translations.ar.noActiveLocationRequests : translations.en.noActiveLocationRequests}</Text>
+                  <Text style={styles.emptyListText}>No active location requests</Text>
                 </View>
               ) : (
                 <BottomSheetFlatList
@@ -1277,7 +1298,7 @@ import { translations } from '@/constants/languages';
                       onRefresh={fetchUserLocation}
                       colors={['#f97316']}
                       tintColor="#f97316"
-                      title={isRTL ? translations.ar.refreshing : translations.en.refreshing}
+                      title={isRTL ? 'جاري التحديث...' : 'Refreshing...'}
                       titleColor="#f97316"
                       progressViewOffset={20}
                     />
@@ -1290,6 +1311,18 @@ import { translations } from '@/constants/languages';
           {/* Render modals */}
           {renderSearchModal()}
           {renderMySharesModal()}
+
+          {/* Custom Alert */}
+          <CustomAlert
+            visible={alertConfig.visible}
+            title={alertConfig.title}
+            message={alertConfig.message}
+            type={alertConfig.type}
+            onConfirm={alertConfig.onConfirm}
+            onCancel={alertConfig.onCancel}
+            confirmText={alertConfig.confirmText}
+            cancelText={alertConfig.cancelText}
+          />
         </SafeAreaView>
       </GestureHandlerRootView>
     );
@@ -1297,8 +1330,8 @@ import { translations } from '@/constants/languages';
   
   const styles = StyleSheet.create({
     androidShadow: {
-          elevation: 5,
-        },
+      elevation: 5,
+    },
     iosShadow: {
       shadowColor: '#000',
       shadowOffset: { width: 0, height: 2 },
@@ -1561,80 +1594,6 @@ import { translations } from '@/constants/languages';
       backgroundColor: '#f3f4f6',
       borderRadius: 16
     },
-    // Skeleton styles
-    skeletonItem: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingVertical: 12,
-      paddingHorizontal: 16,
-      borderBottomWidth: 1,
-      borderBottomColor: '#f3f4f6'
-    },
-    skeletonAvatar: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
-      backgroundColor: '#e5e7eb',
-      opacity: 0.7
-    },
-    skeletonContent: {
-      flex: 1,
-      marginLeft: 12
-    },
-    skeletonName: {
-      height: 16,
-      width: '60%',
-      backgroundColor: '#e5e7eb',
-      borderRadius: 4,
-      marginBottom: 8,
-      opacity: 0.7
-    },
-    skeletonEmail: {
-      height: 14,
-      width: '80%',
-      backgroundColor: '#e5e7eb',
-      borderRadius: 4,
-      marginBottom: 8,
-      opacity: 0.7
-    },
-    skeletonTime: {
-      height: 12,
-      width: '40%',
-      backgroundColor: '#e5e7eb',
-      borderRadius: 4,
-      opacity: 0.7
-    },
-    skeletonButton: {
-      width: 60,
-      height: 32,
-      backgroundColor: '#e5e7eb',
-      borderRadius: 16,
-      opacity: 0.7
-    },
-    skeletonHeaderButton: {
-      width: 24,
-      height: 24,
-      backgroundColor: '#e5e7eb',
-      borderRadius: 12,
-      opacity: 0.7
-    },
-    skeletonHeaderTitle: {
-      width: 150,
-      height: 24,
-      backgroundColor: '#e5e7eb',
-      borderRadius: 4,
-      opacity: 0.7
-    },
-    skeletonBottomSheetTitle: {
-      height: 24,
-      width: 200,
-      backgroundColor: '#e5e7eb',
-      borderRadius: 4,
-      marginBottom: 16,
-      marginHorizontal: 16,
-      marginTop: 16,
-      opacity: 0.7
-    },
     updateAllButton: {
       backgroundColor: '#f97316',
       paddingVertical: 12,
@@ -1653,5 +1612,76 @@ import { translations } from '@/constants/languages';
       color: 'white',
       fontWeight: 'bold',
       fontSize: 16
-    }
+    },
+    alertRoot: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      zIndex: 9999,
+    },
+    alertOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0,0,0,0.5)',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    alertContent: {
+      width: '100%',
+      height: '100%',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    alertContainer: {
+      width: '85%',
+      backgroundColor: 'white',
+      borderRadius: 16,
+      overflow: 'hidden',
+    },
+    alertHeader: {
+      padding: 24,
+    },
+    iconContainer: {
+      alignItems: 'center',
+      marginBottom: 16,
+    },
+    alertTitle: {
+      fontSize: 20,
+      fontWeight: 'bold',
+      color: '#1f2937',
+      textAlign: 'center',
+      marginBottom: 8,
+    },
+    alertMessage: {
+      fontSize: 16,
+      color: '#4b5563',
+      textAlign: 'center',
+    },
+    alertButtons: {
+      flexDirection: 'row',
+      borderTopWidth: 1,
+      borderTopColor: '#e5e7eb',
+    },
+    alertCancelButton: {
+      flex: 1,
+      paddingVertical: 16,
+      borderRightWidth: 1,
+      borderRightColor: '#e5e7eb',
+    },
+    alertConfirmButton: {
+      paddingVertical: 16,
+    },
+    alertCancelButtonText: {
+      fontSize: 16,
+      color: '#4b5563',
+      textAlign: 'center',
+      fontWeight: '500',
+    },
+    alertConfirmButtonText: {
+      fontSize: 16,
+      color: 'white',
+      textAlign: 'center',
+      fontWeight: '500',
+    },
   }); 

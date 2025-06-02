@@ -1,5 +1,11 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Image, Platform, Alert } from 'react-native';
+// Suppress Reanimated strict mode warning in this file only
+// if (__DEV__ && (global as any)._REANIMATED_VERSION_3) {
+//     // @ts-ignore
+//     global.__reanimatedWorkletInit = () => {};
+//   }
+
+import React, { useState, useEffect } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, Image, Platform, Alert, ActivityIndicator, Modal, StyleSheet, Dimensions, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
@@ -13,6 +19,8 @@ import { collection, addDoc, serverTimestamp, query, where, getDocs, updateDoc, 
 import * as ImagePicker from 'expo-image-picker';
 import { uploadImageToCloudinary } from '@/lib/upload';
 import { Picker } from '@react-native-picker/picker';
+import { useUser } from '@clerk/clerk-expo';
+import { MaterialIcons } from '@expo/vector-icons';
 
 interface CityData {
   ar: string;
@@ -324,6 +332,244 @@ const PALESTINIAN_CITIES: PalestinianCities = {
   }
 };
 
+// Stylesheet for custom alert (moved outside of components)
+const styles = StyleSheet.create({
+  alertRoot: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 9999,
+  },
+  alertOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  alertContent: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  alertContainer: {
+    width: '85%',
+    backgroundColor: 'white',
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  alertHeader: {
+    padding: 24,
+  },
+  iconContainer: {
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  alertTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#1f2937',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  alertMessage: {
+    fontSize: 16,
+    color: '#4b5563',
+    textAlign: 'center',
+  },
+  alertButtons: {
+    flexDirection: 'row',
+    borderTopWidth: 1,
+    borderTopColor: '#e5e7eb',
+  },
+  alertCancelButton: {
+    flex: 1,
+    paddingVertical: 16,
+    borderRightWidth: 1,
+    borderRightColor: '#e5e7eb',
+  },
+  alertConfirmButton: {
+    paddingVertical: 16,
+  },
+  alertCancelButtonText: {
+    fontSize: 16,
+    color: '#4b5563',
+    textAlign: 'center',
+    fontWeight: '500',
+  },
+  alertConfirmButtonText: {
+    fontSize: 16,
+    color: 'white',
+    textAlign: 'center',
+    fontWeight: '500',
+  },
+});
+
+// Interface for CustomAlertProps (copied from track.tsx)
+interface CustomAlertProps {
+  visible: boolean;
+  title: string;
+  message: string;
+  onConfirm: () => void;
+  onCancel?: () => void;
+  confirmText?: string;
+  cancelText?: string;
+  type?: 'success' | 'error' | 'warning' | 'info';
+}
+
+// CustomAlert component (copied from track.tsx)
+const CustomAlert = ({
+  visible,
+  title,
+  message,
+  onConfirm,
+  onCancel,
+  confirmText = 'OK',
+  cancelText = 'Cancel',
+  type = 'info'
+}: CustomAlertProps) => {
+  const scaleAnim = React.useRef(new Animated.Value(0)).current;
+  const opacityAnim = React.useRef(new Animated.Value(0)).current;
+
+  React.useEffect(() => {
+    if (visible) {
+      Animated.parallel([
+        Animated.spring(scaleAnim, {
+          toValue: 1,
+          useNativeDriver: true,
+          tension: 50,
+          friction: 7
+        }),
+        Animated.timing(opacityAnim, {
+          toValue: 1,
+          duration: 200,
+          useNativeDriver: true
+        })
+      ]).start();
+    } else {
+      Animated.parallel([
+        Animated.timing(opacityAnim, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true
+        }),
+        Animated.spring(scaleAnim, {
+          toValue: 0,
+          useNativeDriver: true,
+          tension: 50,
+          friction: 7
+        })
+      ]).start();
+    }
+  }, [visible]);
+
+  const handleConfirm = () => {
+    onConfirm();
+  };
+
+  const handleCancel = () => {
+    if (onCancel) {
+      onCancel();
+    }
+  };
+
+  const getTypeStyles = () => {
+    switch (type) {
+      case 'success':
+        return {
+          icon: 'check-circle',
+          color: '#22c55e',
+          bgColor: '#dcfce7'
+        };
+      case 'error':
+        return {
+          icon: 'error',
+          color: '#ef4444',
+          bgColor: '#fee2e2'
+        };
+      case 'warning':
+        return {
+          icon: 'warning',
+          color: '#f97316',
+          bgColor: '#ffedd5'
+        };
+      default:
+        return {
+          icon: 'info',
+          color: '#3b82f6',
+          bgColor: '#dbeafe'
+        };
+    }
+  };
+
+  const typeStyles = getTypeStyles();
+
+  if (!visible) return null;
+
+  return (
+    <View style={styles.alertRoot}>
+      <TouchableOpacity
+        style={styles.alertOverlay}
+        activeOpacity={1}
+        onPress={handleCancel}
+      >
+        <TouchableOpacity
+          activeOpacity={1}
+          onPress={(e) => e.stopPropagation()}
+          style={styles.alertContent}
+        >
+          <Animated.View
+            style={[
+              styles.alertContainer,
+              { transform: [{ scale: scaleAnim }] },
+              { opacity: opacityAnim }
+            ]}
+          >
+            <View style={[styles.alertHeader, { backgroundColor: typeStyles.bgColor }]}>
+              <View style={styles.iconContainer}>
+                <MaterialIcons name={typeStyles.icon as any} size={48} color={typeStyles.color} />
+              </View>
+              <Text className="text-xl font-CairoBold text-gray-800 text-center mb-2">
+            {title}
+          </Text>
+          <Text className="text-base text-gray-600 text-center font-CairoRegular">
+            {message}
+          </Text>
+        </View>
+
+            <View style={styles.alertButtons}>
+              {onCancel && (
+                <TouchableOpacity
+                  onPress={handleCancel}
+                  style={styles.alertCancelButton}
+                >
+                  <Text style={styles.alertCancelButtonText}>
+                    {cancelText}
+                  </Text>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity
+                onPress={handleConfirm}
+                style={[
+                  styles.alertConfirmButton,
+                  { backgroundColor: typeStyles.color },
+                  onCancel ? { flex: 1 } : { width: '100%' }
+                ]}
+              >
+                <Text style={styles.alertConfirmButtonText}>
+                  {confirmText}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </Animated.View>
+        </TouchableOpacity>
+      </TouchableOpacity>
+    </View>
+  );
+};
+
 const AddBarrier = () => {
   const router = useRouter();
   const { t, language } = useLanguage();
@@ -335,6 +581,18 @@ const AddBarrier = () => {
     description: '',
     imageUrl: null,
   });
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [alertConfig, setAlertConfig] = useState({
+    visible: false,
+    title: '',
+    message: '',
+    type: 'info' as 'success' | 'error' | 'warning' | 'info',
+    onConfirm: () => {},
+    confirmText: undefined as string | undefined,
+    onCancel: undefined as (() => void) | undefined,
+  });
+
+  const { user } = useUser();
 
   const handleImagePick = async () => {
     try {
@@ -409,6 +667,21 @@ const AddBarrier = () => {
           timestamp: timestamp, // Add unique timestamp
           updates: updates
         });
+
+        setAlertConfig({
+          visible: true,
+          title: language === 'ar' ? 'نجاح' : 'Success',
+          message: language === 'ar' ? 'تم تحديث حالة الحاجز بنجاح' : 'Barrier status updated successfully',
+          type: 'success',
+          onConfirm: () => {
+            setAlertConfig(prev => ({ ...prev, visible: false }));
+            setTimeout(() => {
+              router.back();
+            }, 50);
+          },
+          confirmText: language === 'ar' ? 'حسناً' : 'OK',
+          onCancel: undefined,
+        });
       } else {
         // Create new barrier
         await addDoc(barriersRef, {
@@ -422,24 +695,35 @@ const AddBarrier = () => {
           timestamp: timestamp, // Add unique timestamp
           updates: []
         });
-      }
 
-      Alert.alert(
-        language === 'ar' ? 'نجاح' : 'Success',
-        language === 'ar' ? 'تم تحديث حالة الحاجز بنجاح' : 'Barrier status updated successfully',
-        [
-          {
-            text: language === 'ar' ? 'حسناً' : 'OK',
-            onPress: () => router.back(),
+        setAlertConfig({
+          visible: true,
+          title: language === 'ar' ? 'نجاح' : 'Success',
+          message: language === 'ar' ? 'تم تحديث حالة الحاجز بنجاح' : 'Barrier status updated successfully',
+          type: 'success',
+          onConfirm: () => {
+            setAlertConfig(prev => ({ ...prev, visible: false }));
+            setTimeout(() => {
+              router.back();
+            }, 50);
           },
-        ]
-      );
+          confirmText: language === 'ar' ? 'حسناً' : 'OK',
+          onCancel: undefined,
+        });
+      }
     } catch (error) {
       console.error('Error updating barrier:', error);
-      Alert.alert(
-        language === 'ar' ? 'خطأ' : 'Error',
-        language === 'ar' ? 'حدث خطأ أثناء تحديث حالة الحاجز' : 'Error updating barrier status'
-      );
+      setAlertConfig({
+        visible: true,
+        title: language === 'ar' ? 'خطأ' : 'Error',
+        message: language === 'ar' ? 'حدث خطأ أثناء تحديث حالة الحاجز' : 'Error updating barrier status',
+        type: 'error',
+        onConfirm: () => {
+          setAlertConfig(prev => ({ ...prev, visible: false }));
+        },
+        confirmText: language === 'ar' ? 'حسناً' : 'OK',
+        onCancel: undefined,
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -635,6 +919,15 @@ const AddBarrier = () => {
           )}
         </View>
       </ScrollView>
+      <CustomAlert
+        visible={alertConfig.visible}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        type={alertConfig.type}
+        onConfirm={alertConfig.onConfirm}
+        onCancel={alertConfig.onCancel}
+        confirmText={alertConfig.confirmText}
+      />
     </SafeAreaView>
   );
 };

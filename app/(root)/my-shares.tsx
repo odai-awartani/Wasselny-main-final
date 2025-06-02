@@ -401,7 +401,7 @@ export default function MySharesPage() {
         visible: true,
         title: isRTL ? 'تم بدء المشاركة' : 'Sharing Started',
         message: isRTL ? `أنت الآن تشارك موقعك مع ${selectedUser.name}` : `You are now sharing your location with ${selectedUser.name}`,
-        type: 'warning', // Use the warning type for orange theme
+        type: 'success', // Use the warning type for orange theme
         onConfirm: () => setAlertConfig({ ...alertConfig, visible: false }), // Close alert on confirm
         confirmText: isRTL ? 'حسنا' : 'OK',
         onCancel: undefined, // No cancel button
@@ -527,7 +527,7 @@ export default function MySharesPage() {
         visible: true,
         title: isRTL ? 'تم التحديث' : 'Updated',
         message: isRTL ? 'تم تحديث موقعك لجميع المستخدمين' : 'Your location has been updated for all users',
-        type: 'warning', // Use warning type for orange theme
+        type: 'success', // Use warning type for orange theme
         onConfirm: () => setAlertConfig({ ...alertConfig, visible: false }), // Close alert on confirm
         confirmText: isRTL ? 'حسنا' : 'OK',
         onCancel: undefined, // No cancel button
