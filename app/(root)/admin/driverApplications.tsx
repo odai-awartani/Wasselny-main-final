@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Image, Alert, Modal, TextInput, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Image, Alert, Modal, TextInput, ActivityIndicator, StyleSheet, Dimensions, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, updateDoc, doc, getDoc, addDoc, orderBy } from 'firebase/firestore';
 import { useUser } from '@clerk/clerk-expo';
 import CustomButton from '@/components/CustomButton';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useLanguage } from '@/context/LanguageContext';
 import Header from '@/components/Header';
@@ -24,6 +24,241 @@ interface DriverApplication {
   phone_number?: string;
   license_number?: string;
 }
+
+interface CustomAlertProps {
+  visible: boolean;
+  title: string;
+  message: string;
+  onConfirm: () => void;
+  onCancel?: () => void;
+  confirmText?: string;
+  cancelText?: string;
+  type?: 'success' | 'error' | 'warning' | 'info';
+}
+
+const CustomAlert = ({
+  visible,
+  title,
+  message,
+  onConfirm,
+  onCancel,
+  confirmText = 'OK',
+  cancelText = 'Cancel',
+  type = 'info'
+}: CustomAlertProps) => {
+  const scaleAnim = React.useRef(new Animated.Value(0)).current;
+  const opacityAnim = React.useRef(new Animated.Value(0)).current;
+
+  React.useEffect(() => {
+    if (visible) {
+      Animated.parallel([
+        Animated.spring(scaleAnim, {
+          toValue: 1,
+          useNativeDriver: true,
+          tension: 50,
+          friction: 7
+        }),
+        Animated.timing(opacityAnim, {
+          toValue: 1,
+          duration: 200,
+          useNativeDriver: true
+        })
+      ]).start();
+    } else {
+      Animated.parallel([
+        Animated.timing(opacityAnim, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true
+        }),
+        Animated.spring(scaleAnim, {
+          toValue: 0,
+          useNativeDriver: true,
+          tension: 50,
+          friction: 7
+        })
+      ]).start();
+    }
+  }, [visible]);
+
+  const handleConfirm = () => {
+    onConfirm();
+  };
+
+  const handleCancel = () => {
+    if (onCancel) {
+      onCancel();
+    }
+  };
+
+  const getTypeStyles = () => {
+    switch (type) {
+      case 'success':
+        return {
+          icon: 'check-circle',
+          color: '#22c55e',
+          bgColor: '#dcfce7'
+        };
+      case 'error':
+        return {
+          icon: 'error',
+          color: '#ef4444',
+          bgColor: '#fee2e2'
+        };
+      case 'warning':
+        return {
+          icon: 'warning',
+          color: '#f97316',
+          bgColor: '#ffedd5'
+        };
+      default:
+        return {
+          icon: 'info',
+          color: '#3b82f6',
+          bgColor: '#dbeafe'
+        };
+    }
+  };
+
+  const typeStyles = getTypeStyles();
+
+  if (!visible) return null;
+
+  return (
+    <View style={styles.alertRoot}>
+      <TouchableOpacity
+        style={styles.alertOverlay}
+        activeOpacity={1}
+        onPress={handleCancel}
+      >
+        <TouchableOpacity
+          activeOpacity={1}
+          onPress={(e) => e.stopPropagation()}
+          style={styles.alertContent}
+        >
+          <Animated.View
+            style={[
+              styles.alertContainer,
+              { transform: [{ scale: scaleAnim }] },
+              { opacity: opacityAnim }
+            ]}
+          >
+            <View style={[styles.alertHeader, { backgroundColor: typeStyles.bgColor }]}>
+              <View style={styles.iconContainer}>
+                <MaterialIcons name={typeStyles.icon as any} size={48} color={typeStyles.color} />
+              </View>
+              <Text className="text-xl font-CairoBold text-gray-800 text-center mb-2">
+                {title}
+              </Text>
+              <Text className="text-base text-gray-600 text-center font-CairoRegular">
+                {message}
+              </Text>
+            </View>
+
+            <View style={styles.alertButtons}>
+              {onCancel && (
+                <TouchableOpacity
+                  onPress={handleCancel}
+                  style={styles.alertCancelButton}
+                >
+                  <Text style={styles.alertCancelButtonText}>
+                    {cancelText}
+                  </Text>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity
+                onPress={handleConfirm}
+                style={[
+                  styles.alertConfirmButton,
+                  { backgroundColor: typeStyles.color },
+                  onCancel ? { flex: 1 } : { width: '100%' }
+                ]}
+              >
+                <Text style={styles.alertConfirmButtonText}>
+                  {confirmText}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </Animated.View>
+        </TouchableOpacity>
+      </TouchableOpacity>
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  alertRoot: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 9999,
+  },
+  alertOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  alertContent: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  alertContainer: {
+    width: '85%',
+    backgroundColor: 'white',
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  alertHeader: {
+    padding: 24,
+  },
+  iconContainer: {
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  alertTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#1f2937',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  alertMessage: {
+    fontSize: 16,
+    color: '#4b5563',
+    textAlign: 'center',
+  },
+  alertButtons: {
+    flexDirection: 'row',
+    borderTopWidth: 1,
+    borderTopColor: '#e5e7eb',
+  },
+  alertCancelButton: {
+    flex: 1,
+    paddingVertical: 16,
+    borderRightWidth: 1,
+    borderRightColor: '#e5e7eb',
+  },
+  alertConfirmButton: {
+    paddingVertical: 16,
+  },
+  alertCancelButtonText: {
+    fontSize: 16,
+    color: '#4b5563',
+    textAlign: 'center',
+    fontWeight: '500',
+  },
+  alertConfirmButtonText: {
+    fontSize: 16,
+    color: 'white',
+    textAlign: 'center',
+    fontWeight: '500',
+  },
+});
 
 const SkeletonApplicationCard = ({ language }: { language: string }) => {
   const isRTL = language === 'ar';
@@ -81,6 +316,18 @@ const DriverApplications = () => {
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending');
   const [sortBy, setSortBy] = useState<'date' | 'name'>('date');
 
+  // State for custom alert
+  const [alertConfig, setAlertConfig] = useState<CustomAlertProps>({
+    visible: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+    onCancel: undefined,
+    confirmText: 'OK',
+    cancelText: 'Cancel',
+    type: 'info',
+  });
+
   useEffect(() => {
     checkAdminAccess();
   }, [user]);
@@ -101,17 +348,47 @@ const DriverApplications = () => {
           setIsAdmin(true);
           fetchApplications();
         } else {
-          Alert.alert('Access Denied', 'You do not have permission to access this page');
-          router.replace('/(root)/(tabs)/home');
+          setAlertConfig({
+            visible: true,
+            title: language === 'ar' ? 'تم رفض الوصول' : 'Access Denied',
+            message: language === 'ar' ? 'ليس لديك الإذن بالوصول إلى هذه الصفحة' : 'You do not have permission to access this page',
+            type: 'error',
+            onConfirm: () => {
+              setAlertConfig(prev => ({ ...prev, visible: false }));
+              router.replace('/(root)/(tabs)/home');
+            },
+            confirmText: 'OK',
+            onCancel: undefined,
+          });
         }
       } else {
-        Alert.alert('Access Denied', 'You do not have permission to access this page');
-        router.replace('/(root)/(tabs)/home');
+        setAlertConfig({
+          visible: true,
+          title: language === 'ar' ? 'تم رفض الوصول' : 'Access Denied',
+          message: language === 'ar' ? 'ليس لديك الإذن بالوصول إلى هذه الصفحة' : 'You do not have permission to access this page',
+          type: 'error',
+          onConfirm: () => {
+            setAlertConfig(prev => ({ ...prev, visible: false }));
+            router.replace('/(root)/(tabs)/home');
+          },
+          confirmText: 'OK',
+          onCancel: undefined,
+        });
       }
     } catch (error) {
       console.error('Error checking admin access:', error);
-      Alert.alert('Error', 'An error occurred while checking permissions');
-      router.replace('/(root)/(tabs)/home');
+      setAlertConfig({
+        visible: true,
+        title: language === 'ar' ? 'خطأ' : 'Error',
+        message: language === 'ar' ? 'حدث خطأ أثناء التحقق من الصلاحيات' : 'An error occurred while checking permissions',
+        type: 'error',
+        onConfirm: () => {
+          setAlertConfig(prev => ({ ...prev, visible: false }));
+          router.replace('/(root)/(tabs)/home');
+        },
+        confirmText: 'OK',
+        onCancel: undefined,
+      });
     }
   };
 
@@ -146,7 +423,15 @@ const DriverApplications = () => {
       setApplications(sortedApplications);
     } catch (error) {
       console.error('Error fetching applications:', error);
-      Alert.alert('Error', 'An error occurred while fetching applications');
+      setAlertConfig({
+        visible: true,
+        title: language === 'ar' ? 'خطأ' : 'Error',
+        message: language === 'ar' ? 'حدث خطأ أثناء جلب الطلبات' : 'An error occurred while fetching applications',
+        type: 'error',
+        onConfirm: () => setAlertConfig(prev => ({ ...prev, visible: false })),
+        confirmText: 'OK',
+        onCancel: undefined,
+      });
     } finally {
       setLoading(false);
     }
@@ -207,16 +492,40 @@ const DriverApplications = () => {
 
       await fetchApplications();
 
-      Alert.alert('Success', 'Driver application approved successfully');
+      setAlertConfig({
+        visible: true,
+        title: language === 'ar' ? 'نجاح' : 'Success',
+        message: language === 'ar' ? 'تمت الموافقة على طلب السائق بنجاح' : 'Driver application approved successfully',
+        type: 'success',
+        onConfirm: () => setAlertConfig(prev => ({ ...prev, visible: false })),
+        confirmText: 'OK',
+        onCancel: undefined,
+      });
     } catch (error) {
       console.error('Error handling application:', error);
-      Alert.alert('Error', 'An error occurred while processing the application');
+      setAlertConfig({
+        visible: true,
+        title: language === 'ar' ? 'خطأ' : 'Error',
+        message: language === 'ar' ? 'حدث خطأ أثناء معالجة الطلب' : 'An error occurred while processing the application',
+        type: 'error',
+        onConfirm: () => setAlertConfig(prev => ({ ...prev, visible: false })),
+        confirmText: 'OK',
+        onCancel: undefined,
+      });
     }
   };
 
   const handleReject = async () => {
     if (!selectedApplication || !rejectionReason.trim()) {
-      Alert.alert('Error', 'Please enter a rejection reason');
+      setAlertConfig({
+        visible: true,
+        title: language === 'ar' ? 'خطأ' : 'Error',
+        message: language === 'ar' ? 'الرجاء إدخال سبب الرفض' : 'Please enter a rejection reason',
+        type: 'warning', // Use warning for validation message
+        onConfirm: () => setAlertConfig(prev => ({ ...prev, visible: false })),
+        confirmText: 'OK',
+        onCancel: undefined,
+      });
       return;
     }
 
@@ -249,10 +558,26 @@ const DriverApplications = () => {
       setRejectionReason('');
       setSelectedApplication(null);
 
-      Alert.alert('Success', 'Driver application rejected successfully');
+      setAlertConfig({
+        visible: true,
+        title: language === 'ar' ? 'نجاح' : 'Success',
+        message: language === 'ar' ? 'تم رفض طلب السائق بنجاح' : 'Driver application rejected successfully',
+        type: 'success',
+        onConfirm: () => setAlertConfig(prev => ({ ...prev, visible: false })),
+        confirmText: 'OK',
+        onCancel: undefined,
+      });
     } catch (error) {
       console.error('Error rejecting application:', error);
-      Alert.alert('Error', 'An error occurred while rejecting the application');
+      setAlertConfig({
+        visible: true,
+        title: language === 'ar' ? 'خطأ' : 'Error',
+        message: language === 'ar' ? 'حدث خطأ أثناء رفض الطلب' : 'An error occurred while rejecting the application',
+        type: 'error',
+        onConfirm: () => setAlertConfig(prev => ({ ...prev, visible: false })),
+        confirmText: 'OK',
+        onCancel: undefined,
+      });
     }
   };
 
@@ -490,7 +815,7 @@ const DriverApplications = () => {
                   setRejectionReason('');
                   setSelectedApplication(null);
                 }}
-                bgVariant="outline"
+                bgVariant="secondary"
                 className={`flex-1 ${language === 'ar' ? 'ml-2' : 'mr-2'}`}
               />
               <CustomButton
@@ -521,6 +846,26 @@ const DriverApplications = () => {
             resizeMode="contain"
           />
         </TouchableOpacity>
+      </Modal>
+
+      {/* Modal for CustomAlert */}
+      <Modal
+        visible={alertConfig.visible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setAlertConfig(prev => ({ ...prev, visible: false }))}
+      >
+        {/* Render CustomAlert component */}
+        <CustomAlert
+          visible={true} // Always visible when the wrapping modal is visible
+          title={alertConfig.title}
+          message={alertConfig.message}
+          type={alertConfig.type}
+          onConfirm={alertConfig.onConfirm}
+          onCancel={alertConfig.onCancel}
+          confirmText={alertConfig.confirmText}
+          cancelText={alertConfig.cancelText}
+        />
       </Modal>
     </SafeAreaView>
   );
