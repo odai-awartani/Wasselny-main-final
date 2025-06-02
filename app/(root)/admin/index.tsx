@@ -241,6 +241,7 @@ const AdminDashboard = () => {
               description={language === 'ar' ? 'مراجعة وإدارة طلبات السائقين' : 'Review and manage driver applications'}
               icon="car"
               color="red"
+              badge={stats.pendingApplications}
               onPress={() => router.push('/(root)/admin/driverApplications' as any)}
             />
             <QuickActionCard 

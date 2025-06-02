@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert, Image, Platform } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert, Image, Platform, Modal, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, updateDoc, collection, query, where, onSnapshot, getDocs } from 'firebase/firestore';
@@ -8,6 +8,10 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useLanguage } from '@/context/LanguageContext';
 import { icons } from '@/constants';
 import Header from '@/components/Header';
+import * as ImagePicker from 'expo-image-picker';
+import { uploadImageToCloudinary } from '@/lib/upload';
+import * as Haptics from 'expo-haptics';
+import { MaterialIcons } from '@expo/vector-icons';
 
 interface Ride {
   id: string;
@@ -104,6 +108,147 @@ interface RideDetails {
   ride_days: string[];
 }
 
+interface CustomAlertProps {
+  visible: boolean;
+  title: string;
+  message: string;
+  onConfirm: () => void;
+  onCancel?: () => void;
+  confirmText?: string;
+  cancelText?: string;
+  type?: 'success' | 'error' | 'warning' | 'info';
+}
+
+const CustomAlert = ({ 
+  visible, 
+  title, 
+  message, 
+  onConfirm, 
+  onCancel, 
+  confirmText = 'OK',
+  cancelText = 'Cancel',
+  type = 'info'
+}: CustomAlertProps) => {
+  const scaleAnim = React.useRef(new Animated.Value(0)).current;
+  const opacityAnim = React.useRef(new Animated.Value(0)).current;
+
+  React.useEffect(() => {
+    if (visible) {
+      Animated.parallel([
+        Animated.spring(scaleAnim, {
+          toValue: 1,
+          useNativeDriver: true,
+          tension: 50,
+          friction: 7
+        }),
+        Animated.timing(opacityAnim, {
+          toValue: 1,
+          duration: 200,
+          useNativeDriver: true
+        })
+      ]).start();
+    } else {
+      Animated.parallel([
+        Animated.spring(scaleAnim, {
+          toValue: 0,
+          useNativeDriver: true,
+          tension: 50,
+          friction: 7
+        }),
+        Animated.timing(opacityAnim, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true
+        })
+      ]).start();
+    }
+  }, [visible]);
+
+  const getTypeStyles = () => {
+    switch (type) {
+      case 'success':
+        return {
+          icon: 'check-circle',
+          color: '#22c55e',
+          bgColor: '#dcfce7'
+        };
+      case 'error':
+        return {
+          icon: 'error',
+          color: '#ef4444',
+          bgColor: '#fee2e2'
+        };
+      case 'warning':
+        return {
+          icon: 'warning',
+          color: '#f97316',
+          bgColor: '#ffedd5'
+        };
+      default:
+        return {
+          icon: 'info',
+          color: '#3b82f6',
+          bgColor: '#dbeafe'
+        };
+    }
+  };
+
+  const typeStyles = getTypeStyles();
+
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="none"
+      onRequestClose={onCancel}
+    >
+      <View className="flex-1 justify-center items-center bg-black/50">
+        <Animated.View 
+          className="w-[85%] bg-white rounded-2xl overflow-hidden"
+          style={[
+            { transform: [{ scale: scaleAnim }] },
+            { opacity: opacityAnim }
+          ]}
+        >
+          <View className={`p-6 ${typeStyles.bgColor}`}>
+            <View className="items-center mb-4">
+              <MaterialIcons name={typeStyles.icon as any} size={48} color={typeStyles.color} />
+            </View>
+            <Text className="text-xl font-CairoBold text-gray-800 text-center mb-2">
+              {title}
+            </Text>
+            <Text className="text-base text-gray-600 text-center font-CairoRegular">
+              {message}
+            </Text>
+          </View>
+          
+          <View className="flex-row border-t border-gray-200">
+            {onCancel && (
+              <TouchableOpacity
+                onPress={onCancel}
+                className="flex-1 py-4 border-r border-gray-200"
+              >
+                <Text className="text-base text-gray-600 text-center font-CairoMedium">
+                  {cancelText}
+                </Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity
+              onPress={onConfirm}
+              className={`py-4 ${onCancel ? 'flex-1' : 'w-full'}`}
+              style={{ backgroundColor: typeStyles.color }}
+            >
+              <Text className="text-base text-white text-center font-CairoMedium">
+                {confirmText}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </Animated.View>
+      </View>
+    </Modal>
+  );
+};
+
 const SkeletonProfileSection = () => (
   <View className="bg-white p-4 mb-4">
     <View className="items-center mb-6">
@@ -195,6 +340,26 @@ const UserDetails = () => {
   const [recentRides, setRecentRides] = useState<Ride[]>([]);
   const [ratings, setRatings] = useState<DetailedRating[]>([]);
   const [showRatings, setShowRatings] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [showFullImage, setShowFullImage] = useState(false);
+  const [showFullCarImage, setShowFullCarImage] = useState(false);
+  const [alertConfig, setAlertConfig] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    type: 'success' | 'error' | 'warning' | 'info';
+    onConfirm: () => void;
+    confirmText?: string;
+    onCancel?: () => void;
+    cancelText?: string;
+  }>({
+    visible: false,
+    title: '',
+    message: '',
+    type: 'info',
+    onConfirm: () => {},
+  });
+  const [showDeactivateConfirmation, setShowDeactivateConfirmation] = useState(false);
 
   useEffect(() => {
     const fetchUserDetails = async () => {
@@ -370,11 +535,67 @@ const UserDetails = () => {
   const handleStatusChange = async (newStatus: boolean) => {
     if (!userDetails?.driver) return;
 
+    // If deactivating, show confirmation first
+    if (!newStatus) {
+      setAlertConfig({
+        visible: true,
+        title: language === 'ar' ? 'تأكيد إيقاف السائق' : 'Confirm Driver Deactivation',
+        message: language === 'ar' 
+          ? 'هل أنت متأكد من رغبتك في إيقاف هذا السائق؟ لن يتمكن من تقديم الخدمة حتى يتم إعادة التفعيل.'
+          : 'Are you sure you want to deactivate this driver? They will not be able to provide service until reactivated.',
+        type: 'warning',
+        onConfirm: async () => {
+          setAlertConfig(prev => ({ ...prev, visible: false }));
+          try {
+            const userRef = doc(db, 'users', userId as string);
+            await updateDoc(userRef, {
+              'driver.is_active': false,
+              'driver.status': 'pending'
+            });
+
+            // Update local state
+            setUserDetails(prev => prev ? {
+              ...prev,
+              driver: {
+                ...prev.driver!,
+                is_active: false,
+                status: 'pending'
+              }
+            } : null);
+
+            setAlertConfig({
+              visible: true,
+              title: language === 'ar' ? 'نجاح' : 'Success',
+              message: language === 'ar' ? 'تم إيقاف السائق بنجاح' : 'Driver deactivated successfully',
+              type: 'success',
+              onConfirm: () => setAlertConfig(prev => ({ ...prev, visible: false })),
+              confirmText: language === 'ar' ? 'حسنا' : 'OK'
+            });
+          } catch (error) {
+            console.error('Error updating driver status:', error);
+            setAlertConfig({
+              visible: true,
+              title: language === 'ar' ? 'خطأ' : 'Error',
+              message: language === 'ar' ? 'فشل في تحديث حالة السائق' : 'Failed to update driver status',
+              type: 'error',
+              onConfirm: () => setAlertConfig(prev => ({ ...prev, visible: false })),
+              confirmText: language === 'ar' ? 'حسنا' : 'OK'
+            });
+          }
+        },
+        onCancel: () => setAlertConfig(prev => ({ ...prev, visible: false })),
+        confirmText: language === 'ar' ? 'تأكيد' : 'Confirm',
+        cancelText: language === 'ar' ? 'إلغاء' : 'Cancel'
+      });
+      return;
+    }
+
+    // Handle activation
     try {
       const userRef = doc(db, 'users', userId as string);
       await updateDoc(userRef, {
-        'driver.is_active': newStatus,
-        'driver.status': newStatus ? 'approved' : 'pending'
+        'driver.is_active': true,
+        'driver.status': 'approved'
       });
 
       // Update local state
@@ -382,23 +603,131 @@ const UserDetails = () => {
         ...prev,
         driver: {
           ...prev.driver!,
-          is_active: newStatus,
-          status: newStatus ? 'approved' : 'pending'
+          is_active: true,
+          status: 'approved'
         }
       } : null);
 
-      Alert.alert(
-        'Success',
-        newStatus 
-          ? (language === 'ar' ? 'تم تفعيل السائق بنجاح' : 'Driver activated successfully')
-          : (language === 'ar' ? 'تم إيقاف السائق بنجاح' : 'Driver deactivated successfully')
-      );
+      setAlertConfig({
+        visible: true,
+        title: language === 'ar' ? 'نجاح' : 'Success',
+        message: language === 'ar' ? 'تم تفعيل السائق بنجاح' : 'Driver activated successfully',
+        type: 'success',
+        onConfirm: () => setAlertConfig(prev => ({ ...prev, visible: false })),
+        confirmText: language === 'ar' ? 'حسنا' : 'OK'
+      });
     } catch (error) {
       console.error('Error updating driver status:', error);
-      Alert.alert(
-        'Error',
-        language === 'ar' ? 'فشل في تحديث حالة السائق' : 'Failed to update driver status'
-      );
+      setAlertConfig({
+        visible: true,
+        title: language === 'ar' ? 'خطأ' : 'Error',
+        message: language === 'ar' ? 'فشل في تحديث حالة السائق' : 'Failed to update driver status',
+        type: 'error',
+        onConfirm: () => setAlertConfig(prev => ({ ...prev, visible: false })),
+        confirmText: language === 'ar' ? 'حسنا' : 'OK'
+      });
+    }
+  };
+
+  const handleImagePick = async () => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        setAlertConfig({
+          visible: true,
+          title: language === 'ar' ? 'تم رفض الإذن' : 'Permission Denied',
+          message: language === 'ar' ? 'يجب منح إذن للوصول إلى مكتبة الصور' : 'You need to grant permission to access media library.',
+          type: 'error',
+          onConfirm: () => {},
+        });
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (result.canceled) return;
+
+      const asset = result.assets[0];
+      if (!asset?.uri) return;
+
+      // Validate file type
+      const fileExtension = asset.uri.split('.').pop()?.toLowerCase();
+      if (!['jpg', 'jpeg', 'png'].includes(fileExtension || '')) {
+        setAlertConfig({
+          visible: true,
+          title: language === 'ar' ? 'خطأ' : 'Error',
+          message: language === 'ar' ? 'يجب اختيار صورة بصيغة JPG أو PNG' : 'Please select a JPG or PNG image.',
+          type: 'error',
+          onConfirm: () => {},
+        });
+        return;
+      }
+
+      setIsUploading(true);
+
+      // Upload to Cloudinary
+      const uploadedImageUrl = await uploadImageToCloudinary(asset.uri);
+
+      if (!uploadedImageUrl) {
+        throw new Error(language === 'ar' ? 'فشل في تحميل الصورة' : 'Failed to upload image');
+      }
+
+      // Update Firestore document
+      const userRef = doc(db, 'users', userId as string);
+      const userDoc = await getDoc(userRef);
+      
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        // Update both driver and user profile image URLs
+        const updateData: any = {
+          profile_image_url: uploadedImageUrl
+        };
+        
+        // If user is a driver, also update the driver profile image
+        if (userData.driver?.is_active) {
+          updateData['driver.profile_image_url'] = uploadedImageUrl;
+        }
+        
+        await updateDoc(userRef, updateData);
+
+        // Update local state
+        setUserDetails(prev => prev ? {
+          ...prev,
+          profile_image_url: uploadedImageUrl,
+          driver: prev.driver ? {
+            ...prev.driver,
+            profile_image_url: uploadedImageUrl
+          } : undefined
+        } : null);
+
+        setAlertConfig({
+          visible: true,
+          title: language === 'ar' ? 'نجاح' : 'Success',
+          message: language === 'ar' ? 'تم تحديث صورة البروفايل بنجاح' : 'Profile picture updated successfully',
+          type: 'success',
+          onConfirm: () => setAlertConfig(prev => ({ ...prev, visible: false })),
+          confirmText: language === 'ar' ? 'حسنا' : 'OK'
+        });
+
+        // Trigger haptic feedback
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
+    } catch (error) {
+      console.error('Profile image upload error:', error);
+      setAlertConfig({
+        visible: true,
+        title: language === 'ar' ? 'خطأ' : 'Error',
+        message: language === 'ar' ? 'حدث خطأ أثناء تحديث صورة البروفايل' : 'Error updating profile picture',
+        type: 'error',
+        onConfirm: () => {},
+      });
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -411,7 +740,7 @@ const UserDetails = () => {
           onPress={() => setShowRatings(!showRatings)}
           className="flex-row justify-between items-center mb-4"
         >
-          <Text className={`text-lg font-bold ${language === 'ar' ? 'font-CairoBold' : 'font-JakartaBold'}`}>
+          <Text className={`text-lg ${language === 'ar' ? 'font-CairoBold' : 'font-JakartaBold'}`}>
             {language === 'ar' ? 'التقييمات التفصيلية' : 'Detailed Ratings'}
           </Text>
           <MaterialCommunityIcons 
@@ -538,29 +867,45 @@ const UserDetails = () => {
             {/* Profile Section */}
             <View className="w-full bg-white p-4 mb-4">
               <View className="items-center mb-6">
-                {userDetails.profile_image_url ? (
-                  <Image 
-                    source={{ uri: userDetails.profile_image_url }}
-                    className="w-24 h-24 rounded-full mb-4"
-                  />
-                ) : (
-                  <View className="w-24 h-24 rounded-full bg-gray-200 items-center justify-center mb-4">
-                    <MaterialCommunityIcons name="account" size={48} color="#6B7280" />
-                  </View>
-                )}
+                <TouchableOpacity 
+                  onPress={() => setShowFullImage(true)}
+                  className="relative"
+                >
+                  {userDetails?.profile_image_url ? (
+                    <Image 
+                      source={{ uri: userDetails.profile_image_url }}
+                      className="w-24 h-24 rounded-full mb-4"
+                    />
+                  ) : (
+                    <View className="w-24 h-24 rounded-full bg-gray-200 items-center justify-center mb-4">
+                      <MaterialCommunityIcons name="account" size={48} color="#6B7280" />
+                    </View>
+                  )}
+                  {isUploading && (
+                    <View className="absolute inset-0 bg-black/50 rounded-full items-center justify-center">
+                      <ActivityIndicator color="white" />
+                    </View>
+                  )}
+                  <TouchableOpacity 
+                    onPress={handleImagePick} 
+                    className={`absolute bottom-0 ${language === 'ar' ? 'left-0' : 'right-0'} bg-gray-800 rounded-full p-2`}
+                  >
+                    <MaterialCommunityIcons name="camera" size={16} color="white" />
+                  </TouchableOpacity>
+                </TouchableOpacity>
                 <Text className={`text-2xl font-bold mb-1 text-center ${language === 'ar' ? 'font-CairoBold' : 'font-JakartaBold'}`}>
-                  {userDetails.name}
+                  {userDetails?.name}
                 </Text>
                 <Text className={`text-gray-600 mb-2 text-center ${language === 'ar' ? 'font-CairoRegular' : 'font-JakartaRegular'}`}>
-                  {userDetails.email}
+                  {userDetails?.email}
                 </Text>
                 <View className="flex-row justify-center">
-                  <View className={`px-3 py-1 rounded-full ${language === 'ar' ? 'ml-2' : 'mr-2'} ${userDetails.role === 'admin' ? 'bg-purple-100' : userDetails.driver ? 'bg-green-100' : 'bg-blue-100'}`}>
-                    <Text className={`${userDetails.role === 'admin' ? 'text-purple-700' : userDetails.driver ? 'text-green-700' : 'text-blue-700'} ${language === 'ar' ? 'font-CairoMedium' : 'font-JakartaMedium'}`}>
-                      {userDetails.role === 'admin' ? 'Admin' : userDetails.driver ? 'Driver' : 'Passenger'}
+                  <View className={`px-3 py-1 rounded-full ${language === 'ar' ? 'ml-2' : 'mr-2'} ${userDetails?.role === 'admin' ? 'bg-purple-100' : userDetails?.driver ? 'bg-green-100' : 'bg-blue-100'}`}>
+                    <Text className={`${userDetails?.role === 'admin' ? 'text-purple-700' : userDetails?.driver ? 'text-green-700' : 'text-blue-700'} ${language === 'ar' ? 'font-CairoMedium' : 'font-JakartaMedium'}`}>
+                      {userDetails?.role === 'admin' ? 'Admin' : userDetails?.driver ? 'Driver' : 'Passenger'}
                     </Text>
                   </View>
-                  {userDetails.driver && (
+                  {userDetails?.driver && (
                     <View className={`px-3 py-1 rounded-full ${userDetails.driver.is_active ? 'bg-green-100' : 'bg-yellow-100'}`}>
                       <Text className={`${userDetails.driver.is_active ? 'text-green-700' : 'text-yellow-700'} ${language === 'ar' ? 'font-CairoMedium' : 'font-JakartaMedium'}`}>
                         {userDetails.driver.is_active ? 'Active' : 'Inactive'}
@@ -612,7 +957,7 @@ const UserDetails = () => {
 
             {/* Basic Information */}
             <View className="w-full bg-gray-50 rounded-xl p-4 mb-4">
-              <Text className={`text-lg font-bold mb-4 ${language === 'ar' ? 'font-CairoBold text-right' : 'font-JakartaBold text-left'}`}>
+              <Text className={`text-lg mb-4 ${language === 'ar' ? 'font-CairoBold text-right' : 'font-JakartaBold text-left'}`}>
                 {language === 'ar' ? 'المعلومات الأساسية' : 'Basic Information'}
               </Text>
               <View className={`space-y-3 ${language === 'ar' ? 'items-end' : 'items-start'}`}>
@@ -657,7 +1002,7 @@ const UserDetails = () => {
             {/* Driver Details */}
             {userDetails.driver && (
               <View className="w-full bg-gray-50 rounded-xl p-4 mb-4">
-                <Text className={`text-lg font-bold mb-4 ${language === 'ar' ? 'font-CairoBold text-right' : 'font-JakartaBold text-left'}`}>
+                <Text className={`text-lg mb-4 ${language === 'ar' ? 'font-CairoBold text-right' : 'font-JakartaBold text-left'}`}>
                   {language === 'ar' ? 'معلومات السائق' : 'Driver Information'}
                 </Text>
                 <View className={`space-y-3 ${language === 'ar' ? 'items-end' : 'items-start'}`}>
@@ -684,23 +1029,29 @@ const UserDetails = () => {
                     </View>
                   </View>
 
-                  <View className={`w-full ${language === 'ar' ? 'items-end' : 'items-start'}`}>
-                    <Text className={`text-gray-600 ${language === 'ar' ? 'font-CairoRegular text-right' : 'font-JakartaRegular text-left'}`}>
-                      {language === 'ar' ? 'نوع السيارة' : 'Car Type'}
-                    </Text>
-                    <Text className={`text-lg ${language === 'ar' ? 'font-CairoMedium text-right' : 'font-JakartaMedium text-left'}`}>
-                      {userDetails.driver.car_type || '-'}
-                    </Text>
-                    {userDetails.driver.car_image_url && (
-                      <View className="mt-2 w-full">
-                        <Image 
-                          source={{ uri: userDetails.driver.car_image_url }}
-                          className="w-full h-40 rounded-lg"
-                          resizeMode="cover"
-                        />
-                      </View>
-                    )}
-                  </View>
+                  {/* Car Image Section */}
+                  {userDetails.driver.car_image_url && (
+                    <View className={`w-full ${language === 'ar' ? 'items-end' : 'items-start'}`}>
+                      <Text className={`text-gray-600 ${language === 'ar' ? 'font-CairoRegular text-right' : 'font-JakartaRegular text-left'}`}>
+                        {language === 'ar' ? 'نوع السيارة' : 'Car Type'}
+                      </Text>
+                      <Text className={`text-lg ${language === 'ar' ? 'font-CairoMedium text-right' : 'font-JakartaMedium text-left'}`}>
+                        {userDetails.driver.car_type || '-'}
+                      </Text>
+                      {userDetails.driver.car_image_url && (
+                        <TouchableOpacity 
+                          onPress={() => setShowFullCarImage(true)}
+                          className="mt-2 w-full"
+                        >
+                          <Image 
+                            source={{ uri: userDetails.driver.car_image_url }}
+                            className="w-full h-40 rounded-lg"
+                            resizeMode="cover"
+                          />
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  )}
 
                   <View className={`w-full ${language === 'ar' ? 'items-end' : 'items-start'}`}>
                     <Text className={`text-gray-600 ${language === 'ar' ? 'font-CairoRegular text-right' : 'font-JakartaRegular text-left'}`}>
@@ -752,7 +1103,7 @@ const UserDetails = () => {
 
             {/* Recent Rides */}
             <View className="w-full bg-gray-50 rounded-xl p-4">
-              <Text className={`text-lg font-bold mb-4 ${language === 'ar' ? 'font-CairoBold text-right' : 'font-JakartaBold text-left'}`}>
+              <Text className={`text-lg mb-4 ${language === 'ar' ? 'font-CairoBold text-right' : 'font-JakartaBold text-left'}`}>
                 {userDetails.driver 
                   ? (language === 'ar' ? 'الرحلات المكتملة' : 'Completed Rides')
                   : (language === 'ar' ? 'طلبات الرحلات' : 'Ride Requests')}
@@ -869,6 +1220,62 @@ const UserDetails = () => {
             </View>
           </View>
         </ScrollView>
+
+        {/* Full Image Modal */}
+        <Modal
+          visible={showFullImage}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setShowFullImage(false)}
+        >
+          <TouchableOpacity 
+            className="flex-1 bg-black/90 justify-center items-center"
+            activeOpacity={1}
+            onPress={() => setShowFullImage(false)}
+          >
+            {userDetails?.profile_image_url && (
+              <Image
+                source={{ uri: userDetails.profile_image_url }}
+                className="w-full h-96"
+                resizeMode="contain"
+              />
+            )}
+          </TouchableOpacity>
+        </Modal>
+
+        {/* Full Car Image Modal */}
+        <Modal
+          visible={showFullCarImage}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setShowFullCarImage(false)}
+        >
+          <TouchableOpacity 
+            className="flex-1 bg-black/90 justify-center items-center"
+            activeOpacity={1}
+            onPress={() => setShowFullCarImage(false)}
+          >
+            {userDetails?.driver?.car_image_url && (
+              <Image
+                source={{ uri: userDetails.driver.car_image_url }}
+                className="w-full h-96"
+                resizeMode="contain"
+              />
+            )}
+          </TouchableOpacity>
+        </Modal>
+
+        {/* Custom Alert */}
+        <CustomAlert
+          visible={alertConfig.visible}
+          title={alertConfig.title}
+          message={alertConfig.message}
+          type={alertConfig.type}
+          onConfirm={alertConfig.onConfirm}
+          onCancel={alertConfig.onCancel}
+          confirmText={alertConfig.confirmText}
+          cancelText={alertConfig.cancelText}
+        />
       </SafeAreaView>
     </>
   );

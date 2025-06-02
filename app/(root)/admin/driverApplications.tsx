@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Image, Alert, Modal, TextInput, ActivityIndicator, StyleSheet, Dimensions, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, updateDoc, doc, getDoc, addDoc, orderBy } from 'firebase/firestore';
+import { collection, query, where, getDocs, updateDoc, doc, getDoc, addDoc, orderBy, onSnapshot } from 'firebase/firestore';
 import { useUser } from '@clerk/clerk-expo';
 import CustomButton from '@/components/CustomButton';
 import { MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
@@ -315,6 +315,7 @@ const DriverApplications = () => {
   const [selectedImage, setSelectedImage] = useState<string>('');
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending');
   const [sortBy, setSortBy] = useState<'date' | 'name'>('date');
+  const [pendingCount, setPendingCount] = useState(0);
 
   // State for custom alert
   const [alertConfig, setAlertConfig] = useState<CustomAlertProps>({
