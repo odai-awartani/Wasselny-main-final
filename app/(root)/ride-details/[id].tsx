@@ -883,32 +883,32 @@ const RideDetails = () => {
             isLoading: true
           });
 
-          if (rideRequest.notification_id) {
-            await cancelNotification(rideRequest.notification_id);
-            console.log(`Cancelled notification ${rideRequest.notification_id}`);
-          }
+      if (rideRequest.notification_id) {
+        await cancelNotification(rideRequest.notification_id);
+        console.log(`Cancelled notification ${rideRequest.notification_id}`);
+      }
 
-          await updateDoc(doc(db, 'ride_requests', rideRequest.id), {
-            status: 'cancelled',
-            updated_at: serverTimestamp(),
-          });
+      await updateDoc(doc(db, 'ride_requests', rideRequest.id), {
+        status: 'cancelled',
+        updated_at: serverTimestamp(),
+      });
 
-          if (ride.status === 'full' && rideRequest.status === 'accepted') {
-            await updateDoc(doc(db, 'rides', ride.id), {
-              status: 'available',
-              updated_at: serverTimestamp(),
-            });
-          }
+      if (ride.status === 'full' && rideRequest.status === 'accepted') {
+        await updateDoc(doc(db, 'rides', ride.id), {
+          status: 'available',
+          updated_at: serverTimestamp(),
+        });
+      }
 
-          if (ride.driver_id) {
-            const passengerName = passengerNames[userId] || 'الراكب';
-            await sendRideStatusNotification(
-              ride.driver_id,
-              'تم إلغاء الحجز',
-              `قام ${passengerName} بإلغاء حجز الرحلة من ${ride.origin_address} إلى ${ride.destination_address}`,
-              ride.id
-            );
-          }
+      if (ride.driver_id) {
+        const passengerName = passengerNames[userId] || 'الراكب';
+        await sendRideStatusNotification(
+          ride.driver_id,
+          'تم إلغاء الحجز',
+          `قام ${passengerName} بإلغاء حجز الرحلة من ${ride.origin_address} إلى ${ride.destination_address}`,
+          ride.id
+        );
+      }
 
           showAlert({
             title: language === 'ar' ? "تم الإلغاء" : "Cancelled",
@@ -1125,9 +1125,9 @@ const RideDetails = () => {
               <View className="mt-4 mb-4">
                 <View className={`flex-row items-center mb-3 ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
                   <Image source={icons.map} className={`w-6 h-6 ${language === 'ar' ? 'ml-3' : 'mr-3'}`} tintColor="#F79824" />
-                  <Text className={`text-lg font-CairoBold text-black ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+                    <Text className={`text-lg font-CairoBold text-black ${language === 'ar' ? 'text-right' : 'text-left'}`}>
                     {language === 'ar' ? 'نقاط التوقف' : 'Waypoints'}
-                  </Text>
+                    </Text>
                 </View>
                 <View className={`flex-row flex-wrap ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
                   {formattedRide.waypoints?.map((waypoint, index) => (
@@ -1139,8 +1139,8 @@ const RideDetails = () => {
                         <View className={`mx-1 ${language === 'ar' ? 'transform rotate-180' : ''}`}>
                           <MaterialIcons name="arrow-forward" size={18} color="#F79824" />
                         </View>
-                      )}
-                    </View>
+                    )}
+                  </View>
                   ))}
                 </View>
               </View>
@@ -1543,81 +1543,81 @@ const RideDetails = () => {
                 isLoading: true
               });
 
-              const currentRideDate = parse(ride.ride_datetime, DATE_FORMAT, new Date());
-              const nextWeekDate = new Date(currentRideDate);
-              nextWeekDate.setDate(nextWeekDate.getDate() + 7);
-              const nextWeekDateTime = format(nextWeekDate, DATE_FORMAT);
+                  const currentRideDate = parse(ride.ride_datetime, DATE_FORMAT, new Date());
+                  const nextWeekDate = new Date(currentRideDate);
+                  nextWeekDate.setDate(nextWeekDate.getDate() + 7);
+                  const nextWeekDateTime = format(nextWeekDate, DATE_FORMAT);
 
-              const ridesRef = collection(db, 'rides');
-              const q = query(ridesRef, orderBy('ride_number', 'desc'), limit(1));
-              const querySnapshot = await getDocs(q);
-              const highestRide = querySnapshot.docs[0];
-              const nextRideNumber = highestRide ? highestRide.data().ride_number + 1 : 1;
+                  const ridesRef = collection(db, 'rides');
+                  const q = query(ridesRef, orderBy('ride_number', 'desc'), limit(1));
+                  const querySnapshot = await getDocs(q);
+                  const highestRide = querySnapshot.docs[0];
+                  const nextRideNumber = highestRide ? highestRide.data().ride_number + 1 : 1;
 
-              const newRideId = `(${ride.ride_number})`;
-              await setDoc(doc(db, 'rides', newRideId), {
-                origin_address: ride.origin_address,
-                destination_address: ride.destination_address,
-                origin_latitude: ride.origin_latitude,
-                origin_longitude: ride.origin_longitude,
-                destination_latitude: ride.destination_latitude,
-                destination_longitude: ride.destination_longitude,
-                ride_datetime: nextWeekDateTime,
-                driver_id: ride.driver_id,
-                status: 'available',
-                available_seats: ride.driver?.car_seats || DEFAULT_CAR_SEATS,
-                is_recurring: true,
-                no_children: ride.no_children,
-                no_music: ride.no_music,
-                no_smoking: ride.no_smoking,
-                required_gender: ride.required_gender,
-                ride_days: ride.ride_days,
-                ride_number: nextRideNumber,
-                created_at: serverTimestamp(),
-              });
+                  const newRideId = `(${ride.ride_number})`;
+                  await setDoc(doc(db, 'rides', newRideId), {
+                    origin_address: ride.origin_address,
+                    destination_address: ride.destination_address,
+                    origin_latitude: ride.origin_latitude,
+                    origin_longitude: ride.origin_longitude,
+                    destination_latitude: ride.destination_latitude,
+                    destination_longitude: ride.destination_longitude,
+                    ride_datetime: nextWeekDateTime,
+                    driver_id: ride.driver_id,
+                    status: 'available',
+                    available_seats: ride.driver?.car_seats || DEFAULT_CAR_SEATS,
+                    is_recurring: true,
+                    no_children: ride.no_children,
+                    no_music: ride.no_music,
+                    no_smoking: ride.no_smoking,
+                    required_gender: ride.required_gender,
+                    ride_days: ride.ride_days,
+                    ride_number: nextRideNumber,
+                    created_at: serverTimestamp(),
+                  });
 
-              await sendRideStatusNotification(
-                ride.driver_id || '',
-                'تم إنشاء رحلة جديدة',
-                `تم إنشاء رحلة جديدة للأسبوع القادم من ${ride.origin_address} إلى ${ride.destination_address}`,
-                newRideId
-              );
+                  await sendRideStatusNotification(
+                    ride.driver_id || '',
+                    'تم إنشاء رحلة جديدة',
+                    `تم إنشاء رحلة جديدة للأسبوع القادم من ${ride.origin_address} إلى ${ride.destination_address}`,
+                    newRideId
+                  );
 
-              for (const passenger of allPassengers) {
-                const notificationId = await schedulePassengerRideReminder(
-                  newRideId,
-                  nextWeekDateTime,
-                  ride.origin_address,
-                  ride.destination_address,
-                  ride.driver?.name || DEFAULT_DRIVER_NAME
-                );
+                  for (const passenger of allPassengers) {
+                    const notificationId = await schedulePassengerRideReminder(
+                      newRideId,
+                      nextWeekDateTime,
+                      ride.origin_address,
+                      ride.destination_address,
+                      ride.driver?.name || DEFAULT_DRIVER_NAME
+                    );
 
-                await sendRideStatusNotification(
-                  passenger.user_id,
-                  'رحلة جديدة للأسبوع القادم!',
-                  `تم إنشاء رحلة جديدة للأسبوع القادم من ${ride.origin_address} إلى ${ride.destination_address}. سيتم تذكيرك قبل الرحلة.`,
-                  newRideId
-                );
+                    await sendRideStatusNotification(
+                      passenger.user_id,
+                      'رحلة جديدة للأسبوع القادم!',
+                      `تم إنشاء رحلة جديدة للأسبوع القادم من ${ride.origin_address} إلى ${ride.destination_address}. سيتم تذكيرك قبل الرحلة.`,
+                      newRideId
+                    );
 
-                await addDoc(collection(db, 'ride_requests'), {
-                  ride_id: newRideId,
-                  user_id: passenger.user_id,
-                  driver_id: ride.driver_id,
-                  status: 'waiting',
-                  created_at: serverTimestamp(),
-                  passenger_name: passengerNames[passenger.user_id] || 'الراكب',
-                  notification_id: notificationId,
-                  selected_waypoint: passenger.selected_waypoint
-                });
-              }
+                    await addDoc(collection(db, 'ride_requests'), {
+                      ride_id: newRideId,
+                      user_id: passenger.user_id,
+                      driver_id: ride.driver_id,
+                      status: 'waiting',
+                      created_at: serverTimestamp(),
+                      passenger_name: passengerNames[passenger.user_id] || 'الراكب',
+                      notification_id: notificationId,
+                      selected_waypoint: passenger.selected_waypoint
+                    });
+                  }
 
               showAlert({
                 title: language === 'ar' ? "تم إنشاء الرحلة" : "Ride Created",
                 message: language === 'ar' ? "تم إنشاء رحلة جديدة للأسبوع القادم بنفس التفاصيل وتم إخطار جميع الركاب" : "New ride created for next week with the same details and all passengers have been notified",
                 type: 'success'
               });
-            } catch (error) {
-              console.error('Error creating next week ride:', error);
+                } catch (error) {
+                  console.error('Error creating next week ride:', error);
               showAlert({
                 title: language === 'ar' ? "خطأ" : "Error",
                 message: language === 'ar' ? "حدث خطأ أثناء إنشاء الرحلة الجديدة" : "An error occurred while creating the new ride",
@@ -1672,19 +1672,19 @@ const RideDetails = () => {
             isLoading: true
           });
 
-          await updateDoc(doc(db, 'rides', ride.id), {
-            status: 'cancelled',
-            updated_at: serverTimestamp(),
-          });
+      await updateDoc(doc(db, 'rides', ride.id), {
+        status: 'cancelled',
+        updated_at: serverTimestamp(),
+      });
 
-          for (const passenger of allPassengers) {
-            await sendRideStatusNotification(
-              passenger.user_id,
-              'تم إلغاء الرحلة',
-              `تم إلغاء رحلتك من ${ride.origin_address} إلى ${ride.destination_address}`,
-              ride.id
-            );
-          }
+      for (const passenger of allPassengers) {
+        await sendRideStatusNotification(
+          passenger.user_id,
+          'تم إلغاء الرحلة',
+          `تم إلغاء رحلتك من ${ride.origin_address} إلى ${ride.destination_address}`,
+          ride.id
+        );
+      }
 
           showAlert({
             title: language === 'ar' ? "تم الإلغاء" : "Cancelled",
@@ -1771,7 +1771,7 @@ const RideDetails = () => {
               </View>
             </View>
           );
-          case 'cancelled':
+        case 'cancelled':
           return (
             <View className="p-4 m-3 bg-red-100 items-center rounded-xl">
               <View className={`flex-row items-center justify-center ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
@@ -1812,7 +1812,7 @@ const RideDetails = () => {
           );
         } else if (ride?.status === 'completed') {
           return (
-            <View className="p-4 m-3 bg-green-50 rounded-xl">
+            <View className="p-4 m-3 bg-green-100 items-center justify-center rounded-xl">
               <Text className={`text-gray-700 font-CairoBold text-center text-lg ${language === 'ar' ? 'text-right' : 'text-left'}`}>
                 {language === 'ar' ? 'تم إكمال الرحلة' : 'Ride completed'}
               </Text>
@@ -1833,7 +1833,7 @@ const RideDetails = () => {
           case 'waiting':
             return (
               <View className="p-4 m-3">
-                <View className="bg-yellow-100 p-4 rounded-xl mb-3">
+                <View className="bg-yellow-100 items-center justify-center p-4 rounded-xl mb-3">
                   <Text className={`text-yellow-800 font-CairoBold text-center text-lg ${language === 'ar' ? 'text-right' : 'text-left'}`}>
                     {rideRequest.is_waitlist 
                       ? (language === 'ar' ? 'في قائمة الانتظار - سيتم إخطارك عند توفر مقعد' : 'On waitlist - You will be notified when a seat is available')
@@ -1851,11 +1851,30 @@ const RideDetails = () => {
           case 'accepted':
             return (
               <View className="p-4 m-3">
-                <CustomButton
-                  title={language === 'ar' ? "تسجيل الدخول" : "Check In"}
-                  onPress={handleCheckIn}
-                  className="bg-green-500 py-3 rounded-xl mb-3"
-                />
+                {isRideTime ? (
+                  <CustomButton
+                    title={language === 'ar' ? "تسجيل الدخول" : "Check In"}
+                    onPress={handleCheckIn}
+                    className="bg-green-500 py-3 rounded-xl mb-3"
+                  />
+                ) : (
+                  <View className="mb-3">
+                    <CustomButton
+                      title={language === 'ar' ? "تسجيل الدخول" : "Check In"}
+                      onPress={handleCheckIn}
+                      className="bg-gray-400 py-3 rounded-xl"
+                      disabled={true}
+                    />
+                    <Text className={`text-center text-sm text-gray-500 mt-2 font-CairoRegular ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+                      {(() => {
+                        const [datePart, timePart] = ride?.ride_datetime?.split(' ') || ['', ''];
+                        return language === 'ar' 
+                          ? `يمكن تسجيل الدخول في ${timePart} بتاريخ ${datePart}`
+                          : `Check-in available at ${timePart} on ${datePart}`;
+                      })()}
+                    </Text>
+                  </View>
+                )}
                 <CustomButton
                   title={language === 'ar' ? "إلغاء الحجز" : "Cancel Booking"}
                   onPress={handleCancelRide}
@@ -1866,11 +1885,27 @@ const RideDetails = () => {
           case 'checked_in':
             return (
               <View className="p-4 m-3">
-                <CustomButton
-                  title={language === 'ar' ? "تسجيل الخروج" : "Check Out"}
-                  onPress={handleCheckOut}
-                  className="bg-orange-500 py-3 rounded-xl"
-                />
+                {ride?.status === 'in-progress' ? (
+                  <CustomButton
+                    title={language === 'ar' ? "تسجيل الخروج" : "Check Out"}
+                    onPress={handleCheckOut}
+                    className="bg-orange-500 py-3 rounded-xl"
+                  />
+                ) : (
+                  <View className="mb-3">
+                    <CustomButton
+                      title={language === 'ar' ? "تسجيل الخروج" : "Check Out"}
+                      onPress={handleCheckOut}
+                      className="bg-gray-400 py-3 rounded-xl"
+                      disabled={true}
+                    />
+                    <Text className={`text-center text-sm text-gray-500 mt-2 font-CairoRegular ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+                      {language === 'ar' 
+                        ? "يمكن تسجيل الخروج بعد بدء السائق للرحلة"
+                        : "Check-out available after driver starts the ride"}
+                    </Text>
+                  </View>
+                )}
               </View>
             );
           case 'checked_out':
@@ -1918,7 +1953,7 @@ const RideDetails = () => {
     >
       <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center' }}>
         <ScrollView className="w-[90%] max-h-[80%]">
-          <View className="bg-white p-6 rounded-2xl">
+          <View className="bg-white p-6 rounded-t-3xl">
             {/* Header */}
             <View className="items-center mb-6">
               <MaterialIcons name="star" size={40} color="#f97316" />
@@ -1937,8 +1972,9 @@ const RideDetails = () => {
                     showRating={true}
                     onFinishRating={(value: number) => setRating(prev => ({ ...prev, overall: value }))}
                     size={35}
-                    defaultRating={rating.overall}
+                    defaultRating={rating.overall || 0}
                     selectedColor="#F79824"
+                    reviews={[]}
                   />
                 </View>
               </View>
@@ -1955,8 +1991,9 @@ const RideDetails = () => {
                     showRating={true}
                     onFinishRating={(value: number) => setRating(prev => ({ ...prev, driving: value }))}
                     size={35}
-                    defaultRating={rating.driving}
+                    defaultRating={rating.driving || 0}
                     selectedColor="#F79824"
+                    reviews={[]}
                   />
                 </View>
               </View>
@@ -1973,8 +2010,9 @@ const RideDetails = () => {
                     showRating={true}
                     onFinishRating={(value: number) => setRating(prev => ({ ...prev, behavior: value }))}
                     size={35}
-                    defaultRating={rating.behavior}
+                    defaultRating={rating.behavior || 0}
                     selectedColor="#F79824"
+                    reviews={[]}
                   />
                 </View>
               </View>
@@ -1991,8 +2029,9 @@ const RideDetails = () => {
                     showRating={true}
                     onFinishRating={(value: number) => setRating(prev => ({ ...prev, punctuality: value }))}
                     size={35}
-                    defaultRating={rating.punctuality}
+                    defaultRating={rating.punctuality || 0}
                     selectedColor="#F79824"
+                    reviews={[]}
                   />
                 </View>
               </View>
@@ -2009,8 +2048,9 @@ const RideDetails = () => {
                     showRating={true}
                     onFinishRating={(value: number) => setRating(prev => ({ ...prev, cleanliness: value }))}
                     size={35}
-                    defaultRating={rating.cleanliness}
+                    defaultRating={rating.cleanliness || 0}
                     selectedColor="#F79824"
+                    reviews={[]}
                   />
                 </View>
               </View>
@@ -2033,9 +2073,14 @@ const RideDetails = () => {
                 />
               </View>
             </View>
+          </View>
 
-            {/* Buttons */}
-            <View className="flex-row justify-between mt-6 space-x-3">
+
+           
+        </ScrollView>
+     
+     
+       <View className="flex-row bg-white  justify-between w-[90%] space-x-3 p-6 rounded-b-3xl">
               <CustomButton
                 title="إرسال التقييم"
                 onPress={handleRateDriver}
@@ -2049,9 +2094,7 @@ const RideDetails = () => {
                 icon={<MaterialIcons name="close" size={20} color="white" />}
               />
             </View>
-          </View>
-        </ScrollView>
-      </View>
+            </View>
     </Modal>
   );
 
@@ -2497,8 +2540,8 @@ const RideDetails = () => {
         <ActivityIndicator size="large" color="#f97316" />
         <Text className="mt-4 text-black font-CairoMedium">
           {language === 'ar' ? "جاري تحميل تفاصيل الرحلة..." : "Loading ride details..."}
-            </Text>
-          </View>
+        </Text>
+      </View>
     );
   }
 
@@ -2508,10 +2551,10 @@ const RideDetails = () => {
         <MaterialIcons name="error-outline" size={48} color="#f97316" />
         <Text className="mt-4 text-black text-center font-CairoMedium">
           {error || (language === 'ar' ? 'الرحلة غير موجودة.' : 'Ride not found.')}
-                </Text>
+        </Text>
         <CustomButton
           title={language === 'ar' ? "إعادة المحاولة" : "Try Again"}
-              onPress={() => {
+          onPress={() => {
             if (Platform.OS === 'android') {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
             }
@@ -2522,9 +2565,9 @@ const RideDetails = () => {
         <TouchableOpacity onPress={() => router.back()} className="mt-2">
           <Text className="text-blue-500 font-CairoMedium">
             {language === 'ar' ? "العودة" : "Back"}
-              </Text>
-            </TouchableOpacity>
-          </View>
+          </Text>
+        </TouchableOpacity>
+      </View>
     );
   }
 
@@ -2570,7 +2613,7 @@ const RideDetails = () => {
           />
           <Text className="text-white mt-4 font-CairoBold">اضغط في أي مكان للإغلاق</Text>
         </Pressable>
-    </Modal>
+      </Modal>
     </RideLayout>
   );
 };

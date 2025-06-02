@@ -8,6 +8,12 @@ import * as Haptics from 'expo-haptics';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import Header from '@/components/Header';
 
+interface Section {
+  key: string;
+  title: string;
+  content: string | React.ReactNode;
+}
+
 // Skeleton Loading Component
 const PrivacyPolicySkeleton = () => (
   <Animated.View entering={FadeIn} className="flex-1 px-4 py-6">
@@ -32,6 +38,7 @@ export default function PrivacyPolicy() {
   const router = useRouter();
   const { language } = useLanguage();
   const [loading, setLoading] = useState(true);
+  const isRTL = language === 'ar';
 
   useEffect(() => {
     // Simulate loading time
@@ -48,152 +55,148 @@ export default function PrivacyPolicy() {
   };
 
   // Section content for both languages
-  const sections = [
+  const sections: Section[] = [
     {
       key: 'introduction',
-      title: language === 'ar' ? 'مقدمة' : 'Introduction',
-      content: language === 'ar'
+      title: isRTL ? 'مقدمة' : 'Introduction',
+      content: isRTL
         ? 'مرحباً بك في سياسة الخصوصية لتطبيق وصلني. نحن نقدر خصوصيتك ونلتزم بحماية بياناتك الشخصية. يرجى قراءة هذه السياسة بعناية لفهم كيفية جمع واستخدام وحماية معلوماتك.'
-        : "Welcome to Wasselny's Privacy Policy. We value your privacy and are committed to protecting your personal data. Please read this policy carefully to understand how we collect, use, and protect your information."
+        : "Welcome to Wasselni Privacy Policy. We value your privacy and are committed to protecting your personal data. Please read this policy carefully to understand how we collect, use, and protect your information."
     },
     {
       key: 'info-collect',
-      title: language === 'ar' ? 'المعلومات التي نجمعها' : 'Information We Collect',
-      content: language === 'ar'
-        ? (
-          <View className="space-y-2">
-            <View><Text className={`${language === 'ar' ? 'text-right' : 'text-left'}`}>• البيانات الشخصية (مثل الاسم، البريد الإلكتروني، رقم الهاتف)</Text></View>
-            <View><Text className={`${language === 'ar' ? 'text-right' : 'text-left'}`}>• بيانات الموقع الجغرافي</Text></View>
-            <View><Text className={`${language === 'ar' ? 'text-right' : 'text-left'}`}>• بيانات الاستخدام (مثل تفاعلك مع التطبيق)</Text></View>
-            <View><Text className={`${language === 'ar' ? 'text-right' : 'text-left'}`}>• بيانات الجهاز (مثل نوع الجهاز ونظام التشغيل)</Text></View>
-            <View><Text className={`${language === 'ar' ? 'text-right' : 'text-left'}`}>• ملفات تعريف الارتباط وتقنيات التتبع</Text></View>
-          </View>
-        )
-        : (
-          <View className="space-y-2">
-            <View><Text className={`${language === 'ar' ? 'text-right' : 'text-left'}`}>• Personal data (such as name, email, phone number)</Text></View>
-            <View><Text className={`${language === 'ar' ? 'text-right' : 'text-left'}`}>• Location data</Text></View>
-            <View><Text className={`${language === 'ar' ? 'text-right' : 'text-left'}`}>• Usage data (such as your interactions with the app)</Text></View>
-            <View><Text className={`${language === 'ar' ? 'text-right' : 'text-left'}`}>• Device data (such as device type and OS)</Text></View>
-            <View><Text className={`${language === 'ar' ? 'text-right' : 'text-left'}`}>• Cookies and tracking technologies</Text></View>
-          </View>
-        )
+      title: isRTL ? 'المعلومات التي نجمعها' : 'Information We Collect',
+      content: (
+        <View className="space-y-2">
+          {[
+            isRTL ? '• البيانات الشخصية (مثل الاسم، البريد الإلكتروني، رقم الهاتف)' : '• Personal data (such as name, email, phone number)',
+            isRTL ? '• بيانات الموقع الجغرافي' : '• Location data',
+            isRTL ? '• بيانات الاستخدام (مثل تفاعلك مع التطبيق)' : '• Usage data (such as your interactions with the app)',
+            isRTL ? '• بيانات الجهاز (مثل نوع الجهاز ونظام التشغيل)' : '• Device data (such as device type and OS)',
+            isRTL ? '• ملفات تعريف الارتباط وتقنيات التتبع' : '• Cookies and tracking technologies'
+          ].map((item, index) => (
+            <Text key={index} className={`${isRTL ? 'text-right' : 'text-left'} font-CairoRegular`}>
+              {item}
+            </Text>
+          ))}
+        </View>
+      )
     },
     {
       key: 'info-use',
-      title: language === 'ar' ? 'كيفية استخدام المعلومات' : 'How We Use Your Information',
-      content: language === 'ar'
-        ? (
-          <View className="space-y-2">
-            <View><Text className={`${language === 'ar' ? 'text-right' : 'text-left'}`}>• تقديم خدمات التطبيق وتحسينها</Text></View>
-            <View><Text className={`${language === 'ar' ? 'text-right' : 'text-left'}`}>• تخصيص تجربتك</Text></View>
-            <View><Text className={`${language === 'ar' ? 'text-right' : 'text-left'}`}>• التواصل معك بشأن التحديثات أو العروض</Text></View>
-            <View><Text className={`${language === 'ar' ? 'text-right' : 'text-left'}`}>• التحليل وتحسين الأداء</Text></View>
-            <View><Text className={`${language === 'ar' ? 'text-right' : 'text-left'}`}>• الامتثال للمتطلبات القانونية</Text></View>
-          </View>
-        )
-        : (
-          <View className="space-y-2">
-            <View><Text className={`${language === 'ar' ? 'text-right' : 'text-left'}`}>• To provide and improve our services</Text></View>
-            <View><Text className={`${language === 'ar' ? 'text-right' : 'text-left'}`}>• To personalize your experience</Text></View>
-            <View><Text className={`${language === 'ar' ? 'text-right' : 'text-left'}`}>• To communicate with you about updates or offers</Text></View>
-            <View><Text className={`${language === 'ar' ? 'text-right' : 'text-left'}`}>• For analytics and performance improvement</Text></View>
-            <View><Text className={`${language === 'ar' ? 'text-right' : 'text-left'}`}>• To comply with legal requirements</Text></View>
-          </View>
-        )
+      title: isRTL ? 'كيفية استخدام المعلومات' : 'How We Use Your Information',
+      content: (
+        <View className="space-y-2">
+          {[
+            isRTL ? '• تقديم خدمات التطبيق وتحسينها' : '• To provide and improve our services',
+            isRTL ? '• تخصيص تجربتك' : '• To personalize your experience',
+            isRTL ? '• التواصل معك بشأن التحديثات أو العروض' : '• To communicate with you about updates or offers',
+            isRTL ? '• التحليل وتحسين الأداء' : '• For analytics and performance improvement',
+            isRTL ? '• الامتثال للمتطلبات القانونية' : '• To comply with legal requirements'
+          ].map((item, index) => (
+            <Text key={index} className={`${isRTL ? 'text-right' : 'text-left'} font-CairoRegular`}>
+              {item}
+            </Text>
+          ))}
+        </View>
+      )
     },
     {
       key: 'info-share',
-      title: language === 'ar' ? 'مشاركة المعلومات' : 'How We Share Your Information',
-      content: language === 'ar'
-        ? (
-          <View className="space-y-2">
-            <View><Text className={`${language === 'ar' ? 'text-right' : 'text-left'}`}>• مع مزودي الخدمة (مثل خدمات الاستضافة والتحليلات)</Text></View>
-            <View><Text className={`${language === 'ar' ? 'text-right' : 'text-left'}`}>• لأسباب قانونية أو استجابة للطلبات الحكومية</Text></View>
-            <View><Text className={`${language === 'ar' ? 'text-right' : 'text-left'}`}>• بموافقتك الصريحة</Text></View>
-            <View><Text className={`${language === 'ar' ? 'text-right' : 'text-left'}`}>• لا نبيع بياناتك لأي طرف ثالث</Text></View>
-          </View>
-        )
-        : (
-          <View className="space-y-2">
-            <View><Text className={`${language === 'ar' ? 'text-right' : 'text-left'}`}>• With service providers (such as hosting and analytics)</Text></View>
-            <View><Text className={`${language === 'ar' ? 'text-right' : 'text-left'}`}>• For legal reasons or in response to government requests</Text></View>
-            <View><Text className={`${language === 'ar' ? 'text-right' : 'text-left'}`}>• With your explicit consent</Text></View>
-            <View><Text className={`${language === 'ar' ? 'text-right' : 'text-left'}`}>• We do not sell your data to third parties</Text></View>
-          </View>
-        )
+      title: isRTL ? 'مشاركة المعلومات' : 'How We Share Your Information',
+      content: (
+        <View className="space-y-2">
+          {[
+            isRTL ? '• مع مزودي الخدمة (مثل خدمات الاستضافة والتحليلات)' : '• With service providers (such as hosting and analytics)',
+            isRTL ? '• لأسباب قانونية أو استجابة للطلبات الحكومية' : '• For legal reasons or in response to government requests',
+            isRTL ? '• بموافقتك الصريحة' : '• With your explicit consent',
+            isRTL ? '• لا نبيع بياناتك لأي طرف ثالث' : '• We do not sell your data to third parties'
+          ].map((item, index) => (
+            <Text key={index} className={`${isRTL ? 'text-right' : 'text-left'} font-CairoRegular`}>
+              {item}
+            </Text>
+          ))}
+        </View>
+      )
     },
     {
       key: 'security',
-      title: language === 'ar' ? 'أمان البيانات' : 'Data Security',
-      content: language === 'ar'
+      title: isRTL ? 'أمان البيانات' : 'Data Security',
+      content: isRTL
         ? 'نستخدم تقنيات وإجراءات أمان متقدمة لحماية بياناتك من الوصول أو الاستخدام غير المصرح به.'
         : 'We use advanced security technologies and procedures to protect your data from unauthorized access or use.'
     },
     {
       key: 'retention',
-      title: language === 'ar' ? 'الاحتفاظ بالبيانات' : 'Data Retention',
-      content: language === 'ar'
+      title: isRTL ? 'الاحتفاظ بالبيانات' : 'Data Retention',
+      content: isRTL
         ? 'نحتفظ ببياناتك فقط للمدة اللازمة لتحقيق الأغراض المذكورة في هذه السياسة أو كما يقتضي القانون.'
         : 'We retain your data only as long as necessary for the purposes described in this policy or as required by law.'
     },
     {
       key: 'rights',
-      title: language === 'ar' ? 'حقوق المستخدم' : 'User Rights',
-      content: language === 'ar'
-        ? (
-          <View className="space-y-2">
-            <View><Text className={`${language === 'ar' ? 'text-right' : 'text-left'}`}>• الوصول إلى بياناتك</Text></View>
-            <View><Text className={`${language === 'ar' ? 'text-right' : 'text-left'}`}>• تصحيح أو تحديث بياناتك</Text></View>
-            <View><Text className={`${language === 'ar' ? 'text-right' : 'text-left'}`}>• حذف حسابك</Text></View>
-            <View><Text className={`${language === 'ar' ? 'text-right' : 'text-left'}`}>• الاعتراض أو تقييد معالجة بياناتك</Text></View>
-            <View><Text className={`${language === 'ar' ? 'text-right' : 'text-left'}`}>• طلب نقل بياناتك</Text></View>
-          </View>
-        )
-        : (
-          <View className="space-y-2">
-            <View><Text className={`${language === 'ar' ? 'text-right' : 'text-left'}`}>• Access your data</Text></View>
-            <View><Text className={`${language === 'ar' ? 'text-right' : 'text-left'}`}>• Correct or update your data</Text></View>
-            <View><Text className={`${language === 'ar' ? 'text-right' : 'text-left'}`}>• Delete your account</Text></View>
-            <View><Text className={`${language === 'ar' ? 'text-right' : 'text-left'}`}>• Object to or restrict processing</Text></View>
-            <View><Text className={`${language === 'ar' ? 'text-right' : 'text-left'}`}>• Request data portability</Text></View>
-          </View>
-        )
+      title: isRTL ? 'حقوق المستخدم' : 'User Rights',
+      content: (
+        <View className="space-y-2">
+          {[
+            isRTL ? '• الوصول إلى بياناتك' : '• Access your data',
+            isRTL ? '• تصحيح أو تحديث بياناتك' : '• Correct or update your data',
+            isRTL ? '• حذف حسابك' : '• Delete your account',
+            isRTL ? '• الاعتراض أو تقييد معالجة بياناتك' : '• Object to or restrict processing',
+            isRTL ? '• طلب نقل بياناتك' : '• Request data portability'
+          ].map((item, index) => (
+            <Text key={index} className={`${isRTL ? 'text-right' : 'text-left'} font-CairoRegular`}>
+              {item}
+            </Text>
+          ))}
+        </View>
+      )
     },
     {
       key: 'children',
-      title: language === 'ar' ? 'خصوصية الأطفال' : "Children's Privacy",
-      content: language === 'ar'
+      title: isRTL ? 'خصوصية الأطفال' : "Children's Privacy",
+      content: isRTL
         ? 'لا يُسمح للأطفال دون سن 18 باستخدام التطبيق دون موافقة ولي الأمر. إذا اكتشفنا جمع بيانات من طفل دون هذا السن، سنحذفها فوراً.'
         : "Our app is not intended for children under 18. If we learn we have collected data from a child under this age, we will delete it immediately."
     },
     {
       key: 'international',
-      title: language === 'ar' ? 'النقل الدولي للبيانات' : 'International Transfers',
-      content: language === 'ar'
+      title: isRTL ? 'النقل الدولي للبيانات' : 'International Transfers',
+      content: isRTL
         ? 'قد يتم نقل بياناتك ومعالجتها خارج بلدك. نحن نضمن حماية بياناتك وفقاً لهذه السياسة.'
         : 'Your data may be transferred and processed outside your country. We ensure your data is protected as described in this policy.'
     },
     {
       key: 'changes',
-      title: language === 'ar' ? 'تغييرات على هذه السياسة' : 'Changes to This Policy',
-      content: language === 'ar'
+      title: isRTL ? 'تغييرات على هذه السياسة' : 'Changes to This Policy',
+      content: isRTL
         ? 'قد نقوم بتحديث هذه السياسة من وقت لآخر. سيتم إخطارك بأي تغييرات جوهرية عبر التطبيق أو البريد الإلكتروني.'
         : 'We may update this policy from time to time. You will be notified of any material changes via the app or email.'
     },
     {
       key: 'contact',
-      title: language === 'ar' ? 'اتصل بنا' : 'Contact Us',
-      content: language === 'ar'
-        ? 'إذا كان لديك أي أسئلة حول سياسة الخصوصية، يرجى التواصل معنا عبر البريد الإلكتروني: support@wasselny.app'
-        : 'If you have any questions about this Privacy Policy, please contact us at: support@wasselny.app'
-    },
+      title: isRTL ? 'اتصل بنا' : 'Contact Us',
+      content: isRTL
+        ? 'إذا كان لديك أي أسئلة حول سياسة الخصوصية، يرجى التواصل معنا عبر البريد الإلكتروني: support@wasselni.app'
+        : 'If you have any questions about this Privacy Policy, please contact us at: support@wasselni.app'
+    }
   ];
+
+  const renderContent = (content: string | React.ReactNode) => {
+    if (typeof content === 'string') {
+      return (
+        <Text className={`text-base ${isRTL ? 'font-CairoRegular text-right' : 'font-JakartaRegular text-left'} text-gray-700 leading-7`}>
+          {content}
+        </Text>
+      );
+    }
+    return content;
+  };
 
   return (
     <SafeAreaView className="flex-1 bg-white">
       <Header 
-        title={language === 'ar' ? 'سياسة الخصوصية' : 'Privacy Policy'} 
+        title={isRTL ? 'سياسة الخصوصية' : 'Privacy Policy'} 
         showProfileImage={false} 
         showSideMenu={false}
       />
@@ -205,15 +208,15 @@ export default function PrivacyPolicy() {
           <View className="space-y-8">
             {sections.map(section => (
               <View key={section.key} className="space-y-2">
-                <Text className={`text-xl ${language === 'ar' ? 'font-CairoBold text-right' : 'font-JakartaBold text-left'} text-orange-600`}>{section.title}</Text>
-                <Text className={`text-base ${language === 'ar' ? 'font-CairoRegular text-right' : 'font-JakartaRegular text-left'} text-gray-700 leading-7`}>{section.content}</Text>
+                <Text className={`text-xl ${isRTL ? 'font-CairoBold text-right' : 'font-JakartaBold text-left'} text-orange-600`}>
+                  {section.title}
+                </Text>
+                {renderContent(section.content)}
               </View>
             ))}
             <View className="pt-4 border-t border-gray-200">
-              <Text className={`text-sm ${language === 'ar' ? 'font-CairoRegular text-right' : 'font-JakartaRegular text-left'} text-gray-500`}>
-                {language === 'ar' 
-                  ? 'آخر تحديث: 1 مارس 2024'
-                  : 'Last Updated: March 1, 2024'}
+              <Text className={`text-sm ${isRTL ? 'font-CairoRegular text-right' : 'font-JakartaRegular text-left'} text-gray-500`}>
+                {isRTL ? 'آخر تحديث: 1 مارس 2024' : 'Last Updated: March 1, 2024'}
               </Text>
             </View>
           </View>

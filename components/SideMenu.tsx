@@ -145,7 +145,7 @@ export default function SideMenu(props: DrawerContentComponentProps) {
         <View className="mt-2 mb-6 items-center w-full">
           <TouchableOpacity 
             onPress={() => router.push('/(root)/profilePage')}
-            className="w-20 h-20 items-center justify-center rounded-full bg-gray-100 overflow-hidden mb-3"
+            className="w-20 h-20 items-center justify-center rounded-full bg-gray-100 overflow-hidden mb-2"
           >
             {profileImageUrl ? (
               <Image
@@ -184,7 +184,7 @@ export default function SideMenu(props: DrawerContentComponentProps) {
         <TouchableOpacity
           onPress={() => router.push('/(root)/profilePageEdit')}
           activeOpacity={0.7}
-          className={`flex-row items-center mb-3 min-h-[44px] ${isRTL ? 'flex-row-reverse' : ''}`}
+          className={`flex-row items-center mb-2 min-h-[44px] ${isRTL ? 'flex-row-reverse' : ''}`}
         >
           <View className={`w-9 h-9 rounded-full bg-orange-500 items-center justify-center ${isRTL ? 'ml-3.5' : 'mr-3.5'}`}>
             <MaterialIcons name="edit" size={22} color="#fff" />
@@ -196,7 +196,7 @@ export default function SideMenu(props: DrawerContentComponentProps) {
         <TouchableOpacity
           onPress={toggleLanguage}
           activeOpacity={0.7}
-          className={`flex-row items-center mb-3 min-h-[44px] ${isRTL ? 'flex-row-reverse' : ''}`}
+          className={`flex-row items-center mb-2 min-h-[44px] ${isRTL ? 'flex-row-reverse' : ''}`}
         >
           <View className={`w-9 h-9 rounded-full bg-orange-500 items-center justify-center ${isRTL ? 'ml-3.5' : 'mr-3.5'}`}>
             <MaterialIcons name="translate" size={22} color="#fff" />
@@ -221,7 +221,7 @@ export default function SideMenu(props: DrawerContentComponentProps) {
         <TouchableOpacity
           onPress={() => router.push('/(root)/location')}
           activeOpacity={0.7}
-          className={`flex-row items-center mb-3 min-h-[44px] ${isRTL ? 'flex-row-reverse' : ''}`}
+          className={`flex-row items-center mb-2 min-h-[44px] ${isRTL ? 'flex-row-reverse' : ''}`}
         >
           <View className={`w-9 h-9 rounded-full bg-orange-500 items-center justify-center ${isRTL ? 'ml-3.5' : 'mr-3.5'}`}>
             <Image source={icons.pin} className='w-5 h-5' tintColor={"white"} resizeMode='contain'/>
@@ -244,7 +244,7 @@ export default function SideMenu(props: DrawerContentComponentProps) {
             props.navigation.closeDrawer();
           }}
           activeOpacity={0.7}
-          className={`flex-row items-center mb-3 min-h-[44px] ${isRTL ? 'flex-row-reverse' : ''}`}
+          className={`flex-row items-center mb-2 min-h-[44px] ${isRTL ? 'flex-row-reverse' : ''}`}
         >
           <View className={`w-9 h-9 rounded-full bg-orange-500 items-center justify-center ${isRTL ? 'ml-3.5' : 'mr-3.5'}`}>
             <MaterialIcons name="location-searching" size={22} color="#fff" />
@@ -260,7 +260,7 @@ export default function SideMenu(props: DrawerContentComponentProps) {
               props.navigation.closeDrawer();
             }}
             activeOpacity={0.7}
-            className={`flex-row items-center min-h-[44px] ${isRTL ? 'flex-row-reverse' : ''}`}
+            className={`flex-row items-center mb-2 min-h-[44px] ${isRTL ? 'flex-row-reverse' : ''}`}
           >
             <View className={`w-9 h-9 rounded-full bg-orange-500 items-center justify-center ${isRTL ? 'ml-3.5' : 'mr-3.5'}`}>
               <MaterialIcons name="qr-code-scanner" size={22} color="#fff" />
@@ -278,7 +278,7 @@ export default function SideMenu(props: DrawerContentComponentProps) {
             props.navigation.closeDrawer();
           }}
           activeOpacity={0.7}
-          className={`flex-row items-center mb-3 min-h-[44px] ${isRTL ? 'flex-row-reverse' : ''}`}
+          className={`flex-row items-center mb-2 min-h-[44px] ${isRTL ? 'flex-row-reverse' : ''}`}
         >
           <View className={`w-9 h-9 rounded-full bg-orange-500 items-center justify-center ${isRTL ? 'ml-3.5' : 'mr-3.5'}`}>
               <MaterialIcons name="add-circle" size={22} color="#fff" />
@@ -297,7 +297,7 @@ export default function SideMenu(props: DrawerContentComponentProps) {
             props.navigation.closeDrawer();
           }}
           activeOpacity={0.7}
-          className={`flex-row items-center mb-3 min-h-[44px] ${isRTL ? 'flex-row-reverse' : ''}`}
+          className={`flex-row items-center mb-2 min-h-[44px] ${isRTL ? 'flex-row-reverse' : ''}`}
         >
           <View className={`w-9 h-9 rounded-full bg-orange-500 items-center justify-center ${isRTL ? 'ml-3.5' : 'mr-3.5'}`}>
             <Image source={icons.barriers} resizeMode='contain' className='w-8 h-8' tintColor={"white"}/>
@@ -311,11 +311,11 @@ export default function SideMenu(props: DrawerContentComponentProps) {
         <View style={{ height: 1, backgroundColor: '#f3f4f6', marginVertical: 15 }} />
 
         {/* Share App */}
-        <View className="mb-3">
+        <View className="mb-1">
           <TouchableOpacity
             onPress={handleShare}
             activeOpacity={0.7}
-            className={`flex-row items-center mb-3 min-h-[44px] ${isRTL ? 'flex-row-reverse' : ''}`}
+            className={`flex-row items-center mb-2 min-h-[44px] ${isRTL ? 'flex-row-reverse' : ''}`}
           >
             <View className={`w-9 h-9 rounded-full bg-orange-500 items-center justify-center ${isRTL ? 'ml-3.5' : 'mr-3.5'}`}>
               <MaterialIcons name="share" size={22} color="#fff" />
@@ -330,7 +330,7 @@ export default function SideMenu(props: DrawerContentComponentProps) {
         <TouchableOpacity
           onPress={handleRate}
           activeOpacity={0.7}
-          className={`flex-row items-center mb-3 min-h-[44px] ${isRTL ? 'flex-row-reverse' : ''}`}
+          className={`flex-row items-center mb-2 min-h-[44px] ${isRTL ? 'flex-row-reverse' : ''}`}
         >
           <View className={`w-9 h-9 rounded-full bg-orange-500 items-center justify-center ${isRTL ? 'ml-3.5' : 'mr-3.5'}`}>
             <MaterialIcons name="star" size={22} color="#fff" />
@@ -342,7 +342,7 @@ export default function SideMenu(props: DrawerContentComponentProps) {
           <TouchableOpacity
             onPress={() => router.push('/(root)/privacy-policy')}
             activeOpacity={0.7}
-            className={`flex-row items-center mb-3 min-h-[44px] ${isRTL ? 'flex-row-reverse' : ''}`}
+            className={`flex-row items-center mb-2 min-h-[44px] ${isRTL ? 'flex-row-reverse' : ''}`}
           >
             <View className={`w-9 h-9 rounded-full bg-orange-500 items-center justify-center ${isRTL ? 'ml-3.5' : 'mr-3.5'}`}>
               <MaterialIcons name="privacy-tip" size={22} color="#fff" />
@@ -354,7 +354,7 @@ export default function SideMenu(props: DrawerContentComponentProps) {
           <TouchableOpacity
             onPress={() => router.push('/(root)/help')}
             activeOpacity={0.7}
-            className={`flex-row items-center mb-3 min-h-[44px] ${isRTL ? 'flex-row-reverse' : ''}`}
+            className={`flex-row items-center mb-2 min-h-[44px] ${isRTL ? 'flex-row-reverse' : ''}`}
           >
             <View className={`w-9 h-9 rounded-full bg-orange-500 items-center justify-center ${isRTL ? 'ml-3.5' : 'mr-3.5'}`}>
               <MaterialIcons name="help-outline" size={22} color="#fff" />
@@ -369,7 +369,7 @@ export default function SideMenu(props: DrawerContentComponentProps) {
         <TouchableOpacity
           onPress={handleSignOut}
           activeOpacity={0.7}
-          className={`flex-row items-center mb-3 min-h-[44px] ${isRTL ? 'flex-row-reverse' : ''}`}
+          className={`flex-row items-center mb-2 min-h-[44px] ${isRTL ? 'flex-row-reverse' : ''}`}
           style={{ backgroundColor: '#fee2e2', borderRadius: 12 }}
         >
           <View className={`w-9 h-9 rounded-full bg-red-100 items-center justify-center ${isRTL ? 'ml-3.5' : 'mr-3.5'}`}>

@@ -30,7 +30,7 @@ const TabIcon = ({ focused, source, name }: { focused: boolean; source: ImageSou
       />
     </View>
     <Text
-      className={`text-xs text-center ${focused ? 'text-orange-100 font-bold' : 'text-white'}`}
+      className={`text-xs mt-1 text-center font-CairoBold ${focused ? 'text-orange-100' : 'text-white'}`}
       numberOfLines={1}
       adjustsFontSizeToFit
     >
@@ -40,7 +40,7 @@ const TabIcon = ({ focused, source, name }: { focused: boolean; source: ImageSou
 );
 
 const Layout = () => {
-  const { isRTL } = useLanguage();
+  const { isRTL, t } = useLanguage();
 
   return (
     <NotificationProvider>
@@ -69,8 +69,6 @@ const Layout = () => {
                 tabBarStyle: {
                   backgroundColor: "black",
                   borderRadius: 20,
-                  borderTopLeftRadius: 20,
-                  borderTopRightRadius: 20,
                   borderBottomLeftRadius: 0,
                   borderBottomRightRadius: 0,
                   paddingTop: 20,
@@ -95,8 +93,11 @@ const Layout = () => {
                 name="home"
                 options={{
                   headerShown: false,
+                  tabBarLabelStyle: {
+                    fontFamily: "CairoBold",
+                  },
                   tabBarIcon: ({ focused }) => (
-                    <TabIcon focused={focused} source={icons.home} name="Home" />
+                    <TabIcon focused={focused} source={icons.home} name={t.home} />
                   ),
                 }}
               />
@@ -105,7 +106,7 @@ const Layout = () => {
                 options={{
                   headerShown: false,
                   tabBarIcon: ({ focused }) => (
-                    <TabIcon focused={focused} source={icons.search} name="Search" />
+                    <TabIcon focused={focused} source={icons.search} name={t.search} />
                   ),
                 }}
               />
@@ -115,7 +116,7 @@ const Layout = () => {
                   title: "Rides",
                   headerShown: false,
                   tabBarIcon: ({ focused }) => (
-                    <TabIcon focused={focused} source={icons.list} name="Rides" />
+                    <TabIcon focused={focused} source={icons.list} name={t.rides} />
                   ),
                 }}
               />
@@ -125,7 +126,7 @@ const Layout = () => {
                   title: "Barriers",
                   headerShown: false,
                   tabBarIcon: ({ focused }) => (
-                    <TabIcon focused={focused} source={icons.barrier} name="Barriers" />
+                    <TabIcon focused={focused} source={icons.barrier} name={t.barrier} />
                   ),
                 }}
               />
@@ -134,7 +135,7 @@ const Layout = () => {
                 options={{
                   headerShown: false,
                   tabBarIcon: ({ focused }) => (
-                    <TabIcon focused={focused} source={icons.chat} name="Chat" />
+                    <TabIcon focused={focused} source={icons.chat} name={t.chat} />
                   ),
                 }}
               />
