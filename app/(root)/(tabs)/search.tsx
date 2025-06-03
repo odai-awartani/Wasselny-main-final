@@ -924,21 +924,30 @@ const Search = () => {
                         <Text className={`text-sm text-gray-500 ${language === 'ar' ? 'font-CairoMedium' : 'font-JakartaMedium'} ${language === 'ar' ? 'ml-2' : 'mr-2'}`}>
                           {language === 'ar' ? 'نقاط التوقف' : 'Waypoints'}:
                         </Text>
+                        {/* Display single waypoint beside label if only one */}
+                        {item.waypoints.length === 1 && (
+                           <Text className={`text-base ${language === 'ar' ? 'font-CairoMedium' : 'font-CairoMedium'} flex-1 ${language === 'ar' ? 'text-right' : 'text-left'}`} numberOfLines={1}>
+                              {item.waypoints[0].address}
+                           </Text>
+                        )}
                       </View>
-                    <View className={`flex-row flex-wrap ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
-                      {item.waypoints.map((waypoint, index) => (
-                        <View key={index} className={`flex-row items-center ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
-                          <Text className={`text-base ${language === 'ar' ? 'font-CairoMedium' : 'font-CairoMedium'} ${language === 'ar' ? 'text-right' : 'text-left'}`}>
-                            {waypoint.address}
-                          </Text>
-                          {index < item.waypoints!.length - 1 && (
-                            <View className={`mx-1 ${language === 'ar' ? 'transform rotate-180' : ''}`}>
-                              <MaterialIcons name="arrow-forward" size={18} color="#F79824" />
-                            </View>
-                          )}
-                        </View>
-                      ))}
-                    </View>
+                    {/* List waypoints below label if more than one */}
+                    {item.waypoints.length > 1 && (
+                      <View className={`flex-row flex-wrap ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
+                        {item.waypoints.map((waypoint, index) => (
+                          <View key={index} className={`flex-row items-center ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
+                            <Text className={`text-base ${language === 'ar' ? 'font-CairoMedium' : 'font-CairoMedium'} ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+                              {waypoint.address}
+                            </Text>
+                            {index < item.waypoints!.length - 1 && (
+                              <View className={`mx-1 ${language === 'ar' ? 'transform rotate-180' : ''}`}>
+                                <MaterialIcons name="arrow-forward" size={18} color="#F79824" />
+                              </View>
+                            )}
+                          </View>
+                        ))}
+                      </View>
+                    )}
                   </View>
                 )}
 
