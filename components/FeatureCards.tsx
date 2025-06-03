@@ -211,7 +211,7 @@ const FeatureCards = () => {
                 <Text className={`text-white text-2xl font-CairoBold mb-2 ${isArabic ? 'text-right' : 'text-left'}`}>
                   {isArabic ? 'كن سائقاً' : 'Become a Driver'}
                 </Text>
-                <Text className={`text-white/80 font-CairoRegular mb-4 ${isArabic ? 'text-right' : 'text-left'}`} numberOfLines={2}>
+                <Text className={`text-white/80 text-base font-CairoRegular mb-4 ${isArabic ? 'text-right' : 'text-left'}`} numberOfLines={3}>
                   {isArabic
                     ? "انضم إلى مجتمع السائقين وابدأ في كسب المال من خلال مشاركة رحلاتك مع الآخرين."
                     : "Join our driver community and start earning by sharing your rides with others."}
