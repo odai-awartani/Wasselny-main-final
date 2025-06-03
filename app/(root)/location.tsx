@@ -194,7 +194,7 @@ const SavedLocationSkeleton = () => (
 );
 
 const LocationSkeleton = () => (
-  <Animated.View entering={FadeIn} className="flex-1">
+  <Reanimated.View entering={FadeIn} className="flex-1">
     <MapSkeleton />
     <ActionButtonSkeleton />
     <View className="flex-1 px-4">
@@ -203,7 +203,7 @@ const LocationSkeleton = () => (
         <SavedLocationSkeleton key={index} />
       ))}
     </View>
-  </Animated.View>
+  </Reanimated.View>
 );
 
 export default function LocationScreen() {
@@ -229,7 +229,9 @@ export default function LocationScreen() {
     longitudeDelta: 0.5,
   });
 
-  const [alertConfig, setAlertConfig] = useState({
+  const [isUpdatingCar, setIsUpdatingCar] = useState(false);
+
+  const [alertConfig, setAlertConfig] = useState<CustomAlertProps>({
     visible: false,
     title: '',
     message: '',
@@ -350,6 +352,9 @@ export default function LocationScreen() {
           message: language === 'ar' ? 'يبدو أنك خارج حدود فلسطين. سيتم عرض الخريطة على فلسطين.' : 'You appear to be outside Palestine. The map will show Palestine.',
           type: 'warning',
           onConfirm: () => setAlertConfig({ ...alertConfig, visible: false }),
+          confirmText: language === 'ar' ? 'حسناً' : 'OK',
+          onCancel: undefined,
+          cancelText: undefined
         });
         // Set to center of Palestine
         setCurrentLocation({
@@ -391,6 +396,9 @@ export default function LocationScreen() {
         message: language === 'ar' ? 'حدث خطأ أثناء تحديد موقعك' : 'Error getting your location',
         type: 'error',
         onConfirm: () => setAlertConfig({ ...alertConfig, visible: false }),
+        confirmText: undefined,
+        onCancel: undefined,
+        cancelText: undefined
       });
     } finally {
       setLoading(false);
@@ -425,6 +433,9 @@ export default function LocationScreen() {
         message: language === 'ar' ? 'حدث خطأ أثناء تحميل العناوين' : 'Error loading addresses',
         type: 'error',
         onConfirm: () => setAlertConfig({ ...alertConfig, visible: false }),
+        confirmText: undefined,
+        onCancel: undefined,
+        cancelText: undefined
       });
     } finally {
       setLoading(false);
@@ -460,6 +471,9 @@ export default function LocationScreen() {
         message: language === 'ar' ? 'حدث خطأ أثناء تحميل المواقع المحفوظة' : 'Error loading saved locations',
         type: 'error',
         onConfirm: () => setAlertConfig({ ...alertConfig, visible: false }),
+        confirmText: undefined,
+        onCancel: undefined,
+        cancelText: undefined
       });
     } finally {
       setLoading(false);
@@ -481,6 +495,9 @@ export default function LocationScreen() {
         message: language === 'ar' ? 'الرجاء تحديد موقعك أولاً' : 'Please get your location first',
         type: 'error',
         onConfirm: () => setAlertConfig({ ...alertConfig, visible: false }),
+        confirmText: undefined,
+        onCancel: undefined,
+        cancelText: undefined
       });
       return;
     }
@@ -492,6 +509,9 @@ export default function LocationScreen() {
         message: language === 'ar' ? 'لا يمكنك حفظ أكثر من 3 مواقع. يرجى حذف موقع قبل إضافة موقع جديد.' : 'You cannot save more than 3 locations. Please delete a location before adding a new one.',
         type: 'warning',
         onConfirm: () => setAlertConfig({ ...alertConfig, visible: false }),
+        confirmText: undefined,
+        onCancel: undefined,
+        cancelText: undefined
       });
       return;
     }
@@ -508,6 +528,9 @@ export default function LocationScreen() {
         message: language === 'ar' ? 'يرجى إدخال اسم للموقع' : 'Please enter a location name',
         type: 'error',
         onConfirm: () => setAlertConfig({ ...alertConfig, visible: false }),
+        confirmText: undefined,
+        onCancel: undefined,
+        cancelText: undefined
       });
       return;
     }
@@ -540,6 +563,9 @@ export default function LocationScreen() {
         message: language === 'ar' ? 'تم حفظ الموقع بنجاح' : 'Location saved successfully',
         type: 'success',
         onConfirm: () => setAlertConfig({ ...alertConfig, visible: false }),
+        confirmText: undefined,
+        onCancel: undefined,
+        cancelText: undefined
       });
     } catch (error) {
       console.error('Error saving location:', error);
@@ -549,6 +575,9 @@ export default function LocationScreen() {
         message: language === 'ar' ? 'حدث خطأ أثناء حفظ الموقع' : 'Error saving location',
         type: 'error',
         onConfirm: () => setAlertConfig({ ...alertConfig, visible: false }),
+        confirmText: undefined,
+        onCancel: undefined,
+        cancelText: undefined
       });
     } finally {
       setButtonLoading(prev => ({ ...prev, saveLocation: false }));
@@ -590,6 +619,9 @@ export default function LocationScreen() {
         message: language === 'ar' ? 'تم تعيين الموقع الافتراضي بنجاح' : 'Default location set successfully',
         type: 'success',
         onConfirm: () => setAlertConfig({ ...alertConfig, visible: false }),
+        confirmText: undefined,
+        onCancel: undefined,
+        cancelText: undefined
       });
     } catch (error) {
       console.error('Error setting default location:', error);
@@ -599,6 +631,9 @@ export default function LocationScreen() {
         message: language === 'ar' ? 'حدث خطأ أثناء تعيين الموقع الافتراضي' : 'Error setting default location',
         type: 'error',
         onConfirm: () => setAlertConfig({ ...alertConfig, visible: false }),
+        confirmText: undefined,
+        onCancel: undefined,
+        cancelText: undefined
       });
     } finally {
       setButtonLoading(prev => ({ ...prev, setDefault: undefined }));
@@ -617,6 +652,9 @@ export default function LocationScreen() {
         message: language === 'ar' ? 'تم حذف الموقع بنجاح' : 'Location deleted successfully',
         type: 'success',
         onConfirm: () => setAlertConfig({ ...alertConfig, visible: false }),
+        confirmText: undefined,
+        onCancel: undefined,
+        cancelText: undefined
       });
     } catch (error) {
       console.error('Error deleting location:', error);
@@ -626,6 +664,9 @@ export default function LocationScreen() {
         message: language === 'ar' ? 'حدث خطأ أثناء حذف الموقع' : 'Error deleting location',
         type: 'error',
         onConfirm: () => setAlertConfig({ ...alertConfig, visible: false }),
+        confirmText: undefined,
+        onCancel: undefined,
+        cancelText: undefined
       });
     } finally {
       setButtonLoading(prev => ({ ...prev, delete: undefined }));
