@@ -187,9 +187,10 @@ const Search = () => {
 
   // Function to save a recent search
   const saveRecentSearch = async (query: string) => {
-    if (!query.trim()) return;
+    if (!user?.id || !query.trim()) return;
+    const storageKey = 'recent_searches_' + user.id;
     try {
-      let searches = await AsyncStorage.getItem('recent_searches');
+      let searches = await AsyncStorage.getItem(storageKey);
       let recent = searches ? JSON.parse(searches) : [];
       
       // Add new query to the front if not already present
@@ -198,7 +199,7 @@ const Search = () => {
       // Keep only the last 5 searches
       recent = recent.slice(0, 5);
       
-      await AsyncStorage.setItem('recent_searches', JSON.stringify(recent));
+      await AsyncStorage.setItem(storageKey, JSON.stringify(recent));
       setRecentSearches(recent);
     } catch (e) {
       console.error('Error saving recent search:', e);
@@ -207,8 +208,10 @@ const Search = () => {
 
   // Function to load recent searches
   const loadRecentSearches = async () => {
+    if (!user?.id) return;
+    const storageKey = 'recent_searches_' + user.id;
     try {
-      const searches = await AsyncStorage.getItem('recent_searches');
+      const searches = await AsyncStorage.getItem(storageKey);
       if (searches) {
         setRecentSearches(JSON.parse(searches));
       }
@@ -219,12 +222,14 @@ const Search = () => {
 
   // Function to remove a recent search
   const removeRecentSearch = async (query: string) => {
+    if (!user?.id) return;
+    const storageKey = 'recent_searches_' + user.id;
     try {
-      let searches = await AsyncStorage.getItem('recent_searches');
+      let searches = await AsyncStorage.getItem(storageKey);
       if (searches) {
         let recent = JSON.parse(searches);
         recent = recent.filter((item: string) => item !== query);
-        await AsyncStorage.setItem('recent_searches', JSON.stringify(recent));
+        await AsyncStorage.setItem(storageKey, JSON.stringify(recent));
         setRecentSearches(recent);
       }
     } catch (e) {
@@ -256,9 +261,11 @@ const Search = () => {
       setSearchQuery(params.searchQuery as string)
       handleSearch(params.searchQuery as string)
     }
-    // Load recent searches on mount
-    loadRecentSearches();
-  }, [params.searchQuery])
+    // Load recent searches on mount if user is logged in
+    if(user?.id) {
+      loadRecentSearches();
+    }
+  }, [params.searchQuery, user?.id])
 
   // Fetch user location
   const fetchUserLocation = useCallback(async () => {
@@ -1261,7 +1268,6 @@ const Search = () => {
             onChangeText={handleSearchInput}
             className={`flex-1 ${language === 'ar' ? 'text-right' : 'text-left'} ${language === 'ar' ? 'font-CairoBold' : 'font-JakartaBold'} text-gray-700`}
             placeholderTextColor="#9CA3AF"
-            autoFocus={true}
             textAlign={language === 'ar' ? 'right' : 'left'}
             onFocus={() => setIsSearchInputFocused(true)}
             onBlur={() => {
