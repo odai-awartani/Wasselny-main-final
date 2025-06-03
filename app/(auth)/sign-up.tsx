@@ -519,6 +519,7 @@ const industryMap = new Map([
   visible={showCustomErrorModal}
   message={customErrorMessage}
   onClose={() => setShowCustomErrorModal(false)}
+  title={t.error}
 />
 
       </ScrollView>

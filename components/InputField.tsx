@@ -71,7 +71,7 @@ const InputField = ({
           {secureTextEntry && (
             <TouchableOpacity
               onPress={() => setShowPassword(!showPassword)}
-              className={language === 'ar' ? 'ml-4 mt-5' : 'mr-4 mt-3.5'} // تغيير الهامش بناءً على اللغة
+              className={language === 'ar' ? 'ml-4 mt-4' : 'mr-4 mt-3.5'} // تغيير الهامش بناءً على اللغة
             >
               <Image
                 source={showPassword ? icons.eyecross : icons.eye} // استخدام أيقونات العين

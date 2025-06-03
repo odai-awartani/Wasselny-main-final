@@ -6,12 +6,14 @@ interface CustomErrorModalProps {
   visible: boolean;
   message: string;
   onClose: () => void;
+  title?: string;
 }
 
 const CustomErrorModal: React.FC<CustomErrorModalProps> = ({
   visible,
   message,
   onClose,
+  title = 'Error',
 }) => {
   if (!visible) {
     return null;
@@ -28,7 +30,7 @@ const CustomErrorModal: React.FC<CustomErrorModalProps> = ({
         <View className="bg-orange-50 p-6 rounded-xl shadow-md w-[90%] max-w-sm">
           <View className="items-center mb-4">
             <MaterialIcons name="warning" size={40} color="#F97316" />
-            <Text className="text-xl font-CairoBold text-center mt-2 text-gray-800">Error</Text>
+            <Text className="text-xl font-CairoBold text-center mt-2 text-gray-800">{title}</Text>
           </View>
           <Text className="text-base font-CairoRegular text-center mb-6 text-gray-600">
             {message}

@@ -211,7 +211,7 @@ const FeatureCards = () => {
                 <Text className={`text-white text-2xl font-CairoBold mb-2 ${isArabic ? 'text-right' : 'text-left'}`}>
                   {isArabic ? 'كن سائقاً' : 'Become a Driver'}
                 </Text>
-                <Text className={`text-white/80 text-base font-CairoRegular mb-4 ${isArabic ? 'text-right' : 'text-left'}`} numberOfLines={3}>
+                <Text className={`text-white/80  font-CairoRegular mb-4 ${isArabic ? 'text-right' : 'text-left'}`} numberOfLines={3}>
                   {isArabic
                     ? "انضم إلى مجتمع السائقين وابدأ في كسب المال من خلال مشاركة رحلاتك مع الآخرين."
                     : "Join our driver community and start earning by sharing your rides with others."}
@@ -277,7 +277,7 @@ const FeatureCards = () => {
               <Text className={`text-white text-2xl font-CairoBold mb-2 ${isArabic ? 'text-right' : 'text-left'}`}>
                 {isArabic ? 'تتبع الرحلات' : 'Track Rides'}
               </Text>
-              <Text className={`text-white/90 text-base font-CairoRegular mb-4 ${isArabic ? 'text-right' : 'text-left'}`} numberOfLines={3}>
+              <Text className={`text-white/80 font-CairoRegular mb-4 ${isArabic ? 'text-right' : 'text-left'}`} numberOfLines={3}>
                 {isArabic 
                   ? "تتبع رحلات أصدقائك وعائلتك في الوقت الفعلي، وابقَ على اطلاع دائم بموقعهم لحظة بلحظة."
                   : "Track your friends' and family's trips in real time and stay instantly updated on their location."}
