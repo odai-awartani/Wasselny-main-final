@@ -572,7 +572,7 @@ const Profile = () => {
               {userData.data?.driver?.total_rides || 0}
             </Text>
             <Text className={`text-gray-500 text-sm ${language === 'ar' ? 'font-CairoBold' : 'font-Jakartab'}`}>
-              {language === 'ar' ? 'إجمالي الرحلات' : 'Total Rides'}
+              {language === 'ar' ? 'إجمالي التقييمات' : 'Total Rating'}
             </Text>
           </View>
           <View className="items-center bg-white rounded-xl p-4 flex-1 mx-2" style={Platform.OS === 'android' ? styles.androidShadow : styles.iosShadow}>
