@@ -3,6 +3,7 @@ import Map from "@/components/Map";
 import RideCard from "@/components/RideCard";
 import SuggestedRides, { SuggestedRidesRef } from "@/components/SuggestedRides";
 import SuggestedRidesGrid from "@/components/SuggestedRidesGrid";
+import FeatureCards from "@/components/FeatureCards";
 import { icons, images } from '@/constants';
 import { useNotifications } from '@/context/NotificationContext';
 import { useLocationStore } from "@/store";
@@ -321,14 +322,15 @@ export default function Home() {
   }, [user?.id, isDriver, t, language]);
 
   return (
-    <SafeAreaView className="bg-general-500 flex-1">
-      <Header 
-        title={t.Home}
-        profileImageUrl={profileImageUrl}
-        showProfileImage={true}
+    <SafeAreaView className="flex-1 bg-white">
+      {/* <StatusBar style="dark" /> */}
+      <Header
         key={headerRefreshKey}
+        title={t.home}
+        showProfileImage={true}
+        profileImageUrl={profileImageUrl}
+        showSideMenu={true}
       />
-
       <FlatList 
         data={[]}
         renderItem={() => null}
@@ -336,7 +338,7 @@ export default function Home() {
         contentContainerStyle={{ paddingTop: 0, paddingBottom: 100 }}
         ListHeaderComponent={
           <>
-            <TouchableOpacity 
+            {/* <TouchableOpacity 
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                 navigation.navigate('tabs', { screen: 'barriers' });
@@ -363,7 +365,7 @@ export default function Home() {
                   {t.explore}
                 </Text>
               </View>
-            </TouchableOpacity>
+            </TouchableOpacity> */}
 
             {/* <View className="mt-4">
               <Text className={`text-xl ${language === 'ar' ? 'font-CairoBold text-right' : 'font-JakartaBold text-left'} mb-2 px-4`}>
@@ -412,7 +414,7 @@ export default function Home() {
               </View>
             </>
 
-            {!isCheckingDriver && !isDriver && (
+            {/* {!isCheckingDriver && !isDriver && (
               <TouchableOpacity 
                 onPress={() => router.push('/(root)/driverInfo')}
                 className={`bg-white p-4 rounded-2xl my-5 flex-row items-center ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'} justify-between shadow-lg`}
@@ -438,7 +440,7 @@ export default function Home() {
                   </Text>
                 </View>
               </TouchableOpacity>
-            )}
+            )} */}
 
             {isDriver && inProgressRides.length > 0 && (
               <>
@@ -532,6 +534,14 @@ export default function Home() {
               </View>
             </View>
             <SuggestedRides ref={suggestedRidesRef} />
+
+            {/* Feature Cards Section */}
+            <View className="mt-4 mb-4">
+              <Text className={`text-xl px-3 mb-3 ${language === 'ar' ? 'font-CairoBold text-right' : 'font-JakartaBold text-left'}`}>
+                {language === 'ar' ? 'المميزات الرئيسية' : 'Key Features'}
+              </Text>
+              <FeatureCards />
+            </View>
           </>
         }
         refreshControl={
@@ -566,8 +576,6 @@ export default function Home() {
           <MaterialIcons name="add" size={30} color="#fff" />
         </TouchableOpacity>
       )}
-
-      <StatusBar backgroundColor="#F87000" style="dark" />
     </SafeAreaView>
   );
 }

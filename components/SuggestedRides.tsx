@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useRef, useImperativeHandle, forwardRef } from 'react';
-import { View, Text, Image, TouchableOpacity, FlatList, Platform, Animated, ActivityIndicator } from 'react-native';
+import { View, Text, Image, TouchableOpacity, FlatList, Platform, Animated, ActivityIndicator, Dimensions } from 'react-native';
 import { useUser } from '@clerk/clerk-expo';
 import { router, useRouter } from 'expo-router';
 import { collection, query, getDocs, doc, getDoc, where, orderBy, limit } from 'firebase/firestore';
@@ -112,6 +112,8 @@ const DAY_TRANSLATIONS: { [key in typeof DAYS[number]]: string } = {
   Friday: 'الجمعة',
   Saturday: 'السبت',
 };
+
+const { width } = Dimensions.get('window');
 
 // Haversine formula to calculate distance
 const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
@@ -260,12 +262,40 @@ const SuggestedRidesComponent = forwardRef<SuggestedRidesRef, SuggestedRidesProp
   const [preferredLocations, setPreferredLocations] = useState<RecentRoute[]>([]);
   const { user } = useUser();
   const isMountedRef = useRef(true);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const flatListRef = useRef<FlatList>(null);
+  const [isUserScrolling, setIsUserScrolling] = useState(false);
 
   useEffect(() => {
     return () => {
       isMountedRef.current = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (rides.length > 0) {
+      const interval = setInterval(() => {
+        if (flatListRef.current && !isUserScrolling) {
+          const nextIndex = currentIndex === rides.length - 1 ? 0 : currentIndex + 1;
+          setCurrentIndex(nextIndex);
+          flatListRef.current.scrollToIndex({
+            index: nextIndex,
+            animated: true
+          });
+        }
+      }, 5000);
+
+      return () => clearInterval(interval);
+    }
+  }, [currentIndex, rides.length, isUserScrolling]);
+
+  const handleScroll = () => {
+    setIsUserScrolling(true);
+    // Reset the flag after 4 seconds of no scrolling
+    setTimeout(() => {
+      setIsUserScrolling(false);
+    }, 5000);
+  };
 
   const formatTimeTo12Hour = (timeStr: string) => {
     try {
@@ -554,8 +584,11 @@ const SuggestedRidesComponent = forwardRef<SuggestedRidesRef, SuggestedRidesProp
     return (
       <TouchableOpacity
         onPress={() => router.push(`/ride-details/${item.id}`)}
-        className="bg-white p-4 rounded-2xl mb-3 mx-2"
-        style={Platform.OS === 'android' ? styles.androidShadow : styles.iosShadow}
+        className="bg-white p-4 rounded-2xl"
+        style={[
+          Platform.OS === 'android' ? styles.androidShadow : styles.iosShadow,
+          { width: width * 0.85 }
+        ]}
       >
         <View className={`absolute top-4 ${language === 'ar' ? 'left-4' : 'right-4'}`}>
           <View className={`px-2 pt-2 pb-1  rounded-full ${statusColors.bg}`}>
@@ -610,10 +643,10 @@ const SuggestedRidesComponent = forwardRef<SuggestedRidesRef, SuggestedRidesProp
           <View className={`flex-row items-center ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
             <Image source={icons.calendar} className={`w-4 h-4 mb-1 ${language === 'ar' ? 'ml-1' : 'mr-1'}`} />
             <View>
-              <Text className={`text-sm pt-5 text-gray-600 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+              <Text className={`text-sm pt-5 font-CairoBold text-gray-600 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
                 {dayOfWeek}
               </Text>
-              <Text className={`text-sm mt-1 font-Bold text-gray-500 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+              <Text className={`text-sm mt-1 font-CairoRegular text-gray-500 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
                 {date}
               </Text>
             </View>
@@ -626,7 +659,7 @@ const SuggestedRidesComponent = forwardRef<SuggestedRidesRef, SuggestedRidesProp
           </View>
           <View className={`flex-row items-center ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
             <Image source={icons.person} className={`w-4 h-4 ${language === 'ar' ? 'ml-1' : 'mr-1'}`} />
-            <Text className={`text-sm text-gray-600 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+            <Text className={`text-sm font-CairoRegular text-gray-600 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
               {item.available_seats} {language === 'ar' ? 'مقاعد' : t.seats}
             </Text>
           </View>
@@ -637,8 +670,10 @@ const SuggestedRidesComponent = forwardRef<SuggestedRidesRef, SuggestedRidesProp
 
   if (loading) {
     return (
-      <View className="flex-1 items-center justify-center py-4">
-        <ActivityIndicator size="large" color="#F8780D" />
+      <View className="flex-row">
+        {[1, 2, 3].map((_, index) => (
+          <RideSkeleton key={index} />
+        ))}
       </View>
     );
   }
@@ -671,21 +706,46 @@ const SuggestedRidesComponent = forwardRef<SuggestedRidesRef, SuggestedRidesProp
   }
 
   return (
-    <FlatList
-      data={rides}
-      renderItem={renderRideCard}
-      keyExtractor={(item) => item.id}
-      showsVerticalScrollIndicator={false}
-      contentContainerStyle={{ padding: 16 }}
-      extraData={language}
-    />
+    <View className="mb-4">
+      <FlatList
+        ref={flatListRef}
+        data={rides}
+        renderItem={renderRideCard}
+        keyExtractor={(item) => item.id}
+        horizontal
+        inverted={language === 'ar'}
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ 
+          paddingHorizontal: 16,
+          paddingVertical: 4
+        }}
+        ItemSeparatorComponent={() => <View style={{ width: 12 }} />}
+        decelerationRate={0.92}
+        snapToAlignment="center"
+        pagingEnabled={true}
+        initialNumToRender={3}
+        maxToRenderPerBatch={3}
+        windowSize={3}
+        removeClippedSubviews={true}
+        getItemLayout={(data, index) => ({
+          length: width * 0.85 + 12,
+          offset: (width * 0.85 + 12) * index,
+          index,
+        })}
+        onScroll={handleScroll}
+        onMomentumScrollEnd={(event) => {
+          const newIndex = Math.round(event.nativeEvent.contentOffset.x / (width * 0.85 + 12));
+          setCurrentIndex(newIndex);
+        }}
+      />
+    </View>
   );
 });
 
 SuggestedRidesComponent.displayName = 'SuggestedRides';
 
 const styles = StyleSheet.create({
-  androidShadow: { elevation: 5 },
+  androidShadow: { elevation: 5, shadowColor: '#000', },
   iosShadow: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 3 },
 });
 

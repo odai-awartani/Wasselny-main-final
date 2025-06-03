@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Alert, ActivityIndicator, Modal, TextInput, Linking } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Alert, ActivityIndicator, Modal, TextInput, Linking, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -12,7 +12,7 @@ import { collection, addDoc, getDocs, query, where, updateDoc, doc, deleteDoc } 
 import { db } from '@/lib/firebase';
 import { LinearGradient } from 'expo-linear-gradient';
 import Header from '@/components/Header';
-import Animated, { FadeIn } from 'react-native-reanimated';
+import Reanimated, { FadeIn } from 'react-native-reanimated';
 
 interface SavedLocation {
   id: string;
@@ -22,6 +22,147 @@ interface SavedLocation {
   isDefault: boolean;
   address?: string;
 }
+
+interface CustomAlertProps {
+  visible: boolean;
+  title: string;
+  message: string;
+  onConfirm: () => void;
+  onCancel?: () => void;
+  confirmText?: string;
+  cancelText?: string;
+  type?: 'success' | 'error' | 'warning' | 'info';
+}
+
+const CustomAlert = ({
+  visible,
+  title,
+  message,
+  onConfirm,
+  onCancel,
+  confirmText = 'OK',
+  cancelText = 'Cancel',
+  type = 'info'
+}: CustomAlertProps) => {
+  const scaleAnim = React.useRef(new Animated.Value(0)).current;
+  const opacityAnim = React.useRef(new Animated.Value(0)).current;
+
+  React.useEffect(() => {
+    if (visible) {
+      Animated.parallel([
+        Animated.spring(scaleAnim, {
+          toValue: 1,
+          useNativeDriver: true,
+          tension: 50,
+          friction: 7
+        }),
+        Animated.timing(opacityAnim, {
+          toValue: 1,
+          duration: 200,
+          useNativeDriver: true
+        })
+      ]).start();
+    } else {
+      Animated.parallel([
+        Animated.timing(scaleAnim, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true
+        }),
+        Animated.spring(scaleAnim, {
+          toValue: 0,
+          useNativeDriver: true,
+          tension: 50,
+          friction: 7
+        })
+      ]).start();
+    }
+  }, [visible]);
+
+  const getTypeStyles = () => {
+    switch (type) {
+      case 'success':
+        return {
+          icon: 'check-circle',
+          color: '#22c55e',
+          bgColor: '#dcfce7'
+        };
+      case 'error':
+        return {
+          icon: 'error',
+          color: '#ef4444',
+          bgColor: '#fee2e2'
+        };
+      case 'warning':
+        return {
+          icon: 'warning',
+          color: '#f97316',
+          bgColor: '#ffedd5'
+        };
+      default:
+        return {
+          icon: 'info',
+          color: '#3b82f6',
+          bgColor: '#dbeafe'
+        };
+    }
+  };
+
+  const typeStyles = getTypeStyles();
+
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="none"
+      onRequestClose={onCancel}
+    >
+      <View className="flex-1 justify-center items-center bg-black/50">
+        <Animated.View
+          className="w-[85%] bg-white rounded-2xl overflow-hidden"
+          style={[
+            { transform: [{ scale: scaleAnim }] },
+            { opacity: opacityAnim }
+          ]}
+        >
+          <View className={`p-6 ${typeStyles.bgColor}`}>
+            <View className="items-center mb-4">
+              <MaterialIcons name={typeStyles.icon as any} size={48} color={typeStyles.color} />
+            </View>
+            <Text className="text-xl font-CairoBold text-gray-800 text-center mb-2">
+              {title}
+            </Text>
+            <Text className="text-base text-gray-600 text-center font-CairoRegular">
+              {message}
+            </Text>
+          </View>
+
+          <View className="flex-row border-t border-gray-200">
+            {onCancel && (
+              <TouchableOpacity
+                onPress={onCancel}
+                className="flex-1 py-4 border-r border-gray-200"
+              >
+                <Text className="text-base text-gray-600 text-center font-CairoMedium">
+                  {cancelText}
+                </Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity
+              onPress={onConfirm}
+              className={`py-4 ${onCancel ? 'flex-1' : 'w-full'}`}
+              style={{ backgroundColor: typeStyles.color }}
+            >
+              <Text className="text-base text-white text-center font-CairoMedium">
+                {confirmText}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </Animated.View>
+      </View>
+    </Modal>
+  );
+};
 
 // Skeleton Loading Components
 const MapSkeleton = () => (
@@ -86,6 +227,16 @@ export default function LocationScreen() {
     longitude: 35.2332,
     latitudeDelta: 0.5,  // Closer zoom level
     longitudeDelta: 0.5,
+  });
+
+  const [alertConfig, setAlertConfig] = useState({
+    visible: false,
+    title: '',
+    message: '',
+    type: 'info' as 'success' | 'error' | 'warning' | 'info',
+    onConfirm: () => {},
+    confirmText: undefined as string | undefined,
+    onCancel: undefined as (() => void) | undefined,
   });
 
   // Add map boundaries for Palestine
@@ -163,20 +314,19 @@ export default function LocationScreen() {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert(
-          language === 'ar' ? 'خطأ' : 'Error',
-          language === 'ar' ? 'لم يتم منح إذن الوصول إلى الموقع' : 'Location permission was denied',
-          [
-            {
-              text: language === 'ar' ? 'إعدادات' : 'Settings',
-              onPress: () => Linking.openSettings()
-            },
-            {
-              text: language === 'ar' ? 'إلغاء' : 'Cancel',
-              style: 'cancel'
-            }
-          ]
-        );
+        setAlertConfig({
+          visible: true,
+          title: language === 'ar' ? 'خطأ' : 'Error',
+          message: language === 'ar' ? 'لم يتم منح إذن الوصول إلى الموقع' : 'Location permission was denied',
+          type: 'error',
+          onConfirm: () => {
+            setAlertConfig({ ...alertConfig, visible: false });
+            Linking.openSettings();
+          },
+          confirmText: language === 'ar' ? 'إعدادات' : 'Settings',
+          onCancel: () => setAlertConfig({ ...alertConfig, visible: false }),
+          cancelText: language === 'ar' ? 'إلغاء' : 'Cancel',
+        });
         return;
       }
 
@@ -194,11 +344,13 @@ export default function LocationScreen() {
         location.coords.longitude <= palestineBounds.east;
 
       if (!isInPalestine) {
-        Alert.alert(
-          language === 'ar' ? 'تنبيه' : 'Alert',
-          language === 'ar' ? 'يبدو أنك خارج حدود فلسطين. سيتم عرض الخريطة على فلسطين.' : 'You appear to be outside Palestine. The map will show Palestine.',
-          [{ text: 'OK' }]
-        );
+        setAlertConfig({
+          visible: true,
+          title: language === 'ar' ? 'تنبيه' : 'Warning',
+          message: language === 'ar' ? 'يبدو أنك خارج حدود فلسطين. سيتم عرض الخريطة على فلسطين.' : 'You appear to be outside Palestine. The map will show Palestine.',
+          type: 'warning',
+          onConfirm: () => setAlertConfig({ ...alertConfig, visible: false }),
+        });
         // Set to center of Palestine
         setCurrentLocation({
           coords: {
@@ -233,10 +385,13 @@ export default function LocationScreen() {
 
     } catch (error) {
       console.error('Error getting location:', error);
-      Alert.alert(
-        language === 'ar' ? 'خطأ' : 'Error',
-        language === 'ar' ? 'حدث خطأ أثناء تحديد موقعك' : 'Error getting your location'
-      );
+      setAlertConfig({
+        visible: true,
+        title: language === 'ar' ? 'خطأ' : 'Error',
+        message: language === 'ar' ? 'حدث خطأ أثناء تحديد موقعك' : 'Error getting your location',
+        type: 'error',
+        onConfirm: () => setAlertConfig({ ...alertConfig, visible: false }),
+      });
     } finally {
       setLoading(false);
     }
@@ -264,10 +419,13 @@ export default function LocationScreen() {
       setLocationAddresses(addresses);
     } catch (error) {
       console.error('Error fetching addresses:', error);
-      Alert.alert(
-        language === 'ar' ? 'خطأ' : 'Error',
-        language === 'ar' ? 'حدث خطأ أثناء تحميل العناوين' : 'Error loading addresses'
-      );
+      setAlertConfig({
+        visible: true,
+        title: language === 'ar' ? 'خطأ' : 'Error',
+        message: language === 'ar' ? 'حدث خطأ أثناء تحميل العناوين' : 'Error loading addresses',
+        type: 'error',
+        onConfirm: () => setAlertConfig({ ...alertConfig, visible: false }),
+      });
     } finally {
       setLoading(false);
     }
@@ -296,10 +454,13 @@ export default function LocationScreen() {
       await fetchAddresses(locations);
     } catch (error) {
       console.error('Error fetching locations:', error);
-      Alert.alert(
-        language === 'ar' ? 'خطأ' : 'Error',
-        language === 'ar' ? 'حدث خطأ أثناء تحميل المواقع المحفوظة' : 'Error loading saved locations'
-      );
+      setAlertConfig({
+        visible: true,
+        title: language === 'ar' ? 'خطأ' : 'Error',
+        message: language === 'ar' ? 'حدث خطأ أثناء تحميل المواقع المحفوظة' : 'Error loading saved locations',
+        type: 'error',
+        onConfirm: () => setAlertConfig({ ...alertConfig, visible: false }),
+      });
     } finally {
       setLoading(false);
     }
@@ -314,18 +475,24 @@ export default function LocationScreen() {
   // Save new location
   const saveNewLocation = async () => {
     if (!currentLocation) {
-      Alert.alert(
-        language === 'ar' ? 'خطأ' : 'Error',
-        language === 'ar' ? 'الرجاء تحديد موقعك أولاً' : 'Please get your location first'
-      );
+      setAlertConfig({
+        visible: true,
+        title: language === 'ar' ? 'خطأ' : 'Error',
+        message: language === 'ar' ? 'الرجاء تحديد موقعك أولاً' : 'Please get your location first',
+        type: 'error',
+        onConfirm: () => setAlertConfig({ ...alertConfig, visible: false }),
+      });
       return;
     }
 
     if (savedLocations.length >= 3) {
-      Alert.alert(
-        language === 'ar' ? 'تنبيه' : 'Alert',
-        language === 'ar' ? 'لا يمكنك حفظ أكثر من 3 مواقع. يرجى حذف موقع قبل إضافة موقع جديد.' : 'You cannot save more than 3 locations. Please delete a location before adding a new one.'
-      );
+      setAlertConfig({
+        visible: true,
+        title: language === 'ar' ? 'تنبيه' : 'Warning',
+        message: language === 'ar' ? 'لا يمكنك حفظ أكثر من 3 مواقع. يرجى حذف موقع قبل إضافة موقع جديد.' : 'You cannot save more than 3 locations. Please delete a location before adding a new one.',
+        type: 'warning',
+        onConfirm: () => setAlertConfig({ ...alertConfig, visible: false }),
+      });
       return;
     }
 
@@ -335,10 +502,13 @@ export default function LocationScreen() {
   // Handle save location with name
   const handleSaveLocation = async () => {
     if (!locationName.trim()) {
-      Alert.alert(
-        language === 'ar' ? 'خطأ' : 'Error',
-        language === 'ar' ? 'يرجى إدخال اسم للموقع' : 'Please enter a location name'
-      );
+      setAlertConfig({
+        visible: true,
+        title: language === 'ar' ? 'خطأ' : 'Error',
+        message: language === 'ar' ? 'يرجى إدخال اسم للموقع' : 'Please enter a location name',
+        type: 'error',
+        onConfirm: () => setAlertConfig({ ...alertConfig, visible: false }),
+      });
       return;
     }
 
@@ -363,17 +533,23 @@ export default function LocationScreen() {
 
       setShowNameModal(false);
       setLocationName('');
-      
-      Alert.alert(
-        language === 'ar' ? 'نجاح' : 'Success',
-        language === 'ar' ? 'تم حفظ الموقع بنجاح' : 'Location saved successfully'
-      );
+
+      setAlertConfig({
+        visible: true,
+        title: language === 'ar' ? 'نجاح' : 'Success',
+        message: language === 'ar' ? 'تم حفظ الموقع بنجاح' : 'Location saved successfully',
+        type: 'success',
+        onConfirm: () => setAlertConfig({ ...alertConfig, visible: false }),
+      });
     } catch (error) {
       console.error('Error saving location:', error);
-      Alert.alert(
-        language === 'ar' ? 'خطأ' : 'Error',
-        language === 'ar' ? 'حدث خطأ أثناء حفظ الموقع' : 'Error saving location'
-      );
+      setAlertConfig({
+        visible: true,
+        title: language === 'ar' ? 'خطأ' : 'Error',
+        message: language === 'ar' ? 'حدث خطأ أثناء حفظ الموقع' : 'Error saving location',
+        type: 'error',
+        onConfirm: () => setAlertConfig({ ...alertConfig, visible: false }),
+      });
     } finally {
       setButtonLoading(prev => ({ ...prev, saveLocation: false }));
     }
@@ -408,16 +584,22 @@ export default function LocationScreen() {
       setSavedLocations(updatedLocations);
       setSelectedLocation(location);
 
-      Alert.alert(
-        language === 'ar' ? 'نجاح' : 'Success',
-        language === 'ar' ? 'تم تعيين الموقع الافتراضي بنجاح' : 'Default location set successfully'
-      );
+      setAlertConfig({
+        visible: true,
+        title: language === 'ar' ? 'نجاح' : 'Success',
+        message: language === 'ar' ? 'تم تعيين الموقع الافتراضي بنجاح' : 'Default location set successfully',
+        type: 'success',
+        onConfirm: () => setAlertConfig({ ...alertConfig, visible: false }),
+      });
     } catch (error) {
       console.error('Error setting default location:', error);
-      Alert.alert(
-        language === 'ar' ? 'خطأ' : 'Error',
-        language === 'ar' ? 'حدث خطأ أثناء تعيين الموقع الافتراضي' : 'Error setting default location'
-      );
+      setAlertConfig({
+        visible: true,
+        title: language === 'ar' ? 'خطأ' : 'Error',
+        message: language === 'ar' ? 'حدث خطأ أثناء تعيين الموقع الافتراضي' : 'Error setting default location',
+        type: 'error',
+        onConfirm: () => setAlertConfig({ ...alertConfig, visible: false }),
+      });
     } finally {
       setButtonLoading(prev => ({ ...prev, setDefault: undefined }));
     }
@@ -429,16 +611,22 @@ export default function LocationScreen() {
       setButtonLoading(prev => ({ ...prev, delete: locationId }));
       await deleteDoc(doc(db, 'user_locations', locationId));
       setSavedLocations(savedLocations.filter(loc => loc.id !== locationId));
-      Alert.alert(
-        language === 'ar' ? 'نجاح' : 'Success',
-        language === 'ar' ? 'تم حذف الموقع بنجاح' : 'Location deleted successfully'
-      );
+      setAlertConfig({
+        visible: true,
+        title: language === 'ar' ? 'نجاح' : 'Success',
+        message: language === 'ar' ? 'تم حذف الموقع بنجاح' : 'Location deleted successfully',
+        type: 'success',
+        onConfirm: () => setAlertConfig({ ...alertConfig, visible: false }),
+      });
     } catch (error) {
       console.error('Error deleting location:', error);
-      Alert.alert(
-        language === 'ar' ? 'خطأ' : 'Error',
-        language === 'ar' ? 'حدث خطأ أثناء حذف الموقع' : 'Error deleting location'
-      );
+      setAlertConfig({
+        visible: true,
+        title: language === 'ar' ? 'خطأ' : 'Error',
+        message: language === 'ar' ? 'حدث خطأ أثناء حذف الموقع' : 'Error deleting location',
+        type: 'error',
+        onConfirm: () => setAlertConfig({ ...alertConfig, visible: false }),
+      });
     } finally {
       setButtonLoading(prev => ({ ...prev, delete: undefined }));
     }
@@ -446,22 +634,19 @@ export default function LocationScreen() {
 
   // Confirm delete
   const confirmDelete = (location: SavedLocation) => {
-    Alert.alert(
-      language === 'ar' ? 'تأكيد الحذف' : 'Confirm Delete',
-      language === 'ar' ? 'هل أنت متأكد أنك تريد حذف هذا الموقع؟' : 'Are you sure you want to delete this location?',
-      [
-        {
-          text: language === 'ar' ? 'إلغاء' : 'Cancel',
-          style: 'cancel'
-        },
-        {
-          text: language === 'ar' ? 'حذف' : 'Delete',
-          style: 'destructive',
-          onPress: () => deleteLocation(location.id)
-        }
-      ],
-      { cancelable: true }
-    );
+    setAlertConfig({
+      visible: true,
+      title: language === 'ar' ? 'تأكيد الحذف' : 'Confirm Delete',
+      message: language === 'ar' ? 'هل أنت متأكد أنك تريد حذف هذا الموقع؟' : 'Are you sure you want to delete this location?',
+      type: 'warning',
+      onConfirm: () => {
+        setAlertConfig({ ...alertConfig, visible: false });
+        deleteLocation(location.id);
+      },
+      confirmText: language === 'ar' ? 'حذف' : 'Delete',
+      onCancel: () => setAlertConfig({ ...alertConfig, visible: false }),
+      cancelText: language === 'ar' ? 'إلغاء' : 'Cancel',
+    });
   };
 
   // Helper function to detect if text contains Arabic
@@ -473,6 +658,16 @@ export default function LocationScreen() {
   return (
     <SafeAreaView className="flex-1 bg-white">
       <Header title={language === 'ar' ? 'ادارة الموقع ' : 'Manage Location' } showProfileImage={false} showSideMenu={false} />
+      <CustomAlert
+        visible={alertConfig.visible}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        type={alertConfig.type}
+        onConfirm={alertConfig.onConfirm}
+        confirmText={alertConfig.confirmText}
+        onCancel={alertConfig.onCancel}
+        cancelText={alertConfig.cancelText}
+      />
       <ScrollView className="flex-1">
         {loading ? (
           <LocationSkeleton />

@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, Image, ScrollView, TouchableOpacity, ActivityIndicator, Animated, Dimensions, Linking, Modal, I18nManager } from 'react-native';
+import { View, Text, Image, ScrollView, TouchableOpacity, ActivityIndicator, Animated, Dimensions, Linking, Modal, I18nManager, Platform } from 'react-native';
 import { MaterialCommunityIcons, FontAwesome5, Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { doc, getDoc, collection, query, where, getDocs, orderBy } from 'firebase/firestore';
@@ -14,6 +14,17 @@ import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { formatDistanceToNow } from 'date-fns';
 import { ar, enUS } from 'date-fns/locale';
+import MapView, { Marker, PROVIDER_GOOGLE, Polyline } from 'react-native-maps';
+import * as Location from 'expo-location';
+
+interface Location {
+  createdAt: any;
+  isDefault: boolean;
+  latitude: number;
+  longitude: number;
+  name: string;
+  userId: string;
+}
 
 interface UserProfile {
   name: string;
@@ -22,6 +33,7 @@ interface UserProfile {
   email?: string | null;
   gender?: string | null;
   industry?: string | null;
+  location?: Location | null;
   driver?: {
     car_type?: string;
     car_seats?: number;
@@ -60,6 +72,11 @@ interface ChatUser {
   id: string;
   fullName: string;
   imageUrl: string;
+}
+
+interface RouteCoordinates {
+  latitude: number;
+  longitude: number;
 }
 
 const DEFAULT_PROFILE_IMAGE = 'https://www.pngitem.com/pimgs/m/146-1468479_my-profile-icon-blank-profile-picture-circle-hd.png';
@@ -134,6 +151,10 @@ export default function Profile() {
   const [showRatings, setShowRatings] = useState(false);
   const insets = useSafeAreaInsets();
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [showMapModal, setShowMapModal] = useState(false);
+  const [currentLocation, setCurrentLocation] = useState<{latitude: number; longitude: number} | null>(null);
+  const [routeCoordinates, setRouteCoordinates] = useState<RouteCoordinates[]>([]);
+  const [isLoadingRoute, setIsLoadingRoute] = useState(false);
 
   const textAlign = language === 'ar' ? 'right' : 'left';
   const flexDirection = language === 'ar' ? 'flex-row-reverse' : 'flex-row';
@@ -188,12 +209,31 @@ export default function Profile() {
         const userData = userDoc.data();
         console.log('Fetched user data:', userData);
         
+        // Fetch user's default location
+        const locationsQuery = query(
+          collection(db, 'user_locations'),
+          where('userId', '==', id),
+          where('isDefault', '==', true)
+        );
+        
+        const locationsSnapshot = await getDocs(locationsQuery);
+        let defaultLocation = null;
+        
+        if (!locationsSnapshot.empty) {
+          const locationDoc = locationsSnapshot.docs[0];
+          defaultLocation = {
+            ...locationDoc.data(),
+            createdAt: locationDoc.data().createdAt
+          } as Location;
+        }
+        
         setUser({
           name: userData.name || 'مستخدم',
           profile_image_url: userData.profile_image_url || DEFAULT_PROFILE_IMAGE,
           gender: userData.gender,
           phone: userData.phone,
           email: userData.email,
+          location: defaultLocation,
           driver: userData.driver ? {
             car_type: userData.driver.car_type || 'غير محدد',
             car_seats: userData.driver.car_seats || 4,
@@ -299,6 +339,95 @@ export default function Profile() {
       fetchUserData();
     }
   }, [id]);
+
+  // Get current location
+  useEffect(() => {
+    (async () => {
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        return;
+      }
+
+      let location = await Location.getCurrentPositionAsync({});
+      setCurrentLocation({
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude
+      });
+    })();
+  }, []);
+
+  // Function to decode polyline
+  const decodePolyline = (encoded: string) => {
+    let index = 0;
+    const len = encoded.length;
+    let lat = 0;
+    let lng = 0;
+    const coordinates: RouteCoordinates[] = [];
+
+    while (index < len) {
+      let shift = 0;
+      let result = 0;
+
+      do {
+        let b = encoded.charCodeAt(index++) - 63;
+        result |= (b & 0x1f) << shift;
+        shift += 5;
+      } while (result >= 0x20);
+
+      const dlat = ((result & 1) ? ~(result >> 1) : (result >> 1));
+      lat += dlat;
+
+      shift = 0;
+      result = 0;
+
+      do {
+        let b = encoded.charCodeAt(index++) - 63;
+        result |= (b & 0x1f) << shift;
+        shift += 5;
+      } while (result >= 0x20);
+
+      const dlng = ((result & 1) ? ~(result >> 1) : (result >> 1));
+      lng += dlng;
+
+      coordinates.push({
+        latitude: lat * 1e-5,
+        longitude: lng * 1e-5
+      });
+    }
+
+    return coordinates;
+  };
+
+  // Function to fetch route
+  const fetchRoute = async (origin: RouteCoordinates, destination: RouteCoordinates) => {
+    try {
+      setIsLoadingRoute(true);
+      const response = await fetch(
+        `https://maps.googleapis.com/maps/api/directions/json?origin=${origin.latitude},${origin.longitude}&destination=${destination.latitude},${destination.longitude}&key=YOUR_GOOGLE_MAPS_API_KEY`
+      );
+      const data = await response.json();
+      
+      if (data.routes && data.routes[0]) {
+        const points = data.routes[0].overview_polyline.points;
+        const coords = decodePolyline(points);
+        setRouteCoordinates(coords);
+      }
+    } catch (error) {
+      console.error('Error fetching route:', error);
+    } finally {
+      setIsLoadingRoute(false);
+    }
+  };
+
+  // Update route when map modal opens
+  useEffect(() => {
+    if (showMapModal && user?.location && currentLocation) {
+      fetchRoute(
+        currentLocation,
+        { latitude: user.location.latitude, longitude: user.location.longitude }
+      );
+    }
+  }, [showMapModal, user?.location, currentLocation]);
 
   if (loading) {
     return <SkeletonLoading />;
@@ -496,6 +625,105 @@ export default function Profile() {
     return gender;
   };
 
+  const handleOpenMaps = () => {
+    if (!user?.location) return;
+    setShowMapModal(true);
+  };
+
+  const MapModal = () => (
+    <Modal
+      visible={showMapModal}
+      animationType="slide"
+      onRequestClose={() => setShowMapModal(false)}
+    >
+      <SafeAreaView className="flex-1 bg-white">
+        <View className="flex-row justify-between items-center p-4 border-b border-gray-200">
+          <TouchableOpacity 
+            onPress={() => setShowMapModal(false)}
+            className="p-2"
+          >
+            <MaterialIcons name="close" size={24} color="#374151" />
+          </TouchableOpacity>
+          <Text className={`text-lg ${language === 'ar' ? 'font-CairoBold' : 'font-JakartaBold'}`}>
+            {language === 'ar' ? 'الموقع' : 'Location'}
+          </Text>
+          <View style={{ width: 40 }} />
+        </View>
+
+        {user?.location && currentLocation && (
+          <View className="flex-1">
+            <MapView
+              provider={PROVIDER_GOOGLE}
+              className="flex-1"
+              initialRegion={{
+                latitude: user.location.latitude,
+                longitude: user.location.longitude,
+                latitudeDelta: 0.0922,
+                longitudeDelta: 0.0421,
+              }}
+            >
+              {/* Destination Marker */}
+              <Marker
+                coordinate={{
+                  latitude: user.location.latitude,
+                  longitude: user.location.longitude,
+                }}
+                title={user.location.name}
+              />
+              
+              {/* Current Location Marker */}
+              <Marker
+                coordinate={{
+                  latitude: currentLocation.latitude,
+                  longitude: currentLocation.longitude,
+                }}
+                title={language === 'ar' ? 'موقعك الحالي' : 'Your Location'}
+                pinColor="blue"
+              />
+
+              {/* Route Line */}
+              {routeCoordinates.length > 0 && (
+                <Polyline
+                  coordinates={routeCoordinates}
+                  strokeWidth={4}
+                  strokeColor="#F97316"
+                />
+              )}
+            </MapView>
+
+            {isLoadingRoute && (
+              <View className="absolute inset-0 bg-black/30 items-center justify-center">
+                <ActivityIndicator size="large" color="#F97316" />
+                <Text className={`text-white mt-2 ${language === 'ar' ? 'font-CairoBold' : 'font-JakartaBold'}`}>
+                  {language === 'ar' ? 'جاري تحميل المسار...' : 'Loading route...'}
+                </Text>
+              </View>
+            )}
+          </View>
+        )}
+
+        <TouchableOpacity
+          onPress={() => {
+            if (user?.location) {
+              const url = Platform.select({
+                ios: `maps://app?daddr=${user.location.latitude},${user.location.longitude}&q=${encodeURIComponent(user.location.name)}`,
+                android: `google.navigation:q=${user.location.latitude},${user.location.longitude}`,
+              });
+              if (url) {
+                Linking.openURL(url);
+              }
+            }
+          }}
+          className="absolute bottom-8 left-4 right-4 bg-orange-500 p-4 rounded-xl"
+        >
+          <Text className={`text-center text-white ${language === 'ar' ? 'font-CairoBold' : 'font-JakartaBold'}`}>
+            {language === 'ar' ? 'فتح في خرائط جوجل' : 'Open in Google Maps'}
+          </Text>
+        </TouchableOpacity>
+      </SafeAreaView>
+    </Modal>
+  );
+
   return (
     <SafeAreaView className="flex-1 bg-white">
       {/* Header Section - Only show if user is a driver */}
@@ -598,6 +826,30 @@ export default function Profile() {
         >
           {/* Contact Info */}
           <View className="mt-4 space-y-3">
+            {user.location && (
+              <TouchableOpacity 
+                onPress={handleOpenMaps}
+                className={`${flexDirection} items-center bg-gray-50 p-3 rounded-lg`}
+              >
+                <View className="w-8 h-8 bg-green-100 rounded-full items-center justify-center">
+                  <MaterialIcons name="location-on" size={16} color="#22C55E" />
+                </View>
+                <View className={`flex-1 ${language === 'ar' ? 'mr-2' : 'ml-2'}`}>
+                  <Text className={`text-xs ${language === 'ar' ? 'font-CairoRegular text-right' : 'font-JakartaRegular text-left'} text-gray-500`}>
+                    {language === 'ar' ? 'الموقع الافتراضي' : 'Default Location'}
+                  </Text>
+                  <Text className={`text-sm ${language === 'ar' ? 'font-CairoRegular text-right' : 'font-JakartaRegular text-left'} text-gray-900`}>
+                    {user.location.name}
+                  </Text>
+                </View>
+                <MaterialIcons 
+                  name={language === 'ar' ? "chevron-left" : "chevron-right"} 
+                  size={20} 
+                  color="#9CA3AF" 
+                />
+              </TouchableOpacity>
+            )}
+
             {user.phone && (
               <TouchableOpacity 
                 onPress={handlePhoneCall}
@@ -814,6 +1066,9 @@ export default function Profile() {
 
       {/* Image Preview Modal */}
       <ImagePreviewModal />
+
+      {/* Add MapModal at the end of the component */}
+      <MapModal />
     </SafeAreaView>
   );
 }
