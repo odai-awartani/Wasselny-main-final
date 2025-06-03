@@ -149,6 +149,17 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     borderRadius: 20,
   },
+  androidShadow1: {
+    elevation: 8,
+    borderRadius: 20,
+  },
+  iosShadow1: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    borderRadius: 20,
+  },
 })
 
 const Search = () => {
@@ -184,26 +195,36 @@ const Search = () => {
   const [isSearchInputFocused, setIsSearchInputFocused] = useState(false);
   const searchInputRef = useRef<TextInput>(null);
   const isRemovingRef = useRef(false);
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Function to save a recent search
+  // Function to save a recent search with debounce
   const saveRecentSearch = async (query: string) => {
     if (!user?.id || !query.trim()) return;
-    const storageKey = 'recent_searches_' + user.id;
-    try {
-      let searches = await AsyncStorage.getItem(storageKey);
-      let recent = searches ? JSON.parse(searches) : [];
-      
-      // Add new query to the front if not already present
-      recent = [query, ...recent.filter((item: string) => item !== query)];
-      
-      // Keep only the last 5 searches
-      recent = recent.slice(0, 5);
-      
-      await AsyncStorage.setItem(storageKey, JSON.stringify(recent));
-      setRecentSearches(recent);
-    } catch (e) {
-      console.error('Error saving recent search:', e);
+    
+    // Clear any existing timeout
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
     }
+
+    // Set new timeout
+    searchTimeoutRef.current = setTimeout(async () => {
+      const storageKey = 'recent_searches_' + user.id;
+      try {
+        let searches = await AsyncStorage.getItem(storageKey);
+        let recent = searches ? JSON.parse(searches) : [];
+        
+        // Add new query to the front if not already present
+        recent = [query, ...recent.filter((item: string) => item !== query)];
+        
+        // Keep only the last 5 searches
+        recent = recent.slice(0, 5);
+        
+        await AsyncStorage.setItem(storageKey, JSON.stringify(recent));
+        setRecentSearches(recent);
+      } catch (e) {
+        console.error('Error saving recent search:', e);
+      }
+    }, 2000); // 2 seconds delay
   };
 
   // Function to load recent searches
@@ -236,6 +257,39 @@ const Search = () => {
       console.error('Error removing recent search:', e);
     }
   };
+
+  // Function to remove all recent searches
+  const removeAllRecentSearches = async () => {
+    if (!user?.id) return;
+    const storageKey = 'recent_searches_' + user.id;
+    try {
+      await AsyncStorage.removeItem(storageKey);
+      setRecentSearches([]);
+    } catch (e) {
+      console.error('Error removing all recent searches:', e);
+    }
+  };
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  // Modified handleSearchInput to use debounced save
+  const handleSearchInput = useCallback((text: string) => {
+    setSearchQuery(text);
+    if (searchTimeout.current) clearTimeout(searchTimeout.current);
+    searchTimeout.current = setTimeout(() => {
+      handleSearch(text);
+    }, 400);
+
+    // Save to recent searches after 2 seconds of inactivity
+    saveRecentSearch(text);
+  }, []);
 
   // Fetch user profile image
   useEffect(() => {
@@ -282,15 +336,6 @@ const Search = () => {
       console.error('Error fetching user location:', err)
       return null
     }
-  }, [])
-
-  // Debounced search handler
-  const handleSearchInput = useCallback((text: string) => {
-    setSearchQuery(text)
-    if (searchTimeout.current) clearTimeout(searchTimeout.current)
-    searchTimeout.current = setTimeout(() => {
-      handleSearch(text)
-    }, 400)
   }, [])
 
   // Fetch all rides
@@ -559,8 +604,6 @@ const Search = () => {
   // Handle search
   const handleSearch = useCallback(async (text: string) => {
     setSearchQuery(text)
-    // Save the search query
-    saveRecentSearch(text);
     if (!text.trim()) {
       // When search is cleared, show all results
       const filteredResults = applyFilters(allResults)
@@ -581,7 +624,7 @@ const Search = () => {
     } finally {
       setLoading(false)
     }
-  }, [allResults, applyFilters, saveRecentSearch])
+  }, [allResults, applyFilters])
 
   // Load more results
   const handleLoadMore = useCallback(() => {
@@ -1257,50 +1300,65 @@ const Search = () => {
     <SafeAreaView className="flex-1 bg-white">
       <Header profileImageUrl={profileImageUrl} title={t.Search} />
       <View className="px-4 py-3 bg-white border-b border-gray-100">
-        <View
-          className="flex-row items-center bg-gray-50 rounded-full px-4 py-2 mx-2 mt-5"
-          style={Platform.OS === 'android' ? styles.androidShadow : styles.iosShadow}
-        >
-          <Image source={icons.search} className={`w-5 h-5 ${language === 'ar' ? 'ml-2' : 'mr-2'}`} tintColor="#6B7280" />
-          <TextInput
-            placeholder={language === 'ar' ? 'ابحث عن رحلات' : 'Search for rides'}
-            value={searchQuery}
-            onChangeText={handleSearchInput}
-            className={`flex-1 ${language === 'ar' ? 'text-right' : 'text-left'} ${language === 'ar' ? 'font-CairoBold' : 'font-JakartaBold'} text-gray-700`}
-            placeholderTextColor="#9CA3AF"
-            textAlign={language === 'ar' ? 'right' : 'left'}
-            onFocus={() => setIsSearchInputFocused(true)}
-            onBlur={() => {
-              // Add a small delay before hiding to allow taps on recent searches
-              // Check if we are currently in the process of removing an item
-              if (isRemovingRef.current) {
-                // If removing, don't hide the list immediately
-                isRemovingRef.current = false; // Reset flag
-                // Optionally refocus here if needed, but the onBlur delay should handle it
-                // searchInputRef.current?.focus();
-              } else {
-                // If not removing, hide the list after the delay
-                setTimeout(() => setIsSearchInputFocused(false), 200);
-              }
+        <View className={`flex-row items-center ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
+          <View className="flex-1 flex-row items-center bg-gray-50 rounded-full px-4 py-2"
+           style={Platform.OS === 'android' ? styles.androidShadow : styles.iosShadow}>
+            <Image source={icons.search} className={`w-5 h-5 ${language === 'ar' ? 'ml-2' : 'mr-2'}`} tintColor="#6B7280" />
+            <TextInput
+              placeholder={language === 'ar' ? 'ابحث عن رحلات' : 'Search for rides'}
+              value={searchQuery}
+              onChangeText={handleSearchInput}
+              className={`flex-1 ${language === 'ar' ? 'text-right' : 'text-left'} ${language === 'ar' ? 'font-CairoBold' : 'font-JakartaBold'} text-gray-700`}
+              placeholderTextColor="#9CA3AF"
+              textAlign={language === 'ar' ? 'right' : 'left'}
+              onFocus={() => setIsSearchInputFocused(true)}
+              onBlur={() => {
+                if (isRemovingRef.current) {
+                  isRemovingRef.current = false;
+                } else {
+                  setTimeout(() => setIsSearchInputFocused(false), 200);
+                }
+              }}
+              ref={searchInputRef}
+            />
+          </View>
+          <TouchableOpacity
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+              setShowFilters(true)
             }}
-            ref={searchInputRef}
-          />
+            className={`bg-gray-50  px-3 py-3 rounded-full ${language === 'ar' ? ' mr-1' : 'ml-1'}`}
+            style={Platform.OS === 'android' ? styles.androidShadow1 : styles.iosShadow1}
+          >
+            <Image source={icons.filter} className="w-6 h-6" tintColor="#6B7280" />
+          </TouchableOpacity>
         </View>
-
         {isSearchInputFocused && recentSearches.length > 0 && (
           <View className="px-4 mt-2 max-h-[200px]">
-            <Text className={`text-sm text-gray-500 mb-2 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
-              {language === 'ar' ? 'عمليات البحث الأخيرة' : 'Recent Searches'}
-            </Text>
+            <View className={`flex-row justify-between items-center mb-2 ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
+              <Text className={`text-sm font-CairoRegular text-gray-500 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+                {language === 'ar' ? 'عمليات البحث الأخيرة' : 'Recent Searches'}
+              </Text>
+              <TouchableOpacity
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  removeAllRecentSearches();
+                }}
+                className="flex-row items-center"
+              >
+                {/* <MaterialIcons name="delete-sweep" size={18} color="#EF4444" /> */}
+                <Text className={`text-sm text-red-500 ml-1 ${language === 'ar' ? 'font-CairoMedium' : 'font-JakartaMedium'}`}>
+                  {language === 'ar' ? 'مسح الكل' : 'Clear All'}
+                </Text>
+              </TouchableOpacity>
+            </View>
             <ScrollView keyboardShouldPersistTaps="always">
               {recentSearches.map((query, index) => (
                 <TouchableOpacity
                   key={index}
                   onPress={(event) => {
-                    // Prevent the touch event from causing the input to blur
                     setSearchQuery(query);
                     handleSearch(query);
-                    // Hide the recent searches after tapping one
                     setIsSearchInputFocused(false);
                   }}
                   className={`flex-row items-center justify-between py-2 border-b border-gray-100 ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}
@@ -1310,10 +1368,8 @@ const Search = () => {
                   </Text>
                   <TouchableOpacity
                     onPress={() => {
-                      // Set a flag to indicate that we are removing an item
                       isRemovingRef.current = true;
                       removeRecentSearch(query);
-                      // A small delay before allowing onBlur to trigger
                       setTimeout(() => isRemovingRef.current = false, 100);
                     }}
                     className={`p-1 ${language === 'ar' ? 'mr-2' : 'ml-2'}`}

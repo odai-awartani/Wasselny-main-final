@@ -11,6 +11,7 @@ import type { Chat as ChatType, LastMessage } from '@/types/type';
 import { useLanguage } from '@/context/LanguageContext';
 import Header from '@/components/Header';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { StyleSheet, Platform } from 'react-native';
 
 interface BaseChat {
   id: string;
@@ -35,7 +36,7 @@ interface Driver {
 export default function ChatListScreen() {
   const router = useRouter();
   const { user } = useUser();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [searchQuery, setSearchQuery] = useState('');
   const [chats, setChats] = useState<ChatType[]>([]);
   const [drivers, setDrivers] = useState<Driver[]>([]);
@@ -251,14 +252,17 @@ export default function ChatListScreen() {
 
       {/* Search Bar */}
       <View className="px-4 py-3 bg-white border-b border-gray-100">
-        <View className="flex-row items-center bg-gray-50 rounded-full px-4 py-2">
+        <View
+          className="flex-row items-center bg-gray-50 rounded-full px-4 py-2"
+          style={Platform.OS === 'android' ? styles.androidShadow : styles.iosShadow}
+        >
           <Image source={icons.search} className="w-5 h-5 ml-2" tintColor="#6B7280" />
           <TextInput
-            placeholder={t.searchDrivers}
+            placeholder={language === 'ar' ? 'ابحث عن السائقين' : t.searchDrivers}
             value={searchQuery}
             onChangeText={handleSearch}
-            className="flex-1 text-right font-CairoBold text-gray-700"
-            style={{ textAlign: 'right' }}
+            className={`flex-1 text-gray-700 ${language === 'ar' ? 'font-CairoBold text-right' : 'font-JakartaBold text-left'}`}
+            style={{ textAlign: language === 'ar' ? 'right' : 'left' }}
             placeholderTextColor="#9CA3AF"
           />
         </View>
@@ -346,3 +350,19 @@ export default function ChatListScreen() {
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  androidShadow: {
+    elevation: 8,
+    backgroundColor: 'white',
+    borderRadius: 20,
+  },
+  iosShadow: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    backgroundColor: 'white',
+    borderRadius: 20,
+  },
+});
