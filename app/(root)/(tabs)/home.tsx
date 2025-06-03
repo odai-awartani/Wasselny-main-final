@@ -9,12 +9,12 @@ import { useNotifications } from '@/context/NotificationContext';
 import { useLocationStore } from "@/store";
 import { useAuth, useUser } from "@clerk/clerk-expo";
 import { router, useFocusEffect } from "expo-router";
-import { ActivityIndicator, Image, RefreshControl, TouchableOpacity, Alert, Platform, StyleSheet } from "react-native";
+import { ActivityIndicator, Image, RefreshControl, TouchableOpacity, Alert, Platform, StyleSheet, Modal, Animated } from "react-native";
 import * as Location from "expo-location";
 import { StatusBar } from "expo-status-bar";
 import { useDriverStore } from '@/store';
 import { Ride } from "@/types/type";
-import { doc, getDoc, collection, query, where, getDocs, orderBy } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs, orderBy, updateDoc, writeBatch } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Text, View } from "react-native";
@@ -47,6 +47,15 @@ interface Location {
   address: string;
 }
 
+interface SavedLocation {
+  createdAt: string;
+  isDefault: boolean;
+  latitude: number;
+  longitude: number;
+  name: string;
+  userId: string;
+}
+
 function CustomMenuIcon({ isRTL }: { isRTL: boolean }) {
   return (
     <View style={{ width: 24, height: 24, justifyContent: 'center' }}>
@@ -77,6 +86,100 @@ function CustomMenuIcon({ isRTL }: { isRTL: boolean }) {
   );
 }
 
+const LocationList = React.memo(({ 
+  locations, 
+  onSelect, 
+  selectedLocation, 
+  language
+}: { 
+  locations: SavedLocation[], 
+  onSelect: (location: SavedLocation) => void,
+  selectedLocation: SavedLocation | null,
+  language: string
+}) => {
+  const formatDate = useCallback((timestamp: any) => {
+    try {
+      let date: Date;
+      if (timestamp?.seconds) {
+        // Handle Firestore timestamp
+        date = new Date(timestamp.seconds * 1000);
+      } else if (timestamp instanceof Date) {
+        // Handle Date object
+        date = timestamp;
+      } else if (typeof timestamp === 'string') {
+        // Handle string date
+        date = new Date(timestamp);
+      } else {
+        console.error('Invalid timestamp format:', timestamp);
+        return '';
+      }
+
+      if (isNaN(date.getTime())) {
+        console.error('Invalid date:', date);
+        return '';
+      }
+
+      return date.toLocaleDateString(language === 'ar' ? 'ar-SA' : 'en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return '';
+    }
+  }, [language]);
+
+  const renderItem = useCallback(({ item }: { item: SavedLocation }) => (
+    <TouchableOpacity
+      onPress={() => onSelect(item)}
+      className={`p-3 rounded-lg mb-2 transition-all duration-200 ${
+        selectedLocation?.createdAt === item.createdAt 
+          ? 'bg-orange-50 border-2 border-orange-500' 
+          : 'bg-gray-50 border-2 border-transparent'
+      }`}
+      activeOpacity={0.6}
+    >
+      <View className={`flex-row justify-between items-center ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
+        <View className="flex-1">
+          <Text className={`text-gray-900 text-sm font-CairoBold ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+            {item.name}
+          </Text>
+          <Text className={`text-gray-500 text-xs ${language === 'ar' ? 'font-CairoRegular text-right' : 'font-JakartaRegular text-left'}`}>
+            {formatDate(item.createdAt)}
+          </Text>
+        </View>
+        <View className={`flex-row items-center ${language === 'ar' ? 'ml-2' : 'mr-2'}`}>
+          {item.isDefault && (
+            <View className="bg-orange-500 px-2 py-0.5 rounded-full mr-1">
+              <Text className="text-white text-xs mt-1 font-CairoBold">
+                {language === 'ar' ? 'افتراضي' : 'Default'}
+              </Text>
+            </View>
+          )}
+          {selectedLocation?.createdAt === item.createdAt && (
+            <MaterialIcons name="check-circle" size={20} color="#f97316" />
+          )}
+        </View>
+      </View>
+    </TouchableOpacity>
+  ), [selectedLocation, language, onSelect, formatDate]);
+
+  return (
+    <FlatList
+      data={locations}
+      keyExtractor={(item) => item.createdAt}
+      renderItem={renderItem}
+      showsVerticalScrollIndicator={true}
+      removeClippedSubviews={true}
+      maxToRenderPerBatch={10}
+      windowSize={5}
+    />
+  );
+});
+
 export default function Home() {
   const { setIsMenuVisible } = require('@/context/MenuContext').useMenu();
   const { t, language, setLanguage, isRTL } = useLanguage();
@@ -96,6 +199,12 @@ export default function Home() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isMapLoading, setIsMapLoading] = useState(true);
   const [headerRefreshKey, setHeaderRefreshKey] = useState(0);
+  const [showLocationModal, setShowLocationModal] = useState(false);
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const [savedLocations, setSavedLocations] = useState<SavedLocation[]>([]);
+  const [isLoadingLocations, setIsLoadingLocations] = useState(true);
+  const [selectedLocation, setSelectedLocation] = useState<SavedLocation | null>(null);
+  const [isConfirming, setIsConfirming] = useState(false);
 
   const openDrawer = () => {
     navigation.dispatch(DrawerActions.openDrawer());
@@ -321,6 +430,289 @@ export default function Home() {
     }
   }, [user?.id, isDriver, t, language]);
 
+  // Check if user has location set and if 12 hours have passed
+  useEffect(() => {
+    const checkUserLocationAndTime = async () => {
+      try {
+        const lastShownTime = await AsyncStorage.getItem('lastLocationModalShown');
+        const currentTime = new Date().getTime();
+        
+        // If no last shown time exists, show modal and set time
+        if (!lastShownTime) {
+          console.log('First time showing location modal');
+          setShowLocationModal(true);
+          await AsyncStorage.setItem('lastLocationModalShown', currentTime.toString());
+          return;
+        }
+
+        // Calculate time difference in hours
+        const timeDiff = (currentTime - parseInt(lastShownTime)) / (1000 * 60 * 60);
+        console.log(`Time since last show: ${timeDiff.toFixed(2)} hours`);
+        
+        // Only show if exactly 12 or more hours have passed
+        if (timeDiff >= 12) {
+          console.log('12 hours passed, showing location modal');
+          setShowLocationModal(true);
+          await AsyncStorage.setItem('lastLocationModalShown', currentTime.toString());
+        } else {
+          console.log(`Not showing modal - ${timeDiff.toFixed(2)} hours passed, need 12 hours`);
+          setShowLocationModal(false);
+        }
+      } catch (error) {
+        console.error('Error checking time interval:', error);
+        setShowLocationModal(false);
+      }
+    };
+
+    checkUserLocationAndTime();
+  }, []);
+
+  // Update last shown time when modal is closed
+  const handleCloseModal = useCallback(async () => {
+    setSelectedLocation(null);
+    setShowLocationModal(false);
+    try {
+      const currentTime = new Date().getTime();
+      await AsyncStorage.setItem('lastLocationModalShown', currentTime.toString());
+      console.log('Updated last shown time:', new Date(currentTime).toLocaleString());
+    } catch (error) {
+      console.error('Error updating last shown time:', error);
+    }
+  }, []);
+
+  // Add a debug effect to monitor modal state
+  useEffect(() => {
+    console.log('Modal visibility changed:', showLocationModal);
+  }, [showLocationModal]);
+
+  // Load saved locations
+  useEffect(() => {
+    const loadSavedLocations = async () => {
+      try {
+        setIsLoadingLocations(true);
+        if (!user?.id) {
+          console.log('No user ID found');
+          return;
+        }
+
+        // Fetch locations from Firebase
+        const locationsRef = collection(db, 'user_locations');
+        const q = query(
+          locationsRef,
+          where('userId', '==', user.id),
+          orderBy('createdAt', 'desc')
+        );
+        
+        const snapshot = await getDocs(q);
+        const locations: SavedLocation[] = [];
+        
+        snapshot.forEach((doc) => {
+          const data = doc.data();
+          locations.push({
+            createdAt: data.createdAt,
+            isDefault: data.isDefault,
+            latitude: data.latitude,
+            longitude: data.longitude,
+            name: data.name,
+            userId: data.userId
+          });
+        });
+
+        console.log('Fetched locations:', locations);
+        setSavedLocations(locations);
+      } catch (error) {
+        console.error('Error loading saved locations:', error);
+        setSavedLocations([]);
+      } finally {
+        setIsLoadingLocations(false);
+      }
+    };
+
+    loadSavedLocations();
+  }, [user?.id]);
+
+  const handleConfirmLocation = useCallback(async () => {
+    if (!selectedLocation) return;
+    
+    try {
+      setIsConfirming(true);
+      const selectedLocationData = {
+        latitude: selectedLocation.latitude,
+        longitude: selectedLocation.longitude,
+        address: selectedLocation.name,
+      };
+
+      // Update the location in Firebase
+      const userLocationRef = doc(db, 'users', user?.id || '');
+      await updateDoc(userLocationRef, {
+        location: selectedLocationData,
+        updatedAt: new Date().toISOString()
+      });
+
+      // Update local state
+      setUserLocation(selectedLocationData);
+      await AsyncStorage.setItem('userLocation', JSON.stringify(selectedLocationData));
+      
+      // Update the default status in user_locations
+      const locationsRef = collection(db, 'user_locations');
+      const q = query(
+        locationsRef,
+        where('userId', '==', user?.id)
+      );
+      
+      const snapshot = await getDocs(q);
+      const batch = writeBatch(db);
+      
+      snapshot.forEach((doc) => {
+        batch.update(doc.ref, { isDefault: false });
+      });
+      
+      // Set the selected location as default
+      const selectedLocationRef = query(
+        locationsRef,
+        where('userId', '==', user?.id),
+        where('latitude', '==', selectedLocation.latitude),
+        where('longitude', '==', selectedLocation.longitude)
+      );
+      
+      const selectedSnapshot = await getDocs(selectedLocationRef);
+      selectedSnapshot.forEach((doc) => {
+        batch.update(doc.ref, { isDefault: true });
+      });
+
+      await batch.commit();
+
+      setShowLocationModal(false);
+    } catch (error) {
+      console.error('Error setting selected location:', error);
+      setLocationError(
+        language === 'ar'
+          ? 'حدث خطأ أثناء تحديد الموقع'
+          : 'An error occurred while setting the location'
+      );
+    } finally {
+      setIsConfirming(false);
+      setSelectedLocation(null);
+    }
+  }, [selectedLocation, user?.id, language]);
+
+  const handleAddNewLocation = useCallback(() => {
+    setShowLocationModal(false);
+    router.push({
+      pathname: '/(root)/location',
+      params: { returnTo: 'home' }
+    });
+  }, []);
+
+  const LocationModal = () => {
+    const handleLocationSelect = useCallback((location: SavedLocation) => {
+      if (selectedLocation?.createdAt === location.createdAt) {
+        setSelectedLocation(null);
+      } else {
+        setSelectedLocation(location);
+      }
+    }, [selectedLocation]);
+
+    return (
+      <Modal
+        visible={showLocationModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={handleCloseModal}
+      >
+        <View className="flex-1 justify-center items-center bg-black/50">
+          <View className="bg-white p-4 rounded-xl w-[85%] max-h-[85%]">
+            <View className={`flex-row justify-between items-center mb-3 ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
+              <Text className={`text-lg ${language === 'ar' ? 'font-CairoBold text-right' : 'font-JakartaBold text-left'} text-gray-900`}>
+                {language === 'ar' ? 'شو موقعك اليوم؟' : 'What is Your Location Today?'}
+              </Text>
+              <TouchableOpacity
+                onPress={handleCloseModal}
+                className="p-1"
+              >
+                <MaterialIcons name="close" size={22} color="#666" />
+              </TouchableOpacity>
+            </View>
+            
+            {locationError && (
+              <Text className={`text-xs text-red-500 mb-3 ${language === 'ar' ? 'font-CairoRegular text-right' : 'font-JakartaRegular text-left'}`}>
+                {locationError}
+              </Text>
+            )}
+
+            {isLoadingLocations ? (
+              <View className="items-center justify-center py-4">
+                <ActivityIndicator size="small" color="#f97316" />
+              </View>
+            ) : savedLocations.length > 0 ? (
+              <>
+                <View className="space-y-2 max-h-[400px]">
+                  <LocationList
+                    locations={savedLocations}
+                    onSelect={handleLocationSelect}
+                    selectedLocation={selectedLocation}
+                    language={language}
+                  />
+
+                  <TouchableOpacity
+                    onPress={handleConfirmLocation}
+                    disabled={!selectedLocation || isConfirming}
+                    className={`p-3 rounded-lg mt-2 ${
+                      !selectedLocation 
+                        ? 'bg-gray-300' 
+                        : isConfirming 
+                          ? 'bg-orange-400' 
+                          : 'bg-orange-500'
+                    }`}
+                  >
+                    {isConfirming ? (
+                      <View className="flex-row items-center justify-center">
+                        <ActivityIndicator size="small" color="#fff" />
+                        <Text className={`text-center text-white text-sm ml-2 ${language === 'ar' ? 'font-CairoBold' : 'font-JakartaBold'}`}>
+                          {language === 'ar' ? 'جاري التأكيد...' : 'Confirming...'}
+                        </Text>
+                      </View>
+                    ) : (
+                      <Text className={`text-center text-white text-sm ${language === 'ar' ? 'font-CairoBold' : 'font-JakartaBold'}`}>
+                        {language === 'ar' ? 'تأكيد الموقع' : 'Confirm Location'}
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    onPress={handleAddNewLocation}
+                    className="bg-gray-100 p-3 rounded-lg mt-2"
+                  >
+                    <Text className={`text-center text-gray-900 text-sm ${language === 'ar' ? 'font-CairoBold' : 'font-JakartaBold'}`}>
+                      {language === 'ar' ? 'إضافة موقع جديد' : 'Add New Location'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            ) : (
+              <View className="items-center justify-center py-4">
+                <MaterialIcons name="location-off" size={40} color="#f97316" className="mb-3" />
+                <Text className={`text-center text-gray-600 text-sm mb-4 ${language === 'ar' ? 'font-CairoRegular' : 'font-JakartaRegular'}`}>
+                  {language === 'ar' 
+                    ? 'لم تقم بإضافة أي مواقع بعد. يرجى إضافة موقعك للبدء.' 
+                    : 'You haven\'t added any locations yet. Please add your location to get started.'}
+                </Text>
+                <TouchableOpacity
+                  onPress={handleAddNewLocation}
+                  className="bg-orange-500 p-3 rounded-lg w-full"
+                >
+                  <Text className={`text-center text-white text-sm ${language === 'ar' ? 'font-CairoBold' : 'font-JakartaBold'}`}>
+                    {language === 'ar' ? 'إضافة موقع جديد' : 'Add New Location'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        </View>
+      </Modal>
+    );
+  };
+
   return (
     <SafeAreaView className="flex-1 bg-white">
       {/* <StatusBar style="dark" /> */}
@@ -331,6 +723,10 @@ export default function Home() {
         profileImageUrl={profileImageUrl}
         showSideMenu={true}
       />
+      
+      {/* Location Modal */}
+      <LocationModal />
+
       <FlatList 
         data={[]}
         renderItem={() => null}
@@ -338,42 +734,6 @@ export default function Home() {
         contentContainerStyle={{ paddingTop: 0, paddingBottom: 100 }}
         ListHeaderComponent={
           <>
-            {/* <TouchableOpacity 
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                navigation.navigate('tabs', { screen: 'barriers' });
-              }}
-              className={`bg-orange-50 p-4 rounded-b-[20px] flex-row items-center ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'} justify-between shadow-lg`}
-              style={{
-                elevation: 3,
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.25,
-                shadowRadius: 3.84,
-              }}
-            >
-              <View className="flex-1">
-                <Text className={`text-gray-900 text-lg ${language === 'ar' ? 'font-CairoBold text-right' : 'font-JakartaBold text-left'} mb-1`}>
-                  {t.barriers}
-                </Text>
-                <Text className={`text-gray-600 ${language === 'ar' ? 'font-CairoBold text-right' : 'font-JakartaBold text-left'}`}>
-                  {t.barriersDescription}
-                </Text>
-              </View>
-              <View className="bg-orange-500 px-4 py-2 rounded-full">
-                <Text className={`text-white ${language === 'ar' ? 'font-CairoBold' : 'font-JakartaBold'}`}>
-                  {t.explore}
-                </Text>
-              </View>
-            </TouchableOpacity> */}
-
-            {/* <View className="mt-4">
-              <Text className={`text-xl ${language === 'ar' ? 'font-CairoBold text-right' : 'font-JakartaBold text-left'} mb-2 px-4`}>
-                {language === 'ar' ? 'الرحلات المقترحة' : 'Suggested Rides'}
-              </Text>
-              <SuggestedRidesGrid refreshKey={refreshKey} />
-            </View> */}
-
             <View 
               className="mx-2 mt-5"
               style={Platform.OS === 'android' ? styles.androidShadow : styles.iosShadow}
@@ -398,50 +758,11 @@ export default function Home() {
                 }}
               />
             </View>
-
-            <>
-              <Text className={`text-xl px-3 mt-5 mb-3 ${language === 'ar' ? 'font-CairoBold text-right' : 'font-JakartaBold text-left'}`}>
-                {t.currentLocation}
-              </Text>
-              <View className="flex flex-row items-center px-2 bg-transparent h-[300px]">
-                {isMapLoading ? (
-                  <View className="flex-1 h-full bg-gray-100 rounded-xl items-center justify-center">
-                    <ActivityIndicator size="large" color="#F87000" />
-                  </View>
-                ) : (
-                  <Map key={refreshKey} />
-                )}
-              </View>
-            </>
-
-            {/* {!isCheckingDriver && !isDriver && (
-              <TouchableOpacity 
-                onPress={() => router.push('/(root)/driverInfo')}
-                className={`bg-white p-4 rounded-2xl my-5 flex-row items-center ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'} justify-between shadow-lg`}
-                style={{
-                  elevation: 3,
-                  shadowColor: '#000',
-                  shadowOffset: { width: 0, height: 2 },
-                  shadowOpacity: 0.25,
-                  shadowRadius: 3.84,
-                }}
-              >
-                <View className="flex-1">
-                  <Text className={`text-gray-900 text-lg ${language === 'ar' ? 'font-CairoBold text-right' : 'font-JakartaBold text-left'} mb-1`}>
-                    {t.becomeDriver}
-                  </Text>
-                  <Text className={`text-gray-600 ${language === 'ar' ? 'font-CairoBold text-right' : 'font-JakartaBold text-left'}`}>
-                    {t.earnMoney}
-                  </Text>
-                </View>
-                <View className="bg-orange-500 px-4 py-2 rounded-full">
-                  <Text className={`text-white ${language === 'ar' ? 'font-CairoBold' : 'font-JakartaBold'}`}>
-                    {t.register}
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            )} */}
-
+              {/* Feature Cards Section */}
+              <View className="mt-4 mb-4">
+              
+              <FeatureCards />
+            </View>
             {isDriver && inProgressRides.length > 0 && (
               <>
                 <View className={`flex-row items-center mt-5 mb-3 w-full px-3 ${language === 'ar' ? 'flex-row-reverse justify-between' : 'flex-row justify-between'}`}>
@@ -534,14 +855,6 @@ export default function Home() {
               </View>
             </View>
             <SuggestedRides ref={suggestedRidesRef} />
-
-            {/* Feature Cards Section */}
-            <View className="mt-4 mb-4">
-              <Text className={`text-xl px-3 mb-3 ${language === 'ar' ? 'font-CairoBold text-right' : 'font-JakartaBold text-left'}`}>
-                {language === 'ar' ? 'المميزات الرئيسية' : 'Key Features'}
-              </Text>
-              <FeatureCards />
-            </View>
           </>
         }
         refreshControl={
