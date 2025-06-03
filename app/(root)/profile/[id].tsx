@@ -1136,13 +1136,13 @@ export default function Profile() {
 
                     <View className="space-y-2 bg-white p-3 rounded-lg">
                       <View className={`${flexDirection} items-center`}>
-                        <Image source={icons.pin} className='w-4 h-4' resizeMode='contain' tintColor="green" style={{ marginRight: language === 'ar' ? 0 : 8, marginLeft: language === 'ar' ? 8 : 0 }} />
+                        <Image source={icons.pin} className='w-4 h-4' resizeMode='contain' style={{ marginRight: language === 'ar' ? 0 : 8, marginLeft: language === 'ar' ? 8 : 0 }} />
                         <Text className={`text-sm ${language === 'ar' ? 'font-CairoRegular text-right' : 'font-JakartaRegular text-left'} text-gray-600 flex-1`}>
                           {ride.origin_address}
                         </Text>
                       </View>
                       <View className={`${flexDirection} items-center`}>
-                        <Image source={icons.pin} className='w-4 h-4' resizeMode='contain' tintColor="red" style={{ marginRight: language === 'ar' ? 0 : 8, marginLeft: language === 'ar' ? 8 : 0 }} />
+                        <Image source={icons.target} className='w-4 h-4' resizeMode='contain' style={{ marginRight: language === 'ar' ? 0 : 8, marginLeft: language === 'ar' ? 8 : 0 }} />
                         <Text className={`text-sm ${language === 'ar' ? 'font-CairoRegular text-right' : 'font-JakartaRegular text-left'} text-gray-600 flex-1`}>
                         {ride.destination_address}
                       </Text>

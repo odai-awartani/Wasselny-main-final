@@ -383,6 +383,9 @@ const ProfileEdit = () => {
           : 'There was an error updating notification settings',
         type: 'error',
         onConfirm: () => setAlertConfig({ ...alertConfig, visible: false }),
+        confirmText: language === 'ar' ? 'حسناً' : 'OK',
+        onCancel: undefined,
+        cancelText: undefined
       });
     }
   };
@@ -793,7 +796,7 @@ const ProfileEdit = () => {
       setAlertConfig({
         visible: true,
         title: language === 'ar' ? 'خطأ' : 'Error',
-        message: language === 'ar' ? 'حدث خطأ أثناء تحديث صورة السيارة' : 'Error updating car image',
+        message: language === 'ar' ? 'حدث خطأ أثناء تحديث صورة السيارة' : 'Failed to update car image',
         type: 'error',
         onConfirm: () => setAlertConfig({ ...alertConfig, visible: false }),
         confirmText: language === 'ar' ? 'حسناً' : 'OK',
@@ -1043,7 +1046,7 @@ const ProfileEdit = () => {
       setAlertConfig({
         visible: true,
         title: language === 'ar' ? 'خطأ' : 'Error',
-        message: language === 'ar' ? 'حدث خطأ أثناء تحديث نوع السيارة' : 'Error updating car type',
+        message: language === 'ar' ? 'حدث خطأ أثناء تحديث نوع السيارة' : 'Failed to update car type',
         type: 'error',
         onConfirm: () => setAlertConfig({ ...alertConfig, visible: false }),
         confirmText: language === 'ar' ? 'حسناً' : 'OK',
@@ -1141,7 +1144,7 @@ const ProfileEdit = () => {
           headerTitle: language === 'ar' ? 'تعديل الملف' : 'Profile Edit',
           headerTitleStyle: {
             fontSize: 18,
-            fontFamily: language === 'ar' ? 'Cairo-Bold' : 'PlusJakartaSans-Bold',
+            fontFamily: 'Cairo-Bold',
           },
           headerTitleAlign: 'center',
         }} 
@@ -1207,14 +1210,14 @@ const ProfileEdit = () => {
           </View>
 
           {/* Form Fields */}
-          <View className="mt-8 space-y-6">
+          <View className="mt-6 space-y-6">
             {/* Full Name */}
             <View>
-              <Text className={`text-gray-500 text-[13px] mb-1 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+              <Text className={`text-gray-500 text-[13px] mb-1 font-CairoRegular ${language === 'ar' ? 'text-right' : 'text-left'}`}>
                 {language === 'ar' ? 'الاسم الكامل' : 'Full Name'}
               </Text>
               <View className="bg-white py-3 px-3 border border-gray-200 rounded-md">
-                <Text className={`text-[15px] text-gray-800 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+                <Text className={`text-[15px] text-gray-800 font-CairoMedium ${language === 'ar' ? 'text-right' : 'text-left'}`}>
                   {user?.fullName || (language === 'ar' ? 'غير محدد' : 'Not specified')}
                 </Text>
               </View>
@@ -1222,11 +1225,11 @@ const ProfileEdit = () => {
 
             {/* Email */}
             <View>
-              <Text className={`text-gray-500 text-[13px] mb-1 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+              <Text className={`text-gray-500 text-[13px] mb-1 font-CairoRegular ${language === 'ar' ? 'text-right' : 'text-left'}`}>
                 {language === 'ar' ? 'البريد الإلكتروني' : 'Email Address'}
               </Text>
               <View className="bg-white py-3 px-3 border border-gray-200 rounded-md">
-                <Text className={`text-[15px] text-gray-800 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+                <Text className={`text-[15px] text-gray-800 font-CairoMedium ${language === 'ar' ? 'text-right' : 'text-left'}`}>
                   {user?.primaryEmailAddress?.emailAddress || (language === 'ar' ? 'غير محدد' : 'Not specified')}
                 </Text>
               </View>
@@ -1237,11 +1240,11 @@ const ProfileEdit = () => {
               <>
                 {/* Car Type */}
                 <View>
-                  <Text className={`text-gray-500 text-[13px] mb-1 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+                  <Text className={`text-gray-500 text-[13px] mb-1 mt-4 font-CairoRegular ${language === 'ar' ? 'text-right' : 'text-left'}`}>
                     {language === 'ar' ? 'نوع السيارة' : 'Car Type'}
                   </Text>
                   <View className={`bg-white py-3 px-3 border border-gray-200 rounded-md flex-row justify-between items-center ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
-                    <Text className={`text-[15px] text-gray-800 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+                    <Text className={`text-[15px] text-gray-800 font-CairoMedium ${language === 'ar' ? 'text-right' : 'text-left'}`}>
                       {userData.data?.driver?.car_type || (language === 'ar' ? 'غير محدد' : 'Not specified')}
                     </Text>
                     <TouchableOpacity onPress={() => setShowCarTypeModal(true)}>
@@ -1252,11 +1255,11 @@ const ProfileEdit = () => {
 
                 {/* Car Seats */}
                 <View>
-                  <Text className={`text-gray-500 text-[13px] mb-1 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+                  <Text className={`text-gray-500 text-[13px] mb-1 mt-4 font-CairoRegular ${language === 'ar' ? 'text-right' : 'text-left'}`}>
                     {language === 'ar' ? 'عدد المقاعد' : 'Car Seats'}
                   </Text>
                   <View className={`bg-white py-3 px-3 border border-gray-200 rounded-md flex-row justify-between items-center ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
-                    <Text className={`text-[15px] text-gray-800 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+                    <Text className={`text-[15px] text-gray-800 font-CairoMedium ${language === 'ar' ? 'text-right' : 'text-left'}`}>
                       {userData.data?.driver?.car_seats || '0'}
                     </Text>
                     <TouchableOpacity onPress={() => setShowCarSeatsModal(true)}>
@@ -1269,11 +1272,11 @@ const ProfileEdit = () => {
 
             {/* Phone Number */}
             <View>
-              <Text className={`text-gray-500 text-[13px] mb-1 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+              <Text className={`text-gray-500 text-[13px] mb-1 font-CairoRegular ${language === 'ar' ? 'text-right' : 'text-left'}`}>
                 {language === 'ar' ? 'رقم الهاتف' : 'Phone Number'}
               </Text>
               <View className={`bg-white py-3 px-3 border border-gray-200 rounded-md flex-row justify-between items-center ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
-                <Text className={`text-[15px] text-gray-800 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+                <Text className={`text-[15px] text-gray-800 font-CairoMedium ${language === 'ar' ? 'text-right' : 'text-left'}`}>
                   {phoneNumber}
                 </Text>
                 <TouchableOpacity onPress={() => setShowPhoneModal(true)}>
@@ -1290,7 +1293,7 @@ const ProfileEdit = () => {
               <View className={`w-9 h-9 rounded-full bg-orange-500 items-center justify-center ${language === 'ar' ? 'ml-3.5' : 'mr-3.5'}`}>
                 <MaterialIcons name="lock" size={22} color="#fff" />
               </View>
-              <Text className={`text-base font-bold text-gray-800 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+              <Text className={`text-base font-CairoBold text-gray-800 mt-2 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
                 {language === 'ar' ? 'تغيير كلمة المرور' : 'Change Password'}
               </Text>
             </TouchableOpacity>
@@ -1306,7 +1309,7 @@ const ProfileEdit = () => {
         >
           <View className="flex-1 bg-black/50 justify-center items-center p-4">
             <View className="bg-white rounded-2xl w-full max-w-sm p-6">
-              <Text className={`text-lg font-bold mb-4 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+              <Text className={`text-lg font-CairoBold mb-4 font-CairoMedium ${language === 'ar' ? 'text-right' : 'text-left'}`}>
                 {editingField === 'carType' 
                   ? (language === 'ar' ? 'تعديل نوع السيارة' : 'Edit Car Type')
                   : editingField === 'carSeats'
@@ -1316,7 +1319,7 @@ const ProfileEdit = () => {
               <TextInput
                 value={editValue}
                 onChangeText={setEditValue}
-                className={`bg-gray-50 rounded-xl p-4 mb-4 ${language === 'ar' ? 'text-right' : 'text-left'}`}
+                className={`bg-gray-50 rounded-xl p-4 mb-4 font-CairoRegular ${language === 'ar' ? 'text-right' : 'text-left'}`}
                 placeholder={
                   editingField === 'carType'
                     ? (language === 'ar' ? 'أدخل نوع السيارة' : 'Enter car type')
@@ -1336,7 +1339,7 @@ const ProfileEdit = () => {
                   }}
                   className="px-4 py-2 rounded-lg"
                 >
-                  <Text className="text-gray-600">
+                  <Text className="text-gray-600 font-CairoMedium">
                     {language === 'ar' ? 'إلغاء' : 'Cancel'}
                   </Text>
                 </TouchableOpacity>
@@ -1344,7 +1347,7 @@ const ProfileEdit = () => {
                   onPress={handleSaveEdit}
                   className="bg-orange-500 px-4 py-2 rounded-lg"
                 >
-                  <Text className="text-white">
+                  <Text className="text-white font-CairoMedium">
                     {language === 'ar' ? 'حفظ' : 'Save'}
                   </Text>
                 </TouchableOpacity>
@@ -1362,28 +1365,31 @@ const ProfileEdit = () => {
         >
           <View className="flex-1 bg-black/50 justify-center items-center p-4">
             <View className="bg-white rounded-2xl w-full max-w-sm p-6">
-              <Text className={`text-lg font-bold mb-4 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+              <Text className={`text-lg font-CairoBold mb-4 font-CairoMedium ${language === 'ar' ? 'text-right' : 'text-left'}`}>
                 {language === 'ar' ? 'تغيير كلمة المرور' : 'Change Password'}
               </Text>
               <TextInput
                 value={passwordData.currentPassword}
                 onChangeText={(text) => setPasswordData(prev => ({ ...prev, currentPassword: text }))}
-                className={`bg-gray-50 rounded-xl p-4 mb-4 ${language === 'ar' ? 'text-right' : 'text-left'}`}
+                className={`bg-gray-50 rounded-xl p-4 mb-4 font-CairoRegular ${language === 'ar' ? 'text-right' : 'text-left'}`}
                 placeholder={language === 'ar' ? 'كلمة المرور الحالية' : 'Current Password'}
+                placeholderTextColor="#9CA3AF"
                 secureTextEntry
               />
               <TextInput
                 value={passwordData.newPassword}
                 onChangeText={(text) => setPasswordData(prev => ({ ...prev, newPassword: text }))}
-                className={`bg-gray-50 rounded-xl p-4 mb-4 ${language === 'ar' ? 'text-right' : 'text-left'}`}
+                className={`bg-gray-50 rounded-xl p-4 mb-4 font-CairoRegular ${language === 'ar' ? 'text-right' : 'text-left'}`}
                 placeholder={language === 'ar' ? 'كلمة المرور الجديدة' : 'New Password'}
+                placeholderTextColor="#9CA3AF"
                 secureTextEntry
               />
               <TextInput
                 value={passwordData.confirmPassword}
                 onChangeText={(text) => setPasswordData(prev => ({ ...prev, confirmPassword: text }))}
-                className={`bg-gray-50 rounded-xl p-4 mb-4 ${language === 'ar' ? 'text-right' : 'text-left'}`}
+                className={`bg-gray-50 rounded-xl p-4 mb-4 font-CairoRegular ${language === 'ar' ? 'text-right' : 'text-left'}`}
                 placeholder={language === 'ar' ? 'تأكيد كلمة المرور الجديدة' : 'Confirm New Password'}
+                placeholderTextColor="#9CA3AF"
                 secureTextEntry
               />
               <View className="flex-row justify-end space-x-2">
@@ -1391,7 +1397,7 @@ const ProfileEdit = () => {
                   onPress={() => setShowChangePassword(false)}
                   className="px-4 py-2 rounded-lg"
                 >
-                  <Text className="text-gray-600">
+                  <Text className="text-gray-600 font-CairoMedium">
                     {language === 'ar' ? 'إلغاء' : 'Cancel'}
                   </Text>
                 </TouchableOpacity>
@@ -1403,7 +1409,7 @@ const ProfileEdit = () => {
                   {isChangingPassword ? (
                     <ActivityIndicator color="white" />
                   ) : (
-                    <Text className="text-white">
+                    <Text className="text-white font-CairoMedium">
                       {language === 'ar' ? 'حفظ' : 'Save'}
                     </Text>
                   )}
@@ -1422,26 +1428,26 @@ const ProfileEdit = () => {
         >
           <View className="flex-1 bg-black/50 justify-center items-center p-4">
             <View className="bg-white rounded-2xl w-full max-w-sm p-6">
-              <Text className={`text-lg font-bold mb-4 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+              <Text className={`text-lg font-CairoBold mb-4 font-CairoMedium ${language === 'ar' ? 'text-right' : 'text-left'}`}>
                 {language === 'ar' ? 'تحديث رقم الهاتف' : 'Update Phone Number'}
               </Text>
               
               <View className="mb-4">
-                <Text className={`text-sm text-gray-500 mb-2 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+                <Text className={`text-sm text-gray-500 mb-2 font-CairoRegular ${language === 'ar' ? 'text-right' : 'text-left'}`}>
                   {language === 'ar' ? 'الرقم الحالي' : 'Current Number'}
                 </Text>
-                <Text className={`text-base text-gray-800 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+                <Text className={`text-base text-gray-800 font-CairoMedium ${language === 'ar' ? 'text-right' : 'text-left'}`}>
                   {phoneNumber}
                 </Text>
               </View>
 
               <View className="mb-4">
-                <Text className={`text-sm text-gray-500 mb-2 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+                <Text className={`text-sm text-gray-500 mb-2 font-CairoRegular ${language === 'ar' ? 'text-right' : 'text-left'}`}>
                   {language === 'ar' ? 'رقم الهاتف الجديد' : 'New Phone Number'}
                 </Text>
                 <View className={`flex-row items-center bg-gray-50 rounded-xl overflow-hidden ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
                   <View className="bg-gray-200 px-4 py-4">
-                    <Text className="text-gray-700 font-medium">+972</Text>
+                    <Text className="text-gray-700 font-CairoMedium">+972</Text>
                   </View>
                   <TextInput
                     value={newPhoneNumber}
@@ -1451,14 +1457,14 @@ const ProfileEdit = () => {
                       // Limit to 9 digits
                       setNewPhoneNumber(cleaned.slice(0, 9));
                     }}
-                    className={`flex-1 p-4 ${language === 'ar' ? 'text-right' : 'text-left'}`}
+                    className={`flex-1 p-4 font-CairoRegular ${language === 'ar' ? 'text-right' : 'text-left'}`}
                     placeholder={language === 'ar' ? 'أدخل الرقم' : 'Enter number'}
                     keyboardType="number-pad"
                     maxLength={9}
                     autoFocus
                   />
                 </View>
-                <Text className={`text-xs text-gray-500 mt-2 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+                <Text className={`text-xs text-gray-500 mt-2 font-CairoRegular ${language === 'ar' ? 'text-right' : 'text-left'}`}>
                   {language === 'ar' 
                     ? 'أدخل 9 أرقام بعد +972' 
                     : 'Enter 9 digits after +972'}
@@ -1473,7 +1479,7 @@ const ProfileEdit = () => {
                   }}
                   className="px-4 py-2 rounded-lg"
                 >
-                  <Text className="text-gray-600">
+                  <Text className="text-gray-600 font-CairoMedium">
                     {language === 'ar' ? 'إلغاء' : 'Cancel'}
                   </Text>
                 </TouchableOpacity>
@@ -1485,7 +1491,7 @@ const ProfileEdit = () => {
                   {isUpdatingPhone ? (
                     <ActivityIndicator color="white" />
                   ) : (
-                    <Text className="text-white">
+                    <Text className="text-white font-CairoMedium">
                       {language === 'ar' ? 'حفظ' : 'Save'}
                     </Text>
                   )}
@@ -1504,15 +1510,15 @@ const ProfileEdit = () => {
         >
           <View className="flex-1 bg-black/50 justify-center items-center p-4">
             <View className="bg-white rounded-2xl w-full max-w-sm p-6">
-              <Text className={`text-lg font-bold mb-4 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+              <Text className={`text-lg font-CairoBold mb-4 font-CairoMedium ${language === 'ar' ? 'text-right' : 'text-left'}`}>
                 {language === 'ar' ? 'تحديث نوع السيارة' : 'Update Car Type'}
               </Text>
               
               <View className="mb-4">
-                <Text className={`text-sm text-gray-500 mb-2 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+                <Text className={`text-sm text-gray-500 mb-2 font-CairoRegular ${language === 'ar' ? 'text-right' : 'text-left'}`}>
                   {language === 'ar' ? 'النوع الحالي' : 'Current Type'}
                 </Text>
-                <Text className={`text-base text-gray-800 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+                <Text className={`text-base text-gray-800 font-CairoMedium ${language === 'ar' ? 'text-right' : 'text-left'}`}>
                   {userData.data?.driver?.car_type || (language === 'ar' ? 'غير محدد' : 'Not specified')}
                 </Text>
               </View>
@@ -1520,7 +1526,7 @@ const ProfileEdit = () => {
               <TextInput
                 value={newCarType}
                 onChangeText={setNewCarType}
-                className={`bg-gray-50 rounded-xl p-4 mb-4 ${language === 'ar' ? 'text-right' : 'text-left'}`}
+                className={`bg-gray-50 rounded-xl p-4 mb-4 font-CairoRegular ${language === 'ar' ? 'text-right' : 'text-left'}`}
                 placeholder={language === 'ar' ? 'أدخل نوع السيارة الجديد' : 'Enter new car type'}
                 autoFocus
               />
@@ -1533,7 +1539,7 @@ const ProfileEdit = () => {
                   }}
                   className="px-4 py-2 rounded-lg"
                 >
-                  <Text className="text-gray-600">
+                  <Text className="text-gray-600 font-CairoMedium">
                     {language === 'ar' ? 'إلغاء' : 'Cancel'}
                   </Text>
                 </TouchableOpacity>
@@ -1545,7 +1551,7 @@ const ProfileEdit = () => {
                   {isUpdatingCar ? (
                     <ActivityIndicator color="white" />
                   ) : (
-                    <Text className="text-white">
+                    <Text className="text-white font-CairoMedium">
                       {language === 'ar' ? 'حفظ' : 'Save'}
                     </Text>
                   )}
@@ -1564,15 +1570,15 @@ const ProfileEdit = () => {
         >
           <View className="flex-1 bg-black/50 justify-center items-center p-4">
             <View className="bg-white rounded-2xl w-full max-w-sm p-6">
-              <Text className={`text-lg font-bold mb-4 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+              <Text className={`text-lg font-CairoBold mb-4 font-CairoMedium ${language === 'ar' ? 'text-right' : 'text-left'}`}>
                 {language === 'ar' ? 'تحديث عدد المقاعد' : 'Update Car Seats'}
               </Text>
               
               <View className="mb-4">
-                <Text className={`text-sm text-gray-500 mb-2 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+                <Text className={`text-sm text-gray-500 mb-2 font-CairoRegular ${language === 'ar' ? 'text-right' : 'text-left'}`}>
                   {language === 'ar' ? 'العدد الحالي' : 'Current Seats'}
                 </Text>
-                <Text className={`text-base text-gray-800 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+                <Text className={`text-base text-gray-800 font-CairoMedium ${language === 'ar' ? 'text-right' : 'text-left'}`}>
                   {userData.data?.driver?.car_seats || '0'}
                 </Text>
               </View>
@@ -1580,14 +1586,14 @@ const ProfileEdit = () => {
               <TextInput
                 value={newCarSeats}
                 onChangeText={setNewCarSeats}
-                className={`bg-gray-50 rounded-xl p-4 mb-4 ${language === 'ar' ? 'text-right' : 'text-left'}`}
+                className={`bg-gray-50 rounded-xl p-4 mb-4 font-CairoRegular ${language === 'ar' ? 'text-right' : 'text-left'}`}
                 placeholder={language === 'ar' ? 'أدخل عدد المقاعد الجديد' : 'Enter new number of seats'}
                 keyboardType="number-pad"
                 maxLength={2}
                 autoFocus
               />
 
-              <Text className={`text-xs text-gray-500 mb-4 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+              <Text className={`text-xs text-gray-500 mb-4 font-CairoRegular ${language === 'ar' ? 'text-right' : 'text-left'}`}>
                 {language === 'ar' 
                   ? 'يجب أن يكون العدد بين 1 و 10' 
                   : 'Number must be between 1 and 10'}
@@ -1601,7 +1607,7 @@ const ProfileEdit = () => {
                   }}
                   className="px-4 py-2 rounded-lg"
                 >
-                  <Text className="text-gray-600">
+                  <Text className="text-gray-600 font-CairoMedium">
                     {language === 'ar' ? 'إلغاء' : 'Cancel'}
                   </Text>
                 </TouchableOpacity>
@@ -1613,7 +1619,7 @@ const ProfileEdit = () => {
                   {isUpdatingCar ? (
                     <ActivityIndicator color="white" />
                   ) : (
-                    <Text className="text-white">
+                    <Text className="text-white font-CairoMedium">
                       {language === 'ar' ? 'حفظ' : 'Save'}
                     </Text>
                   )}
