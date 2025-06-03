@@ -16,6 +16,7 @@ import Modal from 'react-native-modal'
 import debounce from 'lodash/debounce'
 import Animated, { FadeIn } from 'react-native-reanimated'
 import { MaterialIcons } from '@expo/vector-icons'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 
 // Constants
 const MAX_DISTANCE_KM = 500
@@ -134,6 +135,22 @@ const normalizeGender = (gender: string | undefined): string | undefined => {
   return normalized;
 };
 
+const styles = StyleSheet.create({
+  androidShadow: {
+    elevation: 8,
+    backgroundColor: 'white',
+    borderRadius: 20,
+  },
+  iosShadow: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    backgroundColor: 'white',
+    borderRadius: 20,
+  },
+})
+
 const Search = () => {
   const router = useRouter()
   const params = useLocalSearchParams()
@@ -163,6 +180,57 @@ const Search = () => {
   const searchTimeout = useRef<NodeJS.Timeout | null>(null)
   const [currentIndex, setCurrentIndex] = useState(0)
   const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null)
+  const [recentSearches, setRecentSearches] = useState<string[]>([]);
+  const [isSearchInputFocused, setIsSearchInputFocused] = useState(false);
+  const searchInputRef = useRef<TextInput>(null);
+  const isRemovingRef = useRef(false);
+
+  // Function to save a recent search
+  const saveRecentSearch = async (query: string) => {
+    if (!query.trim()) return;
+    try {
+      let searches = await AsyncStorage.getItem('recent_searches');
+      let recent = searches ? JSON.parse(searches) : [];
+      
+      // Add new query to the front if not already present
+      recent = [query, ...recent.filter((item: string) => item !== query)];
+      
+      // Keep only the last 5 searches
+      recent = recent.slice(0, 5);
+      
+      await AsyncStorage.setItem('recent_searches', JSON.stringify(recent));
+      setRecentSearches(recent);
+    } catch (e) {
+      console.error('Error saving recent search:', e);
+    }
+  };
+
+  // Function to load recent searches
+  const loadRecentSearches = async () => {
+    try {
+      const searches = await AsyncStorage.getItem('recent_searches');
+      if (searches) {
+        setRecentSearches(JSON.parse(searches));
+      }
+    } catch (e) {
+      console.error('Error loading recent searches:', e);
+    }
+  };
+
+  // Function to remove a recent search
+  const removeRecentSearch = async (query: string) => {
+    try {
+      let searches = await AsyncStorage.getItem('recent_searches');
+      if (searches) {
+        let recent = JSON.parse(searches);
+        recent = recent.filter((item: string) => item !== query);
+        await AsyncStorage.setItem('recent_searches', JSON.stringify(recent));
+        setRecentSearches(recent);
+      }
+    } catch (e) {
+      console.error('Error removing recent search:', e);
+    }
+  };
 
   // Fetch user profile image
   useEffect(() => {
@@ -188,6 +256,8 @@ const Search = () => {
       setSearchQuery(params.searchQuery as string)
       handleSearch(params.searchQuery as string)
     }
+    // Load recent searches on mount
+    loadRecentSearches();
   }, [params.searchQuery])
 
   // Fetch user location
@@ -325,7 +395,15 @@ const Search = () => {
           item.destination?.toLowerCase().includes(searchText.replace('ة', 'ه')) ||
           item.destination?.toLowerCase().includes(searchText.replace('ه', 'ة'))
         const nameMatch = item.name?.toLowerCase().includes(searchText)
-        return originMatch || destMatch || nameMatch
+
+        // Add waypoint matching
+        const waypointMatch = item.waypoints?.some(waypoint =>
+          waypoint.address.toLowerCase().includes(searchText) ||
+          waypoint.address.toLowerCase().includes(searchText.replace('ة', 'ه')) ||
+          waypoint.address.toLowerCase().includes(searchText.replace('ه', 'ة'))
+        );
+
+        return originMatch || destMatch || nameMatch || waypointMatch;
       })
     }
 
@@ -474,6 +552,8 @@ const Search = () => {
   // Handle search
   const handleSearch = useCallback(async (text: string) => {
     setSearchQuery(text)
+    // Save the search query
+    saveRecentSearch(text);
     if (!text.trim()) {
       // When search is cleared, show all results
       const filteredResults = applyFilters(allResults)
@@ -494,7 +574,7 @@ const Search = () => {
     } finally {
       setLoading(false)
     }
-  }, [allResults, applyFilters])
+  }, [allResults, applyFilters, saveRecentSearch])
 
   // Load more results
   const handleLoadMore = useCallback(() => {
@@ -1170,33 +1250,79 @@ const Search = () => {
     <SafeAreaView className="flex-1 bg-white">
       <Header profileImageUrl={profileImageUrl} title={t.Search} />
       <View className="px-4 py-3 bg-white border-b border-gray-100">
-        <View className={`flex-row items-center ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
-          <View className="flex-1 flex-row items-center bg-gray-50 rounded-full px-4 py-2">
-            <Image source={icons.search} className={`w-5 h-5 ${language === 'ar' ? 'ml-2' : 'mr-2'}`} tintColor="#6B7280" />
-            <TextInput
-              placeholder={language === 'ar' ? 'ابحث عن رحلات' : 'Search for rides'}
-              value={searchQuery}
-              onChangeText={handleSearchInput}
-              className={`flex-1 ${language === 'ar' ? 'text-right' : 'text-left'} ${language === 'ar' ? 'font-CairoBold' : 'font-JakartaBold'} text-gray-700`}
-              placeholderTextColor="#9CA3AF"
-              autoFocus={true}
-              textAlign={language === 'ar' ? 'right' : 'left'}
-            />
-          </View>
-          <TouchableOpacity
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
-              setShowFilters(true)
+        <View
+          className="flex-row items-center bg-gray-50 rounded-full px-4 py-2 mx-2 mt-5"
+          style={Platform.OS === 'android' ? styles.androidShadow : styles.iosShadow}
+        >
+          <Image source={icons.search} className={`w-5 h-5 ${language === 'ar' ? 'ml-2' : 'mr-2'}`} tintColor="#6B7280" />
+          <TextInput
+            placeholder={language === 'ar' ? 'ابحث عن رحلات' : 'Search for rides'}
+            value={searchQuery}
+            onChangeText={handleSearchInput}
+            className={`flex-1 ${language === 'ar' ? 'text-right' : 'text-left'} ${language === 'ar' ? 'font-CairoBold' : 'font-JakartaBold'} text-gray-700`}
+            placeholderTextColor="#9CA3AF"
+            autoFocus={true}
+            textAlign={language === 'ar' ? 'right' : 'left'}
+            onFocus={() => setIsSearchInputFocused(true)}
+            onBlur={() => {
+              // Add a small delay before hiding to allow taps on recent searches
+              // Check if we are currently in the process of removing an item
+              if (isRemovingRef.current) {
+                // If removing, don't hide the list immediately
+                isRemovingRef.current = false; // Reset flag
+                // Optionally refocus here if needed, but the onBlur delay should handle it
+                // searchInputRef.current?.focus();
+              } else {
+                // If not removing, hide the list after the delay
+                setTimeout(() => setIsSearchInputFocused(false), 200);
+              }
             }}
-            className={`bg-gray-50 p-2 rounded-full ${language === 'ar' ? 'ml-2' : 'mr-2'}`}
-          >
-            <Image source={icons.filter} className="w-6 h-6" tintColor="#6B7280" />
-          </TouchableOpacity>
+            ref={searchInputRef}
+          />
         </View>
 
+        {isSearchInputFocused && recentSearches.length > 0 && (
+          <View className="px-4 mt-2 max-h-[200px]">
+            <Text className={`text-sm text-gray-500 mb-2 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+              {language === 'ar' ? 'عمليات البحث الأخيرة' : 'Recent Searches'}
+            </Text>
+            <ScrollView keyboardShouldPersistTaps="always">
+              {recentSearches.map((query, index) => (
+                <TouchableOpacity
+                  key={index}
+                  onPress={(event) => {
+                    // Prevent the touch event from causing the input to blur
+                    setSearchQuery(query);
+                    handleSearch(query);
+                    // Hide the recent searches after tapping one
+                    setIsSearchInputFocused(false);
+                  }}
+                  className={`flex-row items-center justify-between py-2 border-b border-gray-100 ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}
+                >
+                  <Text className={`flex-1 text-gray-700 ${language === 'ar' ? 'font-CairoMedium text-right' : 'font-JakartaMedium text-left'}`} numberOfLines={1}>
+                    {query}
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => {
+                      // Set a flag to indicate that we are removing an item
+                      isRemovingRef.current = true;
+                      removeRecentSearch(query);
+                      // A small delay before allowing onBlur to trigger
+                      setTimeout(() => isRemovingRef.current = false, 100);
+                    }}
+                    className={`p-1 ${language === 'ar' ? 'mr-2' : 'ml-2'}`}
+                  >
+                    <MaterialIcons name="close" size={16} color="#9CA3AF" />
+                  </TouchableOpacity>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        )}
+
         {/* Date Filter Buttons */}
-        <ScrollView 
-          horizontal 
+        <ScrollView
+          horizontal
           showsHorizontalScrollIndicator={false}
           className="mt-4"
         >
@@ -1210,6 +1336,7 @@ const Search = () => {
             {renderFilterButton(FILTERS.DAY_5, getFormattedDate(5))}
           </View>
         </ScrollView>
+
       </View>
 
       <View className="flex-1 px-4">
@@ -1264,12 +1391,3 @@ const Search = () => {
 }
 
 export default Search
-
-const styles = StyleSheet.create({
-  iosShadow: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-  },
-})
