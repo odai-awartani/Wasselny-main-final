@@ -37,7 +37,7 @@ const InputField = ({
 
       {/* Input Container */}
       <View
-        className={`flex flex-row justify-start items-center relative bg-neutral-100 rounded-full border border-neutral-100 focus:border-orange-500 ${containerStyle}`}
+        className={`flex flex-row justify-start items-center relative bg-neutral-100 rounded-xl border border-gray-300 ${containerStyle}`}
       >
         {/* Country Code (لحقل رقم الهاتف فقط) */}
         {isPhoneNumber && (

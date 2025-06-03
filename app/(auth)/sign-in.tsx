@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, Modal, ScrollView, Image, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, Modal, ScrollView, Image, Alert, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import InputField from '@/components/InputField'; // استيراد InputField
 import { useLanguage } from '@/context/LanguageContext';
@@ -95,7 +95,17 @@ const SignIn = () => {
               {t.welcome}
             </Text>
           </View>
-          <View className="-pt-1 px-5 pb-10">
+          {/* Main Form Container with Subtle Border from CreateRideStepper */}
+          <View className="p-6 bg-white rounded-xl border border-gray-100 shadow-sm mx-4 mt-4"
+            style={{
+              elevation: Platform.OS === "android" ? 6 : 0,
+              shadowColor: "#000",
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.15,
+              shadowRadius: 3,
+              overflow: "visible", // Important for shadow on iOS
+            }}
+          >
             {/* حقل البريد الإلكتروني */}
             <InputField
               label={t.email}
