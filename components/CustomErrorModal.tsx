@@ -1,12 +1,14 @@
 import React from 'react';
 import { Modal, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import { TranslationKeys } from '@/constants/languages';
 
 interface CustomErrorModalProps {
   visible: boolean;
   message: string;
   onClose: () => void;
   title?: string;
+  t: TranslationKeys;
 }
 
 const CustomErrorModal: React.FC<CustomErrorModalProps> = ({
@@ -14,6 +16,7 @@ const CustomErrorModal: React.FC<CustomErrorModalProps> = ({
   message,
   onClose,
   title = 'Error',
+  t,
 }) => {
   if (!visible) {
     return null;
@@ -39,7 +42,7 @@ const CustomErrorModal: React.FC<CustomErrorModalProps> = ({
             onPress={onClose}
             className="bg-orange-500 py-3 rounded-xl items-center"
           >
-            <Text className="text-white font-CairoBold text-lg">OK</Text>
+            <Text className="text-white font-CairoBold text-lg">{t.ok}</Text>
           </TouchableOpacity>
         </View>
       </View>

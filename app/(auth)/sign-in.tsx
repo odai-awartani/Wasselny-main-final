@@ -9,6 +9,7 @@ import { Link, router } from 'expo-router';
 import { useSignIn } from '@clerk/clerk-expo'; // استيراد useSignIn من Clerk
 import { StatusBar } from 'expo-status-bar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import CustomErrorModal from '@/components/CustomErrorModal';
 
 const SignIn = () => {
   const { t, language } = useLanguage();
@@ -17,43 +18,12 @@ const SignIn = () => {
     email: '',
     password: '',
   });
-  const [showError, setShowError] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
-
-  const CustomErrorAlert = ({ visible, message, onClose }: { visible: boolean; message: string; onClose: () => void }) => (
-    <Modal
-      transparent
-      visible={visible}
-      animationType="fade"
-      onRequestClose={onClose}
-    >
-      <View className="flex-1 justify-center items-center bg-black/50">
-        <View className={`bg-orange-50 rounded-2xl p-5 m-4 w-[90%] max-w-[400px] ${language === 'ar' ? 'items-end' : 'items-start'}`}>
-          <View className={`flex-row items-center ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'} mb-2`}>
-            <MaterialCommunityIcons name="alert-circle" size={24} color="#F97316" />
-            <Text className={`text-orange-600 font-bold mx-2 ${language === 'ar' ? 'font-CairoBold text-right' : 'font-JakartaBold text-left'}`}>
-              {t.error}
-            </Text>
-          </View>
-          <Text className={`text-orange-700 mb-4 ${language === 'ar' ? 'font-CairoRegular text-right' : 'font-JakartaRegular text-left'}`}>
-            {message}
-          </Text>
-          <TouchableOpacity
-            onPress={onClose}
-            className="bg-orange-100 px-6 py-2 rounded-full self-end"
-          >
-            <Text className={`text-white ${language === 'ar' ? 'font-CairoBold' : 'font-JakartaBold'}`}>
-              {t.ok}
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </Modal>
-  );
+  const [showCustomErrorModal, setShowCustomErrorModal] = useState(false);
+  const [customErrorMessage, setCustomErrorMessage] = useState('');
 
   const showErrorAlert = (message: string) => {
-    setErrorMessage(message);
-    setShowError(true);
+    setCustomErrorMessage(message);
+    setShowCustomErrorModal(true);
   };
 
   const onSignInPress = async () => {
@@ -65,23 +35,51 @@ const SignIn = () => {
     }
 
     try {
-      // محاولة تسجيل الدخول
       const completeSignIn = await signIn.create({
         identifier: form.email,
         password: form.password,
       });
 
       if (completeSignIn.status === 'complete') {
-        // تم تسجيل الدخول بنجاح
         await setActive({ session: completeSignIn.createdSessionId });
-        router.replace('/home'); // الانتقال إلى الصفحة الرئيسية
+        router.replace('/home');
       } else {
-        // في حالة وجود خطأ
+        // This part might be reached for other statuses, though 'complete' is the main one.
+        // We can still show a generic failed message here.
         showErrorAlert(t.signInFailed);
       }
     } catch (err: any) {
       console.error('Error during sign in:', err);
-      showErrorAlert(err.errors[0].longMessage);
+      // Check for specific Clerk error codes or messages
+      let errorMessageKey = t.signInFailed; // Default to generic failed message
+
+      if (err.errors && err.errors.length > 0) {
+        const clerkErrorCode = err.errors[0].code;
+
+        switch (clerkErrorCode) {
+          case 'form_password_incorrect':
+            errorMessageKey = t.incorrectPassword;
+            break;
+          case 'form_identifier_not_found':
+            errorMessageKey = t.userNotFound;
+            break;
+          case 'form_identifier_invalid':
+            errorMessageKey = t.identifierInvalid;
+            break;
+          // Add other specific Clerk error codes as needed
+          default:
+            // Explicitly check for known English error messages from Clerk
+            if (err.errors[0].longMessage === 'Identifier is invalid.') {
+              errorMessageKey = t.identifierInvalid;
+            } else {
+              // Fallback to Clerk's long message or a generic translated message
+              errorMessageKey = err.errors[0].longMessage || t.signInFailed;
+            }
+            break;
+        }
+      }
+
+      showErrorAlert(errorMessageKey);
     }
   };
 
@@ -151,13 +149,15 @@ const SignIn = () => {
             </View>
           </View>
         </View>
+        <CustomErrorModal
+          visible={showCustomErrorModal}
+          message={customErrorMessage}
+          onClose={() => setShowCustomErrorModal(false)}
+          title={t.error}
+          t={t}
+        />
         <StatusBar backgroundColor="#fff" style="dark" />
       </ScrollView>
-      <CustomErrorAlert
-        visible={showError}
-        message={errorMessage}
-        onClose={() => setShowError(false)}
-      />
     </>
   );
 };

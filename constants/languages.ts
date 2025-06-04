@@ -347,6 +347,10 @@ export interface TranslationKeys {
   minutesAgo: string;
   minuteAgo: string;
   locationUpdatedSuccessfully: string;
+  incorrectPassword: string;
+  userNotFound: string;
+  identifierInvalid: string;
+  invalidCode: string;
 }
 
 export interface Translations {
@@ -728,6 +732,10 @@ export const translations: Translations = {
     minutesAgo: "دقائق مضت",
     minuteAgo: "دقيقة مضت",
     locationUpdatedSuccessfully: "تم تحديث الموقع بنجاح",
+    incorrectPassword: "كلمة السر غير صحيحة. حاول مرة أخرى.",
+    userNotFound: "لم يتم العثور على حساب بهذا البريد الإلكتروني.",
+    identifierInvalid: "البريد الإلكتروني غير صحيح.",
+    invalidCode: "رمز التحقق غير صحيح أو منتهي الصلاحية.",
   },
   en: {
     chooseLanguage: "Choose Language",
@@ -836,7 +844,7 @@ export const translations: Translations = {
     currentLocation: "Current Location",
     becomeDriver: "Become a Driver",
     earnMoney: "Earn money by providing rides",
-        register: "Register",
+    register: "Register",
     searchPlaceholder: "Where do you want to go?",
     searchError: "No results found",
     registerDriver: "Register as Driver",
@@ -1102,5 +1110,9 @@ export const translations: Translations = {
     minutesAgo: "minutes ago",
     minuteAgo: "minute ago",
     locationUpdatedSuccessfully: "Location updated successfully",
+    incorrectPassword: "Password is incorrect. Try again.",
+    userNotFound: "Couldn't find your account.",
+    identifierInvalid: "Identifier is invalid.",
+    invalidCode: "رمز التحقق غير صحيح أو منتهي الصلاحية.",
   },
 };

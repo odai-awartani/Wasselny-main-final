@@ -1,32 +1,40 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, Alert, Modal, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import InputField from '@/components/InputField';
 import { useLanguage } from '@/context/LanguageContext';
 import CustomButton from '@/components/CustomButton';
 import { icons, images } from '@/constants';
 import { Link, router, useLocalSearchParams } from 'expo-router';
-import { useSignIn, useAuth } from '@clerk/clerk-expo'; // استيراد useAuth
+import { useSignIn, useAuth } from '@clerk/clerk-expo';
 import { StatusBar } from 'expo-status-bar';
+import CustomErrorModal from '@/components/CustomErrorModal';
 
 const ResetPassword = () => {
   const { t, language } = useLanguage();
   const { isLoaded, signIn } = useSignIn();
-  const { signOut } = useAuth(); // استخدام useAuth لتسجيل الخروج
+  const { signOut } = useAuth();
   const { email } = useLocalSearchParams();
   const [code, setCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
+  const [showCustomErrorModal, setShowCustomErrorModal] = useState(false);
+  const [customErrorMessage, setCustomErrorMessage] = useState('');
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+
+  const showErrorAlert = (message: string) => {
+    setCustomErrorMessage(message);
+    setShowCustomErrorModal(true);
+  };
 
   const onResetPasswordPress = async () => {
     if (!isLoaded) return;
 
     if (!code || !newPassword) {
-      Alert.alert(t.error, t.fillAllFields);
+      showErrorAlert(t.fillAllFields);
       return;
     }
 
     try {
-      // محاولة إعادة تعيين كلمة المرور باستخدام الرمز
       const result = await signIn.attemptFirstFactor({
         strategy: 'reset_password_email_code',
         code,
@@ -34,22 +42,36 @@ const ResetPassword = () => {
       });
 
       if (result.status === 'complete') {
-        // تم إعادة تعيين كلمة المرور بنجاح
-        Alert.alert(t.success, t.passwordResetSuccess); // عرض رسالة نجاح
-
-        // تسجيل خروج المستخدم تلقائيًا
-        await signOut();
-
-        // توجيه المستخدم إلى صفحة تسجيل الدخول
-        router.replace('/sign-in');
+        setShowSuccessModal(true);
       } else {
-        // في حالة وجود خطأ
-        Alert.alert(t.error, t.passwordResetFailed);
+        showErrorAlert(t.passwordResetFailed);
       }
     } catch (err: any) {
       console.error('Error during reset password:', err);
-      Alert.alert(t.error, err.errors[0].longMessage);
+      let errorMessageKey = t.passwordResetFailed;
+
+      if (err.errors && err.errors.length > 0) {
+        const clerkErrorCode = err.errors[0].code;
+
+        switch (clerkErrorCode) {
+          case 'form_code_expired':
+          case 'form_code_incorrect':
+            errorMessageKey = t.invalidCode;
+            break;
+          default:
+            errorMessageKey = err.errors[0].longMessage || t.passwordResetFailed;
+            break;
+        }
+      }
+
+      showErrorAlert(errorMessageKey);
     }
+  };
+
+  const handleSuccessModalClose = async () => {
+    setShowSuccessModal(false);
+    await signOut();
+    router.replace('/sign-in');
   };
 
   return (
@@ -101,8 +123,44 @@ const ResetPassword = () => {
           </Text>
         </TouchableOpacity>
       </View>
-    <StatusBar backgroundColor="#fff" style="dark" />
-      
+      <StatusBar backgroundColor="#fff" style="dark" />
+
+      <CustomErrorModal
+        visible={showCustomErrorModal}
+        message={customErrorMessage}
+        onClose={() => setShowCustomErrorModal(false)}
+        title={t.error}
+        t={t}
+      />
+
+      <Modal
+        visible={showSuccessModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={handleSuccessModalClose}
+      >
+        <View className="flex-1 justify-center items-center bg-black/50">
+          <View className="bg-white p-7 rounded-2xl min-h-[300px] w-11/12">
+            <Image
+              source={images.check}
+              className="w-[110px] h-[110px] mx-auto my-5"
+              accessibilityLabel="Success check icon"
+            />
+            <Text className={`text-3xl ${language === 'ar' ? 'font-CairoBold pt-3' : 'font-JakartaBold'} text-center`}>
+              {t.success}
+            </Text>
+            <Text className={`text-base text-gray-400 ${language === 'ar' ? 'font-CairoBold' : 'font-JakartaBold'} text-center mt-2`}>
+              {t.passwordResetSuccessDescription}
+            </Text>
+            <CustomButton
+              title={t.browseHome}
+              onPress={handleSuccessModalClose}
+              className="mt-5"
+              accessibilityLabel="OK Button"
+            />
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
