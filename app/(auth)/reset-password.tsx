@@ -153,7 +153,7 @@ const ResetPassword = () => {
               {t.passwordResetSuccessDescription}
             </Text>
             <CustomButton
-              title={t.browseHome}
+              title={t.logIn}
               onPress={handleSuccessModalClose}
               className="mt-5"
               accessibilityLabel="OK Button"

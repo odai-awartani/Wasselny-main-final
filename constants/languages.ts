@@ -351,6 +351,8 @@ export interface TranslationKeys {
   userNotFound: string;
   identifierInvalid: string;
   invalidCode: string;
+  emailTaken: string;
+  invalidEmailFormat: string;
 }
 
 export interface Translations {
@@ -736,6 +738,8 @@ export const translations: Translations = {
     userNotFound: "لم يتم العثور على حساب بهذا البريد الإلكتروني.",
     identifierInvalid: "البريد الإلكتروني غير صحيح.",
     invalidCode: "رمز التحقق غير صحيح أو منتهي الصلاحية.",
+    emailTaken: "هذا البريد الإلكتروني مستخدم بالفعل. يرجى المحاولة ببريد آخر.",
+    invalidEmailFormat: "يجب أن يكون البريد الإلكتروني بصيغة صحيحة.",
   },
   en: {
     chooseLanguage: "Choose Language",
@@ -1113,6 +1117,8 @@ export const translations: Translations = {
     incorrectPassword: "Password is incorrect. Try again.",
     userNotFound: "Couldn't find your account.",
     identifierInvalid: "Identifier is invalid.",
-    invalidCode: "رمز التحقق غير صحيح أو منتهي الصلاحية.",
+    invalidCode: "The verification code is invalid or expired.",
+    emailTaken: "That email address is taken. Please try another.",
+    invalidEmailFormat: "email_address must be a valid email address.",
   },
 };

@@ -156,13 +156,43 @@ const industryMap = new Map([
         state: 'pending',
       });
     } catch (err: any) {
+      setIsLoading(false);
       console.log(JSON.stringify(err, null, 2));
       console.error('Error during sign up:', err);
+
+      let errorMessageKey = t.signUpFailed; // Default to generic failed message
+
+      if (err.errors && err.errors.length > 0) {
+        const clerkErrorCode = err.errors[0].code;
+
+        switch (clerkErrorCode) {
+          case 'form_identifier_already_in_use':
+            errorMessageKey = t.emailTaken;
+            break;
+          // Add other specific Clerk error codes for sign up if known
+          default:
+            // Explicitly check for known English error messages from Clerk
+            if (err.errors[0].longMessage === 'That email address is taken. Please try another.') {
+              errorMessageKey = t.emailTaken;
+            } else if (err.errors[0].longMessage === 'email_address must be a valid email address.') {
+              errorMessageKey = t.invalidEmailFormat;
+            } else {
+              // Fallback to Clerk's long message or a generic translated message.
+              errorMessageKey = err.errors[0].longMessage || t.signUpFailed;
+            }
+            break;
+        }
+      }
+
       // Alert.alert(t.error, err.errors[0].longMessage);
-      setCustomErrorMessage(err.errors[0].longMessage);
+      setCustomErrorMessage(errorMessageKey);
       setShowCustomErrorModal(true);
     } finally {
-      setIsLoading(false);
+      // The isLoading state is set to false in the catch block already, and should also be here
+      // in the success case. However, be careful about setting it false too early before
+      // the verification step is fully processed if that's asynchronous outside the try/catch.
+      // Given the structure, it's fine here as verification prepare is awaited.
+      // setIsLoading(false);
     }
   };
 
@@ -520,6 +550,7 @@ const industryMap = new Map([
   message={customErrorMessage}
   onClose={() => setShowCustomErrorModal(false)}
   title={t.error}
+  t={t}
 />
 
       </ScrollView>
