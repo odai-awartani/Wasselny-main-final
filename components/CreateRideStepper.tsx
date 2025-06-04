@@ -509,7 +509,7 @@ const RideCreationScreen = () => {
     return dates;
   }, [days]);
 
-  const radius = 30;
+  const radius = 29;
 const strokeWidth = 5;
 const normalizedRadius = radius - strokeWidth / 2;
 const circumference = 2 * Math.PI * normalizedRadius;

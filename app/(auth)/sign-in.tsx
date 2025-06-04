@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, Modal, ScrollView, Image, Alert, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, Modal, ScrollView, Image, Alert, Platform, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import InputField from '@/components/InputField'; // استيراد InputField
 import { useLanguage } from '@/context/LanguageContext';
@@ -20,6 +20,7 @@ const SignIn = () => {
   });
   const [showCustomErrorModal, setShowCustomErrorModal] = useState(false);
   const [customErrorMessage, setCustomErrorMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   const showErrorAlert = (message: string) => {
     setCustomErrorMessage(message);
@@ -35,6 +36,7 @@ const SignIn = () => {
     }
 
     try {
+      setIsLoading(true);
       const completeSignIn = await signIn.create({
         identifier: form.email,
         password: form.password,
@@ -80,6 +82,8 @@ const SignIn = () => {
       }
 
       showErrorAlert(errorMessageKey);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -138,7 +142,8 @@ const SignIn = () => {
               <CustomButton
                 title={t.logIn}
                 onPress={onSignInPress}
-                
+                loading={isLoading}
+                disabled={isLoading}
               />
 
               {/* رابط الانتقال إلى تسجيل الدخول */}

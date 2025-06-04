@@ -35,6 +35,7 @@ const SignUp = () => {
     state: 'default', // حالة التحقق: default, pending, success, error
     error: '', // رسالة الخطأ
     code: '', // كود التحقق
+    isLoading: false, // Add loading state for verify button
   });
   const formatPhoneNumber = (phoneNumber: string) => {
     // إذا كان رقم الجوال يبدأ بـ +972، اتركه كما هو
@@ -74,15 +75,12 @@ const industryMap = new Map([
   const onSignUpPress = async () => {
     if (!isLoaded) return;
     if (!isAgreed) {
-      // Alert.alert(t.error, t.agreeToTermsAlert);
       setCustomErrorMessage(t.agreeToTermsAlert);
       setShowCustomErrorModal(true);
       return;
     }
     
-    
     if (!form.email || !form.password || !form.confirmPassword || !form.name || !form.phoneNumber || !form.gender || !form.workIndustry) {
-      // Alert.alert(t.error, t.fillAllFields);
       setCustomErrorMessage(t.fillAllFields);
       setShowCustomErrorModal(true);
       return;
@@ -100,23 +98,13 @@ const industryMap = new Map([
 
     // Check if passwords match
     if (form.password !== form.confirmPassword) {
-      // Alert.alert(
-      //   t.error,
-      //   language === 'ar' ? 'كلمات المرور غير متطابقة' : 'Passwords do not match'
-      // );
       setCustomErrorMessage(language === 'ar' ? 'كلمات المرور غير متطابقة' : 'Passwords do not match');
       setShowCustomErrorModal(true);
       return;
     }
 
-    // Check password strength (at least 8 characters, including numbers and letters)
+    // Check password strength
     if (form.password.length < 8 || !/[A-Za-z]/.test(form.password) || !/[0-9]/.test(form.password)) {
-      // Alert.alert(
-      //   t.error,
-      //   language === 'ar'
-      //     ? 'يجب أن تتكون كلمة المرور من 8 أحرف على الأقل وتحتوي على أحرف وأرقام'
-      //     : 'Password must be at least 8 characters long and contain both letters and numbers'
-      // );
       setCustomErrorMessage(language === 'ar'
         ? 'يجب أن تتكون كلمة المرور من 8 أحرف على الأقل وتحتوي على أحرف وأرقام'
         : 'Password must be at least 8 characters long and contain both letters and numbers');
@@ -127,40 +115,38 @@ const industryMap = new Map([
     try {
       setIsLoading(true);
       const formattedPhoneNumber = formatPhoneNumber(form.phoneNumber);
-        // تحويل الجنس والمجال إلى الإنجليزية
-    const englishGender = genderMap.get(form.gender) || form.gender;
-    const englishIndustry = industryMap.get(form.workIndustry) || form.workIndustry;
-  
+      const englishGender = genderMap.get(form.gender) || form.gender;
+      const englishIndustry = industryMap.get(form.workIndustry) || form.workIndustry;
 
       // Create a new user with Clerk
       await signUp.create({
-      emailAddress: form.email,
-      password: form.password,
-      firstName: form.name.split(' ')[0],
-      lastName: form.name.split(' ')[1] || '',
-      // إضافة الجنس والمجال إلى البيانات الإضافية (إذا كان مدعومًا)
-      unsafeMetadata: {
-        gender: englishGender,
-        workIndustry: englishIndustry,
-        phoneNumber: formattedPhoneNumber, // تخزين رقم الجوال المنسق
-
-      },
-    });
+        emailAddress: form.email,
+        password: form.password,
+        firstName: form.name.split(' ')[0],
+        lastName: form.name.split(' ')[1] || '',
+        unsafeMetadata: {
+          gender: englishGender,
+          workIndustry: englishIndustry,
+          phoneNumber: formattedPhoneNumber,
+        },
+      });
 
       // إرسال كود التحقق
       await signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
 
-      // تغيير حالة التحقق إلى "pending"
+      // تغيير حالة التحقق إلى "pending" وتوقف حالة التحميل
       setVerification({
         ...verification,
         state: 'pending',
+        isLoading: false
       });
+      setIsLoading(false); // Stop loading when modal opens
     } catch (err: any) {
       setIsLoading(false);
       console.log(JSON.stringify(err, null, 2));
       console.error('Error during sign up:', err);
 
-      let errorMessageKey = t.signUpFailed; // Default to generic failed message
+      let errorMessageKey = t.signInFailed;
 
       if (err.errors && err.errors.length > 0) {
         const clerkErrorCode = err.errors[0].code;
@@ -169,37 +155,37 @@ const industryMap = new Map([
           case 'form_identifier_already_in_use':
             errorMessageKey = t.emailTaken;
             break;
-          // Add other specific Clerk error codes for sign up if known
           default:
-            // Explicitly check for known English error messages from Clerk
             if (err.errors[0].longMessage === 'That email address is taken. Please try another.') {
               errorMessageKey = t.emailTaken;
             } else if (err.errors[0].longMessage === 'email_address must be a valid email address.') {
               errorMessageKey = t.invalidEmailFormat;
             } else {
-              // Fallback to Clerk's long message or a generic translated message.
-              errorMessageKey = err.errors[0].longMessage || t.signUpFailed;
+              errorMessageKey = err.errors[0].longMessage || t.signInFailed;
             }
             break;
         }
       }
 
-      // Alert.alert(t.error, err.errors[0].longMessage);
       setCustomErrorMessage(errorMessageKey);
       setShowCustomErrorModal(true);
-    } finally {
-      // The isLoading state is set to false in the catch block already, and should also be here
-      // in the success case. However, be careful about setting it false too early before
-      // the verification step is fully processed if that's asynchronous outside the try/catch.
-      // Given the structure, it's fine here as verification prepare is awaited.
-      // setIsLoading(false);
     }
+  };
+
+  const handleCloseVerification = () => {
+    setVerification({
+      state: 'default',
+      error: '',
+      code: '',
+      isLoading: false
+    });
   };
 
   const onVerifyPress = async () => {
     if (!isLoaded) return;
   
     try {
+      setVerification(prev => ({ ...prev, isLoading: true, error: '' }));
       const completeSignUp = await signUp.attemptEmailAddressVerification({
         code: verification.code,
       });
@@ -218,7 +204,6 @@ const industryMap = new Map([
           clerkId: completeSignUp.createdUserId,
         });
   
-        // Use setDoc with Clerk ID as document ID
         await setDoc(doc(db, "users", completeSignUp.createdUserId || ''), {
           name: form.name,
           email: form.email,
@@ -236,23 +221,18 @@ const industryMap = new Map([
         setVerification((prev) => ({ ...prev, state: 'success' }));
         setShowSuccessModal(true);
       } else {
-        setVerification({
-          ...verification,
-          error: "Verification failed. Please try again.",
-          state: "failed",
-        });
+        setVerification(prev => ({
+          ...prev,
+          error: language === 'ar' ? 'كود التحقق غير صحيح. يرجى المحاولة مرة أخرى.' : 'Invalid verification code. Please try again.',
+          isLoading: false
+        }));
       }
     } catch (err: any) {
-      // See https://clerk.com/docs/custom-flows/error-handling
-      // for more info on error handling
-      setVerification({
-        ...verification,
-        error: err.errors[0].longMessage,
-        state: "failed",
-      });
-      // Show custom error modal for verification errors
-      setCustomErrorMessage(err.errors[0].longMessage);
-      setShowCustomErrorModal(true);
+      setVerification(prev => ({
+        ...prev,
+        error: err.errors[0].longMessage || (language === 'ar' ? 'كود التحقق غير صحيح. يرجى المحاولة مرة أخرى.' : 'Invalid verification code. Please try again.'),
+        isLoading: false
+      }));
     }
   };
   
@@ -382,23 +362,15 @@ const industryMap = new Map([
           {/* زر التسجيل */}
           <View className="items-center">
             <CustomButton
-              title={isLoading ? '' : t.signUpButton}
+              title={t.signUpButton}
               onPress={onSignUpPress}
+              loading={isLoading}
               disabled={isLoading}
-              className={isLoading ? 'opacity-70' : ''}
-            >
-              {isLoading ? (
-                <ActivityIndicator size="small" color="#fff" />
-              ) : (
-                t.signUpButton
-              )}
-            </CustomButton>
-       
-
+            />
 
             {/* رابط الانتقال إلى تسجيل الدخول */}
- <Link href="/(auth)/sign-in" className={`text-lg text-center text-general-200 mt-4 ${language === 'ar' ? 'font-CairoBold' : 'font-JakartaBold'}`}>
-               <Text>{t.alreadyHaveAccount}</Text>
+            <Link href="/(auth)/sign-in" className={`text-lg text-center text-general-200 mt-4 ${language === 'ar' ? 'font-CairoBold' : 'font-JakartaBold'}`}>
+              <Text>{t.alreadyHaveAccount}</Text>
               <Text className="text-orange-500"> {t.logIn}</Text>
             </Link>
           </View>
@@ -455,108 +427,113 @@ const industryMap = new Map([
             </View>
           </View>
         </Modal>
-{/* نافذة التحقق */}
-<Modal
- key="verification-modal"
-  visible={verification.state === "pending"}
-  transparent={true} // لجعل الخلفية شفافة
-  animationType="slide" // لإضافة رسوم متحركة
-  onRequestClose={() => {
-    if (verification.state === "success") {
-      console.log("Verification successful, showing success modal"); // Debugging
-      setShowSuccessModal(true);
-    }
-  }}
->
-  <View className="flex-1 justify-center items-center bg-black/50">
-    <View className="bg-white p-7 rounded-2xl min-h-[300px] w-11/12">
-      <Text className={`${language === 'ar' ? 'text-right font-CairoExtraBold' : 'text-left font-JakartaExtraBold'} text-2xl mb-2`}>
-        {t.Verification}
-      </Text>
-  <Text className={`${language === 'ar' ? 'text-right font-CairoMedium' : 'text-left font-Jakarta '} text-lg mb-5`}>
-        {t.SendVCode}{form.email}.
-      </Text>
-      <InputField
-        label={t.Code}
-        icon={icons.lock}
-        placeholder={"12345"}
-        value={verification.code}
-        keyboardType="numeric"
-        onChangeText={(code) => setVerification({ ...verification, code })}
-        iconStyle="mt-3 mr-3"
-        maxLength={6}
-        accessibilityLabel="Enter verification code"
-        labelStyle={language === 'ar' ? 'text-right font-CairoBold ' : 'text-left font-JakartaBold '}
 
-      />
-      {verification.error && (
-        <Text className="text-red-500 text-sm mt-1">
-          {verification.error}
-        </Text>
-      )}
-      <CustomButton
-        title={t.VerifyEmail}
-        onPress={onVerifyPress}
-        className="mt-5 bg-success-500"
-        accessibilityLabel="Verify Email Button"
-        disabled={verification.code.length < 6} // Disable until 6 digits are entered
-      />
-    </View>
-  </View>
-</Modal>
+        {/* نافذة التحقق */}
+        <Modal
+          key="verification-modal"
+          visible={verification.state === "pending"}
+          transparent={true}
+          animationType="slide"
+          onRequestClose={handleCloseVerification}
+        >
+          <View className="flex-1 justify-center items-center bg-black/50">
+            <View className="bg-white p-7 rounded-2xl min-h-[300px] w-11/12">
+              {/* Header with close button */}
+              <View className={`flex-row ${language === 'ar' ? 'flex-row-reverse' : ''} justify-between items-center mb-4`}>
+                <Text className={`${language === 'ar' ? 'text-right font-CairoExtraBold' : 'text-left font-JakartaExtraBold'} text-2xl`}>
+                  {t.Verification}
+                </Text>
+                <TouchableOpacity 
+                  onPress={handleCloseVerification}
+                  className="w-8 h-8 rounded-full bg-gray-100 items-center justify-center"
+                >
+                  <Text className="text-gray-500 text-lg">✕</Text>
+                </TouchableOpacity>
+              </View>
 
-{/* نافذة النجاح */}
-<Modal
-  key="success-modal"
-  visible={showSuccessModal}
-  transparent={true} // لجعل الخلفية شفافة
-  animationType="slide" // لإضافة رسوم متحركة
-  onRequestClose={() => {
-    console.log("Success modal hidden"); // Debugging
-  }}
->
-  <View className="flex-1 justify-center items-center bg-black/50">
-    <View className="bg-white p-7 rounded-2xl min-h-[300px] w-11/12">
-      <Image
-        source={images.check}
-        className="w-[110px] h-[110px] mx-auto my-5"
-        accessibilityLabel="Success check icon"
-      />
-      <Text className={`text-3xl ${language === 'ar' ? 'font-CairoBold pt-3' : 'font-JakartaBold'} text-center`}>
-        {t.verified}
-      </Text>
-      <Text className={`text-base text-gray-400 ${language === 'ar' ? 'font-CairoBold' : 'font-JakartaBold'} text-center mt-2`}>
-        {t.verificationSuccess}
-      </Text>
-      <CustomButton
-        title={t.browseHome}
-        onPress={() => {
-          setShowSuccessModal(false);
-          router.replace("/home");
-        }}
-        className="mt-5"
-     
+              <Text className={`${language === 'ar' ? 'text-right font-CairoMedium' : 'text-left font-Jakarta'} text-lg mb-5`}>
+                {t.SendVCode}{form.email}.
+              </Text>
 
-        accessibilityLabel="Navigate to Home"
-        
-      />
-    </View>
-  </View>
-</Modal>
+              <InputField
+                label={t.Code}
+                icon={icons.lock}
+                placeholder={"12345"}
+                value={verification.code}
+                keyboardType="numeric"
+                onChangeText={(code) => setVerification({ ...verification, code })}
+                iconStyle="mt-3 mr-3"
+                maxLength={6}
+                accessibilityLabel="Enter verification code"
+                labelStyle={language === 'ar' ? 'text-right font-CairoBold' : 'text-left font-JakartaBold'}
+              />
 
-{/* Custom Error Modal */}
-<CustomErrorModal
-  visible={showCustomErrorModal}
-  message={customErrorMessage}
-  onClose={() => setShowCustomErrorModal(false)}
-  title={t.error}
-  t={t}
-/>
+              {verification.error && (
+                <Text className="text-red-500 text-sm mt-1">
+                  {verification.error}
+                </Text>
+              )}
 
+              <CustomButton
+                title={t.VerifyEmail}
+                onPress={onVerifyPress}
+                className="mt-5 bg-success-500"
+                accessibilityLabel="Verify Email Button"
+                disabled={verification.code.length < 6 || verification.isLoading}
+                loading={verification.isLoading}
+              />
+            </View>
+          </View>
+        </Modal>
+
+        {/* نافذة النجاح */}
+        <Modal
+          key="success-modal"
+          visible={showSuccessModal}
+          transparent={true}
+          animationType="slide"
+          onRequestClose={() => {
+            console.log("Success modal hidden");
+          }}
+        >
+          <View className="flex-1 justify-center items-center bg-black/50">
+            <View className="bg-white p-7 rounded-2xl min-h-[300px] w-11/12">
+              <Image
+                source={images.check}
+                className="w-[110px] h-[110px] mx-auto my-5"
+                accessibilityLabel="Success check icon"
+              />
+              <Text className={`text-3xl ${language === 'ar' ? 'font-CairoBold pt-3' : 'font-JakartaBold'} text-center`}>
+                {t.verified}
+              </Text>
+              <Text className={`text-base text-gray-400 ${language === 'ar' ? 'font-CairoBold' : 'font-JakartaBold'} text-center mt-2`}>
+                {t.verificationSuccess}
+              </Text>
+              <CustomButton
+                title={t.browseHome}
+                onPress={() => {
+                  setShowSuccessModal(false);
+                  router.replace("/home");
+                }}
+                className="mt-5"
+                accessibilityLabel="Navigate to Home"
+              />
+            </View>
+          </View>
+        </Modal>
+
+        {/* Custom Error Modal */}
+        <CustomErrorModal
+          visible={showCustomErrorModal}
+          message={customErrorMessage}
+          onClose={() => setShowCustomErrorModal(false)}
+          title={t.error}
+          t={t}
+        />
       </ScrollView>
-      </View>
-      <StatusBar backgroundColor="#fff" style="dark" />
-      </SafeAreaView>
+    </View>
+    <StatusBar backgroundColor="#fff" style="dark" />
+  </SafeAreaView>
   );
 };
 

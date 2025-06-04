@@ -446,12 +446,12 @@ export default function Home() {
         }
 
         // Calculate time difference in hours
-        const timeDiff = (currentTime - parseInt(lastShownTime)) / (1000 * 60 * 60);
+        const timeDiff = (currentTime - parseInt(lastShownTime)) / (1000 * 60 );
         console.log(`Time since last show: ${timeDiff.toFixed(2)} hours`);
         
         // Only show if exactly 12 or more hours have passed
-        if (timeDiff >= 12) {
-          console.log('12 hours passed, showing location modal');
+        if (timeDiff >= 1) {
+          console.log('1 hours passed, showing location modal');
           setShowLocationModal(true);
           await AsyncStorage.setItem('lastLocationModalShown', currentTime.toString());
         } else {

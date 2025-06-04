@@ -1,6 +1,6 @@
 import { useLanguage } from "@/context/LanguageContext";
 import { ButtonProps } from "@/types/type";
-import { Text, TouchableOpacity } from "react-native";
+import { Text, TouchableOpacity, ActivityIndicator } from "react-native";
 
 const getBgVariantStyle = (variant: ButtonProps["bgVariant"]) => {
     switch (variant) {
@@ -13,7 +13,7 @@ const getBgVariantStyle = (variant: ButtonProps["bgVariant"]) => {
         case "outline":
             return 'bg-transparent border-neutral-300 border-[0.5px]';   
         default:
-            return 'bg-orange-100';
+            return 'bg-orange-500';
     }
 };
 
@@ -40,7 +40,9 @@ const CustomButton = ({
     IconLeft,
     IconRight,
     className = "",
-    
+    loading = false,
+    disabled = false,
+    children,
     ...props
 }: ButtonProps) => {
     const { language } = useLanguage();
@@ -48,16 +50,24 @@ const CustomButton = ({
     return (
         <TouchableOpacity
             onPress={onPress}
-            className={`w-full rounded-full flex flex-row p-3 justify-center items-center shadow-md shadow-neutral-400/70 ${getBgVariantStyle(bgVariant)} ${className}`}
+            disabled={disabled || loading}
+            className={`w-full rounded-full flex flex-row p-3 justify-center items-center shadow-md shadow-neutral-400/70 ${getBgVariantStyle(bgVariant)} ${className} ${(disabled || loading) ? 'opacity-70' : ''}`}
             {...props}
         >
-            {IconLeft && <IconLeft />}
-            <Text
-                className={`text-lg font-CairoBold  ${getTextVariantStyle(textVariant)} `}
-            >
-                {title}
-            </Text>
-            {IconRight && <IconRight />}
+            {IconLeft && !loading && <IconLeft />}
+            {loading ? (
+                <ActivityIndicator color="white" size="small" />
+            ) : (
+                <>
+                    <Text
+                        className={`text-lg font-CairoBold ${getTextVariantStyle(textVariant)}`}
+                    >
+                        {title}
+                    </Text>
+                    {IconRight && <IconRight />}
+                    {children}
+                </>
+            )}
         </TouchableOpacity>
     );
 };
