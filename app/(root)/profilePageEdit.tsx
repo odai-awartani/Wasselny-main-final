@@ -174,18 +174,16 @@ const ProfileEdit = () => {
   const { language } = useLanguage();
   const router = useRouter();
   const storage = getStorage();
-  const { refreshProfileImage } = useProfile();
+  const { profileImageUrl, refreshProfileImage } = useProfile();
 
   const [userData, setUserData] = useState<{
     isDriver: boolean;
     isLoading: boolean;
-    profileImage: string | null;
     data: UserData | null;
     isAdmin: boolean;
   }>({
     isDriver: false,
     isLoading: true,
-    profileImage: null,
     data: null,
     isAdmin: false,
   });
@@ -245,8 +243,7 @@ const ProfileEdit = () => {
           ...prev,
           isLoading: false,
           isDriver: false,
-          profileImage: user?.imageUrl || null,
-          isAdmin: false,
+          isAdmin: false
         }));
       }
       return;
@@ -263,7 +260,6 @@ const ProfileEdit = () => {
         setUserData({
           isDriver: !!data.driver?.is_active,
           isLoading: false,
-          profileImage: data.driver?.profile_image_url || user?.imageUrl || null,
           data,
           isAdmin: data.role === 'admin',
         });
@@ -277,7 +273,6 @@ const ProfileEdit = () => {
           ...prev,
           isDriver: false,
           isLoading: false,
-          profileImage: user?.imageUrl || null,
           data: null,
           isAdmin: false,
         }));
@@ -294,7 +289,6 @@ const ProfileEdit = () => {
           ...prev,
           isDriver: false,
           isLoading: false,
-          profileImage: user?.imageUrl || null,
           isAdmin: false,
         }));
       }
@@ -1156,7 +1150,7 @@ const ProfileEdit = () => {
               refreshing={isRefreshing}
               onRefresh={() => {
                 setIsRefreshing(true);
-                fetchUserData().finally(() => setIsRefreshing(false));
+                Promise.all([fetchUserData(), refreshProfileImage()]).finally(() => setIsRefreshing(false));
               }}
               colors={["#F97316"]}
               tintColor="#F97316"
@@ -1174,7 +1168,7 @@ const ProfileEdit = () => {
                 className="bg-white rounded-2xl overflow-hidden"
               >
                 <Image
-                  source={{ uri: userData.profileImage || user?.imageUrl }}
+                  source={{ uri: profileImageUrl || user?.imageUrl }}
                   className="w-full aspect-square"
                   resizeMode="cover"
                 />
@@ -1626,6 +1620,28 @@ const ProfileEdit = () => {
                 </TouchableOpacity>
               </View>
             </View>
+          </View>
+        </Modal>
+
+        {/* Full Image Modal */}
+        <Modal
+          visible={showFullImage}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShowFullImage(false)}
+        >
+          <View className="flex-1 bg-black/90 justify-center items-center">
+            <TouchableOpacity 
+              activeOpacity={1}
+              onPress={() => setShowFullImage(false)}
+              className="w-full h-full justify-center items-center"
+            >
+              <Image
+                source={{ uri: profileImageUrl || user?.imageUrl }}
+                className="w-80 h-80 rounded-xl"
+                resizeMode="contain"
+              />
+            </TouchableOpacity>
           </View>
         </Modal>
 

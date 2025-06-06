@@ -353,6 +353,7 @@ export interface TranslationKeys {
   invalidCode: string;
   emailTaken: string;
   invalidEmailFormat: string;
+  TotalRating: string;
 }
 
 export interface Translations {
@@ -712,7 +713,7 @@ export const translations: Translations = {
     searchUserPlaceholder: "بحث عن مستخدم...",
     noUsersFound: "لم يتم العثور على مستخدمين",
     startSharing: "بدء المشاركة",
-    locationRequests: "طلبات الموقع",
+    locationRequests: "الاشخاص اللذين يشاركون مقعهم معي",
     noActiveLocationRequests: "لا توجد طلبات موقع نشطة",
     myShares: "مشاركاتي",
     updateLocationForAll: "تحديث الموقع للجميع",
@@ -740,6 +741,7 @@ export const translations: Translations = {
     invalidCode: "رمز التحقق غير صحيح أو منتهي الصلاحية.",
     emailTaken: "هذا البريد الإلكتروني مستخدم بالفعل. يرجى المحاولة ببريد آخر.",
     invalidEmailFormat: "يجب أن يكون البريد الإلكتروني بصيغة صحيحة.",
+    TotalRating: "عدد التقييمات"
   },
   en: {
     chooseLanguage: "Choose Language",
@@ -1120,5 +1122,6 @@ export const translations: Translations = {
     invalidCode: "The verification code is invalid or expired.",
     emailTaken: "That email address is taken. Please try another.",
     invalidEmailFormat: "email_address must be a valid email address.",
+    TotalRating: "Total Rating "
   },
 };

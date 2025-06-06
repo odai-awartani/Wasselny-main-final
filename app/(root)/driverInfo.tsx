@@ -10,11 +10,12 @@ import { useUser } from "@clerk/clerk-expo";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import InputField from "@/components/InputField";
 import { db } from "@/lib/firebase";
-import { doc, updateDoc, setDoc, getDoc, collection, addDoc } from "firebase/firestore";
+import { doc, updateDoc, setDoc, getDoc, collection, addDoc, getDocs, query, where } from "firebase/firestore";
 import { ActivityIndicator } from "react-native";
 import { useLanguage } from "@/context/LanguageContext";
 import { StyleSheet, Dimensions, Animated } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import Header from "@/components/Header";
 
 interface DriverFormData {
   carType: string;
@@ -503,7 +504,16 @@ const driverInfo = () => {
         profile_image_url: profileImageUrl
       });
 
-      // Create notification for admin
+      // Get admin user ID
+      const usersRef = collection(db, 'users');
+      const adminQuery = query(usersRef, where('role', '==', 'admin'));
+      const adminSnapshot = await getDocs(adminQuery);
+      const adminDoc = adminSnapshot.docs[0];
+      
+      if (!adminDoc) {
+        throw new Error('Admin user not found');
+      }
+
       const notificationsRef = collection(db, 'notifications');
       await addDoc(notificationsRef, {
         type: 'driver_request',
@@ -511,12 +521,13 @@ const driverInfo = () => {
         message: t.newDriverRequestMessage.replace('{userName}', user?.fullName || t.userName),
         created_at: new Date(),
         read: false,
-        user_id: 'admin',
+        user_id: adminDoc.id,
         data: {
           driver_id: user?.id,
           driver_name: user?.fullName,
           car_type: carType.trim(),
-          car_seats: Number(carSeats)
+          car_seats: Number(carSeats),
+          type: 'driver_request'
         }
       });
 
@@ -571,12 +582,13 @@ const driverInfo = () => {
   }
 
   return (
-    <SafeAreaView className="flex-1 p-6 bg-gray-50">
-      <ScrollView showsVerticalScrollIndicator={false}>
-        <Text className={`text-3xl font-bold text-center text-black mb-6 ${language === 'ar' ? 'font-CairoBold text-right' : 'font-JakartaBold text-left'}`}>
-          {t.registerDriver}
-        </Text>
-      
+    <SafeAreaView className="flex-1 bg-gray-50">
+      <Header 
+        title={t.registerDriver}
+        showSideMenu={false}
+        showProfileImage={false}
+      />
+      <ScrollView showsVerticalScrollIndicator={false} className="p-6">
         <InputField 
           label={t.carType}
           value={driverFormData.carType}

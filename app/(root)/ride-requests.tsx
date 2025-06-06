@@ -121,8 +121,8 @@ const CustomAlert = ({
       default:
         return {
           icon: 'info' as IconName,
-          color: '#3b82f6',
-          bgColor: '#dbeafe'
+          color: '#f97316',
+          bgColor: '#ffedd5'
         };
     }
   };
@@ -528,7 +528,7 @@ const RideRequests = () => {
         visible: true,
         title: t.confirmAcceptRequest,
         message: `${t.acceptRequestFor} ${passengerName}?`,
-        type: 'info',
+        type: 'warning',
         onConfirm: async () => {
           setAlertConfig(prev => ({ ...prev, visible: false }));
 

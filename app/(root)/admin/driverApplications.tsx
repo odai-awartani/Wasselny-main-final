@@ -481,8 +481,10 @@ const DriverApplications = () => {
       const notificationsRef = collection(db, 'notifications');
       await addDoc(notificationsRef, {
         type: 'driver_status',
-        title: 'Driver Application Approved',
-        message: 'Congratulations! Your driver application has been approved. You can now start providing transportation services.',
+        title: language === 'ar' ? 'تمت الموافقة على طلب السائق' : 'Driver Application Approved',
+        message: language === 'ar' 
+          ? 'تهانينا! تمت الموافقة على طلبك كسائق. يمكنك الآن البدء في تقديم خدمات النقل.'
+          : 'Congratulations! Your driver application has been approved. You can now start providing transportation services.',
         created_at: new Date(),
         read: false,
         user_id: applicationId,
@@ -539,17 +541,29 @@ const DriverApplications = () => {
         'driver.rejected_at': new Date().toISOString()
       });
 
+      // Get admin user ID
+      const adminQuery = query(collection(db, 'users'), where('role', '==', 'admin'));
+      const adminSnapshot = await getDocs(adminQuery);
+      const adminDoc = adminSnapshot.docs[0];
+      
+      if (!adminDoc) {
+        throw new Error('Admin user not found');
+      }
+
       const notificationsRef = collection(db, 'notifications');
       await addDoc(notificationsRef, {
         type: 'driver_status',
-        title: 'Driver Application Rejected',
-        message: `Your driver application has been rejected for the following reasons:\n${rejectionReason.trim()}\n\nYou can update your information and reapply.`,
+        title: language === 'ar' ? 'تم رفض طلب السائق' : 'Driver Application Rejected',
+        message: language === 'ar' 
+          ? `تم رفض طلبك كسائق للأسباب التالية:\n${rejectionReason.trim()}\n\nيمكنك تحديث معلوماتك وإعادة التقديم.`
+          : `Your driver application has been rejected for the following reasons:\n${rejectionReason.trim()}\n\nYou can update your information and reapply.`,
         created_at: new Date(),
         read: false,
         user_id: selectedApplication.id,
         data: {
           status: 'rejected',
-          rejection_reason: rejectionReason.trim()
+          rejection_reason: rejectionReason.trim(),
+          type: 'driver_status'
         }
       });
 
@@ -730,14 +744,7 @@ const DriverApplications = () => {
                     {application.car_seats}
                   </Text>
                 </View>
-                <View className={`flex-row justify-between ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
-                  <Text className={`text-gray-500 ${language === 'ar' ? 'font-CairoRegular text-right' : 'font-JakartaRegular text-left'}`}>
-                    {language === 'ar' ? 'رقم الترخيص:' : 'License Number:'}
-                  </Text>
-                  <Text className={`${language === 'ar' ? 'font-CairoMedium text-right' : 'font-JakartaMedium text-left'}`}>
-                    {application.license_number || (language === 'ar' ? 'غير متوفر' : 'Not provided')}
-                  </Text>
-                </View>
+                
                 <View className={`flex-row justify-between ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
                   <Text className={`text-gray-500 ${language === 'ar' ? 'font-CairoRegular text-right' : 'font-JakartaRegular text-left'}`}>
                     {language === 'ar' ? 'تاريخ التقديم:' : 'Applied on:'}

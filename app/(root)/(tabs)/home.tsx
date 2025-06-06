@@ -195,6 +195,7 @@ export default function Home() {
   const navigation = useNavigation<NavigationProp>();
   const [refreshKey, setRefreshKey] = useState(0);
   const [inProgressRides, setInProgressRides] = useState<Ride[]>([]);
+  const [isLoadingRides, setIsLoadingRides] = useState(true);
   const suggestedRidesRef = useRef<SuggestedRidesRef>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isMapLoading, setIsMapLoading] = useState(true);
@@ -251,12 +252,16 @@ export default function Home() {
     }
   }, [user?.id]);
 
+  // Update useFocusEffect to properly refresh rides
   useFocusEffect(
     useCallback(() => {
-      console.log('Screen focused, checking driver status');
+      console.log('Screen focused, refreshing rides');
       if (user?.id) {
-        checkIfUserIsDriver();
-        setRefreshKey(prev => prev + 1);
+        // Refresh driver status first
+        checkIfUserIsDriver().then(() => {
+          // Then fetch rides after we know the driver status
+          fetchInProgressRides();
+        });
       }
     }, [user?.id])
   );
@@ -345,44 +350,100 @@ export default function Home() {
   }, [t]);
 
   const fetchInProgressRides = async () => {
-    if (!user?.id || !isDriver) return;
+    if (!user?.id) {
+      console.log('No user ID found, skipping fetchInProgressRides');
+      return;
+    }
     
     try {
-      const ridesRef = collection(db, 'rides');
-      const q = query(
-        ridesRef,
-        where('driver_id', '==', user.id),
-        where('status', '==', 'in-progress'),
-        orderBy('created_at', 'desc')
-      );
+      console.log('Fetching in-progress rides for user:', user.id);
+      console.log('Is driver:', isDriver);
+      setIsLoadingRides(true);
+      let rides: (Ride & { display_status?: string })[] = [];
+
+      if (isDriver) {
+        // For drivers: fetch rides with status 'in-progress'
+        const ridesRef = collection(db, 'rides');
+        const q = query(
+          ridesRef,
+          where('driver_id', '==', user.id),
+          where('status', '==', 'in-progress'),
+          orderBy('created_at', 'desc')
+        );
+        
+        const snapshot = await getDocs(q);
+        console.log('Driver rides found:', snapshot.size);
+        snapshot.forEach((doc) => {
+          rides.push({ id: doc.id, ...doc.data() } as Ride);
+        });
+      } else {
+        // For passengers: fetch ride requests with status 'checked_in'
+        const requestsRef = collection(db, 'ride_requests');
+        const requestsQuery = query(
+          requestsRef,
+          where('user_id', '==', user.id),
+          where('status', '==', 'checked_in')
+        );
+        
+        const requestsSnapshot = await getDocs(requestsQuery);
+        console.log('Passenger requests found:', requestsSnapshot.size);
+        
+        // Get all ride IDs from the requests
+        const rideIds = requestsSnapshot.docs.map(doc => doc.data().ride_id);
+        console.log('Ride IDs to search for:', rideIds);
+        
+        // Fetch each ride without checking its status
+        for (const rideId of rideIds) {
+          try {
+            const rideRef = doc(db, 'rides', rideId);
+            const rideDoc = await getDoc(rideRef);
+            
+            if (rideDoc.exists()) {
+              console.log('Found ride:', rideId, rideDoc.data());
+              const rideData = rideDoc.data();
+              // Add the ride regardless of its status
+              rides.push({ 
+                id: rideDoc.id, 
+                ...rideData,
+                // Add a custom status for display purposes
+                display_status: rideData.status === 'completed' ? 'completed' : 'in-progress'
+              } as Ride & { display_status: string });
+            } else {
+              console.log('Ride not found:', rideId);
+            }
+          } catch (error) {
+            console.error('Error fetching ride:', rideId, error);
+          }
+        }
+      }
       
-      const snapshot = await getDocs(q);
-      const rides: Ride[] = [];
-      
-      snapshot.forEach((doc) => {
-        rides.push({ id: doc.id, ...doc.data() } as Ride);
-      });
-      
+      console.log('Total rides found:', rides.length);
+      console.log('Rides data:', rides);
       setInProgressRides(rides);
     } catch (error) {
       console.error('Error fetching in-progress rides:', error);
+    } finally {
+      setIsLoadingRides(false);
     }
   };
 
   useEffect(() => {
-    if (isDriver && user?.id) {
+    console.log('useEffect triggered - isDriver:', isDriver);
+    if (user?.id) {
       fetchInProgressRides();
     }
-  }, [isDriver, user?.id]);
+  }, [user?.id, isDriver]);
 
   useFocusEffect(
     useCallback(() => {
-      if (isDriver && user?.id) {
+      console.log('useFocusEffect triggered - isDriver:', isDriver);
+      if (user?.id) {
         fetchInProgressRides();
       }
-    }, [isDriver, user?.id])
+    }, [user?.id, isDriver])
   );
 
+  // Update the onRefresh function to also refresh rides
   const onRefresh = useCallback(async () => {
     setIsRefreshing(true);
     setIsMapLoading(true);
@@ -401,13 +462,9 @@ export default function Home() {
       setUserLocation(newLocation);
       await AsyncStorage.setItem('userLocation', JSON.stringify(newLocation));
 
-      // Refresh driver status
+      // Refresh driver status and rides
       if (user?.id) {
         await checkIfUserIsDriver();
-      }
-
-      // Refresh in-progress rides if user is a driver
-      if (isDriver && user?.id) {
         await fetchInProgressRides();
       }
 
@@ -428,7 +485,7 @@ export default function Home() {
       setIsRefreshing(false);
       setIsMapLoading(false);
     }
-  }, [user?.id, isDriver, t, language]);
+  }, [user?.id, t, language]);
 
   // Check if user has location set and if 12 hours have passed
   useEffect(() => {
@@ -446,12 +503,12 @@ export default function Home() {
         }
 
         // Calculate time difference in hours
-        const timeDiff = (currentTime - parseInt(lastShownTime)) / (1000 * 60 );
+        const timeDiff = (currentTime - parseInt(lastShownTime)) / (1000 * 60 * 60);
         console.log(`Time since last show: ${timeDiff.toFixed(2)} hours`);
         
         // Only show if exactly 12 or more hours have passed
-        if (timeDiff >= 1) {
-          console.log('1 hours passed, showing location modal');
+        if (timeDiff >= 12) {
+          console.log('12 hours passed, showing location modal');
           setShowLocationModal(true);
           await AsyncStorage.setItem('lastLocationModalShown', currentTime.toString());
         } else {
@@ -763,7 +820,11 @@ export default function Home() {
               
               <FeatureCards />
             </View>
-            {isDriver && inProgressRides.length > 0 && (
+            {isLoadingRides ? (
+              <View className="items-center justify-center py-4">
+                <ActivityIndicator size="small" color="#f97316" />
+              </View>
+            ) : inProgressRides.length > 0 ? (
               <>
                 <View className={`flex-row items-center mt-5 mb-3 w-full px-3 ${language === 'ar' ? 'flex-row-reverse justify-between' : 'flex-row justify-between'}`}>
                   <Text className={`text-xl ${language === 'ar' ? 'font-CairoBold text-right' : 'font-JakartaBold text-left'}`}>
@@ -778,60 +839,74 @@ export default function Home() {
                 
                 <FlatList
                   data={inProgressRides}
-                  renderItem={({ item: ride }) => (
-                    <TouchableOpacity
-                      key={ride.id}
-                      onPress={() => {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                        router.push(`/(root)/ride-details/${ride.id}`);
-                      }}
-                      className="bg-white mx-3 mb-3 p-4 rounded-2xl shadow-lg"
-                      style={{
-                        elevation: 3,
-                        shadowColor: '#000',
-                        shadowOffset: { width: 0, height: 2 },
-                        shadowOpacity: 0.1,
-                        shadowRadius: 3.84,
-                      }}
-                    >
-                      <View className={`flex-row items-center justify-between ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
-                        <View className="flex-1">
-                          <View className={`flex-row items-center mb-2 ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
-                            <View className="bg-green-100 px-2 py-1 rounded-full">
-                              <Text className={`text-green-600 text-xs ${language === 'ar' ? 'font-CairoBold' : 'font-JakartaBold'}`}>
-                                {language === 'ar' ? 'قيد التقدم' : 'In Progress'}
+                  renderItem={({ item: ride }) => {
+                    const rideWithStatus = ride as Ride & { display_status?: string };
+                    return (
+                      <TouchableOpacity
+                        key={ride.id}
+                        onPress={() => {
+                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                          router.push(`/(root)/ride-details/${ride.id}`);
+                        }}
+                        className="bg-white mx-3 mb-3 p-4 rounded-2xl shadow-lg"
+                        style={{
+                          elevation: 3,
+                          shadowColor: '#000',
+                          shadowOffset: { width: 0, height: 2 },
+                          shadowOpacity: 0.1,
+                          shadowRadius: 3.84,
+                        }}
+                      >
+                        <View className={`flex-row items-center justify-between ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
+                          <View className="flex-1">
+                            <View className={`flex-row items-center mb-2 ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
+                              <View className={`px-2 py-1 rounded-full ${
+                                rideWithStatus.display_status === 'completed' ? 'bg-blue-100' : 'bg-green-100'
+                              }`}>
+                                <Text className={`text-xs ${
+                                  rideWithStatus.display_status === 'completed' 
+                                    ? 'text-blue-600' 
+                                    : 'text-green-600'
+                                } ${language === 'ar' ? 'font-CairoBold' : 'font-JakartaBold'}`}>
+                                  {language === 'ar' 
+                                    ? (rideWithStatus.display_status === 'completed' ? 'مكتملة' : 'قيد التقدم')
+                                    : (rideWithStatus.display_status === 'completed' ? 'Completed' : 'In Progress')
+                                  }
+                                </Text>
+                              </View>
+                              <Text className={`text-gray-500 text-sm ${language === 'ar' ? 'font-CairoBold mr-2' : 'font-JakartaBold ml-2'}`}>
+                                {ride.ride_datetime}
                               </Text>
                             </View>
-                            <Text className={`text-gray-500 text-sm ${language === 'ar' ? 'font-CairoBold mr-2' : 'font-JakartaBold ml-2'}`}>
-                              {ride.ride_datetime}
+                            <Text className={`text-gray-900 text-lg mb-1 ${language === 'ar' ? 'font-CairoBold text-right' : 'font-CairoBold text-left'}`}>
+                              {ride.destination_address}
+                            </Text>
+                            <Text className={`text-gray-600 text-sm ${language === 'ar' ? 'font-CairoBold text-right' : 'font-CairoRegular text-left'}`}>
+                              {ride.origin_address}
+                            </Text>
+                            {isDriver && (
+                              <Text className={`text-orange-500 text-sm mt-1 ${language === 'ar' ? 'font-CairoBold text-right' : 'font-JakartaBold text-left'}`}>
+                                {language === 'ar' ? `المقاعد المتاحة: ${ride.available_seats}` : `Available seats: ${ride.available_seats}`}
+                              </Text>
+                            )}
+                          </View>
+                          <View className={`items-center ${language === 'ar' ? 'ml-3' : 'mr-3'}`}>
+                            <MaterialIcons name="navigation" size={24} color="#f97316" />
+                            <Text className={`text-orange-500 text-xs mt-1 ${language === 'ar' ? 'font-CairoBold' : 'font-JakartaBold'}`}>
+                              {language === 'ar' ? 'انتقل' : 'Navigate'}
                             </Text>
                           </View>
-                          <Text className={`text-gray-900 text-lg mb-1 ${language === 'ar' ? 'font-CairoBold text-right' : 'font-CairoBold text-left'}`}>
-                            {ride.destination_address}
-                          </Text>
-                          <Text className={`text-gray-600 text-sm ${language === 'ar' ? 'font-CairoBold text-right' : 'font-CairoRegular text-left'}`}>
-                            {ride.origin_address}
-                          </Text>
-                          <Text className={`text-orange-500 text-sm mt-1 ${language === 'ar' ? 'font-CairoBold text-right' : 'font-JakartaBold text-left'}`}>
-                            {language === 'ar' ? `المقاعد المتاحة: ${ride.available_seats}` : `Available seats: ${ride.available_seats}`}
-                          </Text>
                         </View>
-                        <View className={`items-center ${language === 'ar' ? 'ml-3' : 'mr-3'}`}>
-                          <MaterialIcons name="navigation" size={24} color="#f97316" />
-                          <Text className={`text-orange-500 text-xs mt-1 ${language === 'ar' ? 'font-CairoBold' : 'font-JakartaBold'}`}>
-                            {language === 'ar' ? 'انتقل' : 'Navigate'}
-                          </Text>
-                        </View>
-                      </View>
-                    </TouchableOpacity>
-                  )}
+                      </TouchableOpacity>
+                    );
+                  }}
                   keyExtractor={(item) => item.id}
                   showsVerticalScrollIndicator={false}
                   horizontal={false}
                   contentContainerStyle={{ paddingHorizontal: 0 }}
                 />
               </>
-            )}
+            ) : null}
 
             <View className={`flex-row items-center mt-5 mb-3 w-full px-3 ${language === 'ar' ? 'flex-row-reverse justify-between' : 'flex-row justify-between'}`}>
               <View className={`${language === 'ar' ? 'items-end' : 'items-start'}`}>

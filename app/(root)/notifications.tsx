@@ -52,6 +52,14 @@ const NotificationItem = ({ notification, onPress }: NotificationItemProps) => {
         return <MaterialIcons name="check-circle" size={24} color="#10B981" />;
       case 'ride_status':
         return <MaterialIcons name="notifications" size={24} color="#F97316" />;
+      case 'location_update':
+        return <MaterialIcons name="location-on" size={24} color="#3B82F6" />;
+      case 'check_in':
+        return <MaterialIcons name="login" size={24} color="#10B981" />;
+      case 'check_out':
+        return <MaterialIcons name="logout" size={24} color="#EF4444" />;
+      case 'chat':
+        return <MaterialIcons name="chat" size={24} color="#8B5CF6" />;
       default:
         return <MaterialIcons name="info" size={24} color="#F97316" />;
     }
@@ -65,6 +73,14 @@ const NotificationItem = ({ notification, onPress }: NotificationItemProps) => {
         return 'bg-green-50';
       case 'ride_status':
         return 'bg-blue-50';
+      case 'location_update':
+        return 'bg-blue-50';
+      case 'check_in':
+        return 'bg-green-50';
+      case 'check_out':
+        return 'bg-red-50';
+      case 'chat':
+        return 'bg-purple-50';
       default:
         return 'bg-gray-50';
     }
@@ -81,7 +97,7 @@ const NotificationItem = ({ notification, onPress }: NotificationItemProps) => {
       }}
       onPress={onPress}
     >
-      <View className="flex-row-reverse  items-start">
+      <View className="flex-row-reverse items-start">
         <View className={`w-12 h-12 rounded-xl ${getBackgroundColor()} items-center justify-center ml-3`}>
           {getIcon()}
         </View>
@@ -93,7 +109,7 @@ const NotificationItem = ({ notification, onPress }: NotificationItemProps) => {
             )}
           </View>
           <Text className="text-[15px] text-right text-gray-600 mt-1 leading-relaxed font-CairoRegular">{notification.message}</Text>
-          <Text className="text-xs text-gray-400  mt-2 font-CairoMedium">{formatTimeAgo(notification.createdAt)}</Text>
+          <Text className="text-xs text-gray-400 mt-2 font-CairoMedium">{formatTimeAgo(notification.createdAt)}</Text>
         </View>
       </View>
     </TouchableOpacity>
@@ -108,11 +124,37 @@ export default function Notifications() {
     try {
       await markAsRead(notification.id);
       
+      // Navigate based on notification type
+      switch (notification.data?.type) {
+        case 'location_update':
+          router.push('/track');
+          break;
+          case 'driver_status' :
+            router.push('/driverInfo');
+            break; 
+            case 'driver_request' :
+            router.push('/(root)/admin/driverApplications');
+            break;  
+        case 'ride_request':
+        case 'ride_status':
+        case 'ride_complete':
+        case 'check_in':
+        case 'check_out':
       if (notification.data?.rideId) {
         router.push({
           pathname: '/(root)/ride-details/[id]',
           params: { id: notification.data.rideId, expandSheet: 'true' }
         });
+          }
+          break;
+        case 'chat':
+          if (notification.data?.chatId) {
+            router.push(`/chat/${notification.data.chatId}`);
+          }
+          break;
+        default:
+          // For any other notification type, just refresh the notifications
+          break;
       }
     } catch (error) {
       console.error('Error handling notification press:', error);
@@ -126,15 +168,15 @@ export default function Notifications() {
         <View className="flex-row w-full justify-between items-center">
           <TouchableOpacity 
             onPress={() => router.back()}
-            className="w-10 h-10 items-center  pl-2 justify-center rounded-full bg-gray-100"
+            className="w-10 h-10 items-center pl-2 justify-center rounded-full bg-gray-100"
           >
-            <MaterialIcons name="arrow-back-ios"  size={20} color="#374151" />
+            <MaterialIcons name="arrow-back-ios" size={20} color="#374151" />
           </TouchableOpacity>
           <View className="flex-row items-center">
             <Text className="text-2xl font-CairoBold text-gray-900">الإشعارات</Text>
             {unreadCount > 0 && (
-              <View className="mr-2 bg-orange-500 rounded-full w-6 h-6 items-center justify-center">
-                <Text className="text-white text-xs font-CairoBold">{unreadCount}</Text>
+              <View className="mr-2 bg-orange-500 mb-3 rounded-full w-7 h-7 items-center justify-center border-2 border-white shadow-sm">
+                <Text className="text-white text-sm mt-1 font-CairoBold">{unreadCount}</Text>
               </View>
             )}
           </View>

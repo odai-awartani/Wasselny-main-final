@@ -14,31 +14,40 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const { user } = useUser();
   const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (!user?.id) return;
+
+    // Set up real-time listener for profile image updates
+    const userRef = doc(db, 'users', user.id);
+    const unsubscribe = onSnapshot(userRef, (doc) => {
+      if (doc.exists()) {
+        const userData = doc.data();
+        const imageUrl = userData.profile_image_url || userData.driver?.profile_image_url || user?.imageUrl || null;
+        setProfileImageUrl(imageUrl);
+      }
+    }, (error) => {
+      console.error('Error in profile image listener:', error);
+    });
+
+    // Cleanup subscription on unmount
+    return () => unsubscribe();
+  }, [user?.id, user?.imageUrl]);
+
   const refreshProfileImage = async () => {
     if (!user?.id) return;
 
     try {
       const userRef = doc(db, 'users', user.id);
-      return new Promise<void>((resolve) => {
-        const unsubscribe = onSnapshot(userRef, (doc) => {
-          if (doc.exists()) {
-            const userData = doc.data();
-            const imageUrl = userData.profile_image_url || userData.driver?.profile_image_url || null;
-            setProfileImageUrl(imageUrl);
-          }
-          resolve();
-        });
-      });
+      const doc = await userRef.get();
+      if (doc.exists()) {
+        const userData = doc.data();
+        const imageUrl = userData.profile_image_url || userData.driver?.profile_image_url || user?.imageUrl || null;
+        setProfileImageUrl(imageUrl);
+      }
     } catch (error) {
       console.error('Error refreshing profile image:', error);
     }
   };
-
-  useEffect(() => {
-    if (user?.id) {
-      refreshProfileImage();
-    }
-  }, [user?.id]);
 
   return (
     <ProfileContext.Provider value={{ profileImageUrl, refreshProfileImage }}>

@@ -1320,9 +1320,7 @@ const strokeDashoffset = circumference - progress * circumference;
             <View>
               <View className="w-full">
                 <View className="mb-6">
-                  <Text className={`text-2xl font-CairoBold ${isRTL ? 'text-right' : 'text-left'} mt-4 mb-2 text-gray-800`}>
-                    {language === 'ar' ? "قوانين السيارة" : "Car Rules"}
-                  </Text>
+                 
                   <Text className={`text-sm font-CairoRegular ${isRTL ? 'text-right' : 'text-left'} text-gray-500 leading-5`}>
                     {language === 'ar' 
                       ? "حدد القوانين التي تريد تطبيقها في رحلتك لضمان رحلة مريحة وآمنة"
@@ -1975,14 +1973,19 @@ const strokeDashoffset = circumference - progress * circumference;
                     shadowOffset: { width: 0, height: 4 },
                     shadowOpacity: 0.3,
                     shadowRadius: 4.65,
+                    opacity: isLoading ? 0.7 : 1,
                   }}
                 >
                   <View className="flex-row items-center justify-center">
-                    <Text className="text-white font-CairoBold text-lg">
-                      {currentStep === steps.length - 1
-                        ? (language === 'ar' ? "انشاء الرحلة" : "Create Ride")
-                        : (language === 'ar' ? "التالي" : "Next")}
-                    </Text>
+                    {isLoading && currentStep === steps.length - 1 ? (
+                      <ActivityIndicator color="white" size="small" />
+                    ) : (
+                      <Text className="text-white font-CairoBold text-lg">
+                        {currentStep === steps.length - 1
+                          ? (language === 'ar' ? "انشاء الرحلة" : "Create Ride")
+                          : (language === 'ar' ? "التالي" : "Next")}
+                      </Text>
+                    )}
                   </View>
                 </LinearGradient>
               </TouchableOpacity>

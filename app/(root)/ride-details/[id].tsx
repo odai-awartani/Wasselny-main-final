@@ -10,7 +10,8 @@ import { icons } from '@/constants';
 import RideMap from '@/components/RideMap';
 import CustomButton from '@/components/CustomButton';
 import { useAuth } from '@clerk/clerk-expo';
-import { scheduleNotification, setupNotifications, cancelNotification, sendRideStatusNotification, sendRideRequestNotification, startRideNotificationService, schedulePassengerRideReminder, sendCheckOutNotificationForDriver, scheduleDriverRideReminder, scheduleRideNotification } from '@/lib/notifications';
+import { useUser } from '@clerk/clerk-expo';
+import { scheduleNotification, setupNotifications, cancelNotification, sendRideStatusNotification, sendRideRequestNotification, startRideNotificationService, schedulePassengerRideReminder, sendCheckOutNotificationForDriver, scheduleDriverRideReminder, scheduleRideNotification, sendLocationUpdateNotification } from '@/lib/notifications';
 import { MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import BottomSheet from '@gorhom/bottom-sheet';
@@ -145,6 +146,7 @@ const RideDetails = () => {
     created_at: null
   });
   const { userId } = useAuth();
+  const { user } = useUser();
   const isDriver = ride?.driver_id === userId;
   const isPassenger = rideRequest && rideRequest.status === 'accepted';
   const [isRideTime, setIsRideTime] = useState(false);
@@ -751,6 +753,7 @@ const RideDetails = () => {
       if (Platform.OS === 'android') {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       }
+
       if (!rideRequest || !ride || !userId) {
         showAlert({
           title: language === 'ar' ? "خطأ" : "Error",
@@ -760,32 +763,105 @@ const RideDetails = () => {
         return;
       }
 
+      // Show location sharing confirmation
       showAlert({
-        title: language === 'ar' ? "جاري تسجيل الدخول" : "Checking In",
-        message: language === 'ar' ? "جاري تسجيل دخولك..." : "Checking you in...",
+        title: language === 'ar' ? 'مشاركة الموقع' : 'Share Location',
+        message: language === 'ar' 
+          ? 'هل تريد مشاركة موقعك مع الأشخاص الذين يشاركون موقعهم معك؟' 
+          : 'Would you like to share your location with people who share their location with you?',
         type: 'info',
-        isLoading: true
-      });
+        showCancel: true,
+        confirmText: language === 'ar' ? 'نعم' : 'Yes',
+        cancelText: language === 'ar' ? 'لا' : 'No',
+        onConfirm: async () => {
+          try {
+            // Request location permissions
+            let { status } = await Location.requestForegroundPermissionsAsync();
+            if (status !== 'granted') {
+              showAlert({
+                title: language === 'ar' ? 'تنبيه الموقع' : 'Location Alert',
+                message: language === 'ar' 
+                  ? 'يجب منح إذن للوصول إلى الموقع لاستخدام ميزات التتبع' 
+                  : 'Location permission is required to use the tracking features.',
+                type: 'warning'
+              });
+              return;
+            }
 
-      await updateDoc(doc(db, 'ride_requests', rideRequest.id), {
-        status: 'checked_in',
-        updated_at: serverTimestamp()
-      });
+            // Get current location
+            const location = await Location.getCurrentPositionAsync({
+              accuracy: Location.Accuracy.Balanced
+            });
 
-      await sendRideStatusNotification(
-        ride.driver_id || '',
-        'الراكب وصل',
-        `الراكب قد وصل وبدأ الرحلة من ${ride.origin_address} إلى ${ride.destination_address}`,
-        ride.id
-      );
+            const currentTime = new Date().toISOString();
 
-      showAlert({
-        title: language === 'ar' ? "تم تسجيل الدخول" : "Checked In",
-        message: language === 'ar' ? "تم تسجيل دخولك بنجاح" : "Successfully checked in",
-        type: 'success'
+            // Get all active shares where user is the sharer
+            const sharesQuery = query(
+              collection(db, 'location_sharing'),
+              where('sharer_id', '==', userId),
+              where('is_active', '==', true)
+            );
+            const sharesSnapshot = await getDocs(sharesQuery);
+            
+            // Update location for each active share
+            const updatePromises = sharesSnapshot.docs.map(async (docSnapshot) => {
+              const shareData = docSnapshot.data();
+              await updateDoc(doc(db, 'location_sharing', docSnapshot.id), {
+                latitude: location.coords.latitude,
+                longitude: location.coords.longitude,
+                last_updated: currentTime
+              });
+
+              // Send notification to recipient
+              await sendLocationUpdateNotification(
+                shareData.recipient_id,
+                user?.fullName || (language === 'ar' ? 'مستخدم' : 'A user'),
+                language === 'ar',
+                userId
+              );
+            });
+
+            await Promise.all(updatePromises);
+
+            // Now proceed with check-in
+            showAlert({
+              title: language === 'ar' ? "جاري تسجيل الدخول" : "Checking In",
+              message: language === 'ar' ? "جاري تسجيل دخولك..." : "Checking you in...",
+              type: 'info',
+              isLoading: true
+            });
+
+            await updateDoc(doc(db, 'ride_requests', rideRequest.id), {
+              status: 'checked_in',
+              updated_at: serverTimestamp()
+            });
+
+            await sendRideStatusNotification(
+              ride.driver_id || '',
+              language === 'ar' ? 'الراكب وصل' : 'Passenger Arrived',
+              language === 'ar'
+                ? `الراكب قد وصل وبدأ الرحلة من ${ride.origin_address} إلى ${ride.destination_address}`
+                : `Passenger has arrived and started the ride from ${ride.origin_address} to ${ride.destination_address}`,
+              ride.id
+            );
+
+            showAlert({
+              title: language === 'ar' ? "تم تسجيل الدخول" : "Checked In",
+              message: language === 'ar' ? "تم تسجيل دخولك بنجاح" : "Successfully checked in",
+              type: 'success'
+            });
+          } catch (error) {
+            console.error('Error during check-in:', error);
+            showAlert({
+              title: language === 'ar' ? "خطأ" : "Error",
+              message: language === 'ar' ? "حدث خطأ أثناء تسجيل الدخول" : "An error occurred while checking in",
+              type: 'error'
+            });
+          }
+        }
       });
     } catch (error) {
-      console.error('Error during check-in:', error);
+      console.error('Error showing check-in alert:', error);
       showAlert({
         title: language === 'ar' ? "خطأ" : "Error",
         message: language === 'ar' ? "حدث خطأ أثناء تسجيل الدخول" : "An error occurred while checking in",
@@ -800,6 +876,7 @@ const RideDetails = () => {
       if (Platform.OS === 'android') {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       }
+
       if (!rideRequest || !ride || !userId) {
         showAlert({
           title: language === 'ar' ? "خطأ" : "Error",
@@ -809,42 +886,101 @@ const RideDetails = () => {
         return;
       }
 
+      // Show location sharing confirmation
       showAlert({
-        title: language === 'ar' ? "جاري تسجيل الخروج" : "Checking Out",
-        message: language === 'ar' ? "جاري تسجيل خروجك..." : "Checking you out...",
+        title: language === 'ar' ? 'مشاركة الموقع' : 'Share Location',
+        message: language === 'ar' 
+          ? 'هل تريد مشاركة موقعك مع الأشخاص الذين يشاركون موقعهم معك؟' 
+          : 'Would you like to share your location with people who share their location with you?',
         type: 'info',
-        isLoading: true
+        showCancel: true,
+        confirmText: language === 'ar' ? 'نعم' : 'Yes',
+        cancelText: language === 'ar' ? 'لا' : 'No',
+        onConfirm: async () => {
+          try {
+            const { status } = await Location.requestForegroundPermissionsAsync();
+            if (status !== 'granted') {
+              showAlert({
+                title: language === 'ar' ? "خطأ" : "Error",
+                message: language === 'ar' ? "يجب السماح بالوصول إلى الموقع لمشاركته" : "Location permission is required to share location",
+                type: 'error'
+              });
+              return;
+            }
+
+            const location = await Location.getCurrentPositionAsync({});
+            const currentTime = new Date().toISOString();
+
+            // Get all active location shares
+            const sharesQuery = query(
+              collection(db, 'location_sharing'),
+              where('sharer_id', '==', userId),
+              where('is_active', '==', true)
+            );
+            const sharesSnapshot = await getDocs(sharesQuery);
+            
+            // Update location for each active share
+            const updatePromises = sharesSnapshot.docs.map(async (docSnapshot) => {
+              const shareData = docSnapshot.data();
+              await updateDoc(doc(db, 'location_sharing', docSnapshot.id), {
+                latitude: location.coords.latitude,
+                longitude: location.coords.longitude,
+                last_updated: currentTime
+              });
+
+              // Send notification to recipient
+              await sendLocationUpdateNotification(
+                shareData.recipient_id,
+                user?.fullName || (language === 'ar' ? 'مستخدم' : 'A user'),
+                language === 'ar',
+                userId
+              );
+            });
+
+            await Promise.all(updatePromises);
+
+            // Now proceed with check-out
+            showAlert({
+              title: language === 'ar' ? "جاري تسجيل الخروج" : "Checking Out",
+              message: language === 'ar' ? "جاري تسجيل خروجك..." : "Checking you out...",
+              type: 'info',
+              isLoading: true
+            });
+
+            await updateDoc(doc(db, 'ride_requests', rideRequest.id), {
+              status: 'checked_out',
+              updated_at: serverTimestamp()
+            });
+
+            await sendRideStatusNotification(
+              ride.driver_id || '',
+              language === 'ar' ? 'الراكب وصل' : 'Passenger Arrived',
+              language === 'ar'
+                ? `الراكب قد وصل إلى وجهته ${ride.destination_address}`
+                : `Passenger has arrived at their destination ${ride.destination_address}`,
+              ride.id
+            );
+
+            showAlert({
+              title: language === 'ar' ? "تم تسجيل الخروج" : "Checked Out",
+              message: language === 'ar' ? "تم تسجيل خروجك بنجاح" : "Successfully checked out",
+              type: 'success'
+            });
+
+            // Show rating modal after successful checkout
+            setShowRatingModal(true);
+          } catch (error) {
+            console.error('Error during check-out:', error);
+            showAlert({
+              title: language === 'ar' ? "خطأ" : "Error",
+              message: language === 'ar' ? "حدث خطأ أثناء تسجيل الخروج" : "An error occurred while checking out",
+              type: 'error'
+            });
+          }
+        }
       });
-
-      if (rideRequest.notification_id) {
-        await cancelNotification(rideRequest.notification_id);
-        console.log(`Cancelled notification ${rideRequest.notification_id}`);
-      }
-
-      await updateDoc(doc(db, 'ride_requests', rideRequest.id), {
-        status: 'checked_out',
-        updated_at: serverTimestamp()
-      });
-
-      const notificationSent = await sendCheckOutNotificationForDriver(
-        ride.driver_id || '',
-        passengerNames[userId] || 'الراكب',
-        ride.id
-      );
-
-      if (!notificationSent) {
-        console.warn('Failed to send check-out notification to driver');
-      }
-
-      showAlert({
-        title: language === 'ar' ? "تم تسجيل الخروج" : "Checked Out",
-        message: language === 'ar' ? "تم تسجيل خروجك بنجاح" : "Successfully checked out",
-        type: 'success'
-      });
-
-      setShowRatingModal(true);
     } catch (error) {
-      console.error('Check-out error:', error);
+      console.error('Error showing check-out alert:', error);
       showAlert({
         title: language === 'ar' ? "خطأ" : "Error",
         message: language === 'ar' ? "حدث خطأ أثناء تسجيل الخروج" : "An error occurred while checking out",
@@ -934,13 +1070,13 @@ const RideDetails = () => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       }
       if (!rideRequest || !ride || !userId) {
-        showAlert({
+              showAlert({
           title: language === 'ar' ? "خطأ" : "Error",
           message: language === 'ar' ? "معلومات الرحلة غير مكتملة" : "Ride information is incomplete",
           type: 'error'
-        });
-        return;
-      }
+              });
+              return;
+            }
 
       if (Object.values(rating).some(value => value === 0)) {
         showAlert({
@@ -1362,7 +1498,7 @@ const RideDetails = () => {
         {allPassengers.length > 0 ? (
           <View className="border border-gray-200 rounded-lg overflow-hidden">
             <View className={`flex-row bg-gray-50 p-3 border-b border-gray-200 ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
-              <View className="flex-1">
+              <View className="w-32">
                 <Text className={`text-sm font-CairoBold text-gray-700 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
                   {language === 'ar' ? 'الاسم' : 'Name'}
                 </Text>
@@ -1372,30 +1508,36 @@ const RideDetails = () => {
                   {language === 'ar' ? 'المقاعد' : 'Seats'}
                 </Text>
               </View>
-              <View className="w-49">
+              <View className="flex-1">
                 <Text className={`text-sm font-CairoBold text-gray-700 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
                   {language === 'ar' ? 'نقطة التوقف' : 'Stop Point'}
                 </Text>
               </View>
-            </View>
-            {allPassengers.map((passenger) => (
-              <View key={passenger.id} className={`flex-row p-3 border-b border-gray-100 ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
-                <View className={`flex-1 flex-row items-center ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
-                  <Image
-                    source={icons.person}
-                    className={`w-5 h-5 ${language === 'ar' ? 'ml-2' : 'mr-2'}`}
-                    tintColor="#10B981"
-                  />
-                  <Text className={`text-sm pt-1.5 text-gray-700 font-CairoRegular ${language === 'ar' ? 'text-right' : 'text-left'}`}>
-                    {passengerNames[passenger.user_id] || (language === 'ar' ? 'الراكب' : 'Passenger')}
-                  </Text>
                 </View>
-                <View className="w-20 justify-center">
+                  {allPassengers.map((passenger) => (
+                     <View key={passenger.id} className={`flex-row p-3 border-b border-gray-100 ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
+                      <View className="w-32">
+                          <View className={`items-center ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
+                           <Image
+                        source={icons.person}
+                        className={`w-5 h-5 ${language === 'ar' ? 'ml-2' : 'mr-2'}`}
+                        tintColor="#10B981"
+                      />
+                           <Text
+                        numberOfLines={2}
+                        className={`text-sm pt-1.5 text-gray-700 font-CairoRegular ${language === 'ar' ? 'text-right' : 'text-left'} flex-1`}
+                                 >
+                        {passengerNames[passenger.user_id] || (language === 'ar' ? 'الراكب' : 'Passenger')}
+                            </Text>
+                      </View>
+                  </View>
+
+                <View className="w-24 justify-center">
                   <Text className={`text-sm pt-1.5 text-gray-700 font-CairoRegular ${language === 'ar' ? 'text-right' : 'text-left'}`}>
                     {passenger.requested_seats || 1} {passenger.requested_seats === 1 ? t.seat : t.seats}
                   </Text>
                 </View>
-                <View className="w-49 justify-center">
+                <View className="flex-1 justify-center">
                   <Text className={`text-sm pt-1.5 text-gray-700 font-CairoRegular ${language === 'ar' ? 'text-right' : 'text-left'}`}>
                     {passenger.selected_waypoint ? (
                       <>
@@ -1904,7 +2046,7 @@ const RideDetails = () => {
           case 'checked_in':
             return (
               <View className="p-4 m-3">
-                {ride?.status === 'in-progress' ? (
+                {(ride?.status === 'in-progress' || ride?.status === 'completed') ? (
                   <CustomButton
                     title={language === 'ar' ? "تسجيل الخروج" : "Check Out"}
                     onPress={handleCheckOut}
@@ -1985,7 +2127,7 @@ const RideDetails = () => {
               {/* Overall Rating */}
               <View className="bg-gray-50 p-4 rounded-xl">
                 <Text className="text-lg font-CairoBold mb-3 text-right text-gray-800">التقييم العام</Text>
-                <View className="py-2">
+                <View className="py-2" style={{ transform: [{ scaleX: -1 }] }}>
                   <AirbnbRating
                     reviewColor="#F79824"
                     showRating={true}
@@ -2004,7 +2146,7 @@ const RideDetails = () => {
                   <Text className="text-lg font-CairoBold text-gray-800">قيادة السيارة</Text>
                   <MaterialIcons name="directions-car" size={24} color="#f97316" />
                 </View>
-                <View className="py-2">
+                <View className="py-2" style={{ transform: [{ scaleX: -1 }] }}>
                   <AirbnbRating
                     reviewColor="#F79824"
                     showRating={true}
@@ -2023,7 +2165,7 @@ const RideDetails = () => {
                   <Text className="text-lg font-CairoBold text-gray-800">الأخلاق والسلوك</Text>
                   <MaterialIcons name="people" size={24} color="#f97316" />
                 </View>
-                <View className="py-2">
+                <View className="py-2" style={{ transform: [{ scaleX: -1 }] }}>
                   <AirbnbRating
                     reviewColor="#F79824"
                     showRating={true}
@@ -2042,7 +2184,7 @@ const RideDetails = () => {
                   <Text className="text-lg font-CairoBold text-gray-800">الالتزام بالمواعيد</Text>
                   <MaterialIcons name="access-time" size={24} color="#f97316" />
                 </View>
-                <View className="py-2">
+                <View className="py-2" style={{ transform: [{ scaleX: -1 }] }}>
                   <AirbnbRating
                     reviewColor="#F79824"
                     showRating={true}
@@ -2061,7 +2203,7 @@ const RideDetails = () => {
                   <Text className="text-lg font-CairoBold text-gray-800">نظافة السيارة</Text>
                   <MaterialIcons name="cleaning-services" size={24} color="#f97316" />
                 </View>
-                <View className="py-2">
+                <View className="py-2" style={{ transform: [{ scaleX: -1 }] }}>
                   <AirbnbRating
                     reviewColor="#F79824"
                     showRating={true}

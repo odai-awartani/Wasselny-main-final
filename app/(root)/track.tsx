@@ -336,24 +336,19 @@ export default function Track() {
       for (const docSnap of snapshot.docs) {
         const data = docSnap.data() as Share;
         const sharerDoc = await getDoc(doc(db, 'users', data.sharer_id));
-        let sharer = {
-          id: data.sharer_id,
-            name: 'Unknown User',
-          email: '',
-          profile_image: undefined
-        };
         
+        // Only add the request if the sharer has a Firebase account
         if (sharerDoc.exists()) {
           const sharerData = sharerDoc.data();
-          sharer = {
+          const sharer = {
             id: data.sharer_id,
             name: sharerData.name || sharerData.email || 'User',
             email: sharerData.email,
             profile_image: sharerData.profile_image_url 
           };
+          
+          requests.push({ ...data, sharer, docId: docSnap.id });
         }
-        
-        requests.push({ ...data, sharer, docId: docSnap.id });
       }
       
       setTrackRequests(requests);
@@ -473,6 +468,7 @@ export default function Track() {
     if (!timestamp) return isRTL ? "لم يتم التحديث" : "Never";
     
     const lastUpdated = new Date(timestamp);
+    const now = new Date();
     const seconds = Math.floor((now.getTime() - lastUpdated.getTime()) / 1000);
     
     if (seconds < 60) {
@@ -653,25 +649,92 @@ export default function Track() {
     if (!user?.id || !selectedUser) return;
     
     try {
-      const locationSharingRef = doc(db, 'location_sharing', `${user.id}_${selectedUser.id}`);
-      await setDoc(locationSharingRef, {
-        sharer_id: user.id,
-        recipient_id: selectedUser.id,
-        latitude,
-        longitude,
-        last_updated: new Date().toISOString(),
-        is_active: true
-      }, { merge: true });
-
-      // Send location update notification
-      await sendLocationUpdateNotification(
-        selectedUser.id,
-        user?.fullName || (isRTL ? 'مستخدم' : 'A user'),
-        isRTL,
-        user.id
+      const currentTime = new Date().toISOString();
+      
+      // Get all active shares where current user is the sharer
+      const sharesQuery = query(
+        collection(db, 'location_sharing'),
+        where('sharer_id', '==', user.id),
+        where('is_active', '==', true)
       );
+      const sharesSnapshot = await getDocs(sharesQuery);
+      
+      // Update location for each active share
+      const updatePromises = sharesSnapshot.docs.map(async (docSnapshot) => {
+        const shareData = docSnapshot.data();
+        await updateDoc(doc(db, 'location_sharing', docSnapshot.id), {
+          latitude,
+          longitude,
+          last_updated: currentTime
+        });
+
+        // Send notification to recipient
+        await sendLocationUpdateNotification(
+          shareData.recipient_id,
+          user?.fullName || (isRTL ? 'مستخدم' : 'A user'),
+          isRTL,
+          user.id
+        );
+      });
+
+      await Promise.all(updatePromises);
+
+      // Update user's own location state
+      setUserLocation({
+        latitude,
+        longitude
+      });
+
+      // Force refresh the track requests to update timestamps
+      const refreshQuery = query(
+        collection(db, 'location_sharing'),
+        where('recipient_id', '==', user.id),
+        where('is_active', '==', true)
+      );
+      
+      const refreshSnapshot = await getDocs(refreshQuery);
+      const requests: any[] = [];
+      
+      for (const docSnap of refreshSnapshot.docs) {
+        const data = docSnap.data() as Share;
+        const sharerDoc = await getDoc(doc(db, 'users', data.sharer_id));
+        
+        if (sharerDoc.exists()) {
+          const sharerData = sharerDoc.data();
+          const sharer = {
+            id: data.sharer_id,
+            name: sharerData.name || sharerData.email || 'User',
+            email: sharerData.email,
+            profile_image: sharerData.profile_image_url 
+          };
+          
+          requests.push({ ...data, sharer, docId: docSnap.id });
+        }
+      }
+      
+      setTrackRequests(requests);
+
+      // Center map on new location
+      if (mapRef.current) {
+        mapRef.current.animateToRegion({
+          latitude,
+          longitude,
+          latitudeDelta: 0.01,
+          longitudeDelta: 0.01
+        }, 1000);
+      }
+
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (error) {
       console.error('Error updating shared location:', error);
+      setAlertConfig({
+        visible: true,
+        title: isRTL ? 'خطأ' : 'Error',
+        message: isRTL ? 'فشل في تحديث الموقع' : 'Failed to update location',
+        type: 'error',
+        onConfirm: () => setAlertConfig(prev => ({ ...prev, visible: false })),
+        confirmText: isRTL ? 'حسنا' : 'OK'
+      });
     }
   };
 
@@ -878,7 +941,7 @@ export default function Track() {
     return (
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
-          <View className={`${language === 'ar' ? 'flex-row' : 'flex-row'} justify-between items-center mb-4`}>
+          <View className={`${language === 'ar' ? 'flex-row-reverse' : 'flex-row'} justify-between items-center mb-4`}>
             <Text className="text-xl font-CairoBold text-gray-800">
               {isRTL ? 'مشاركة الموقع مع' : 'Share Location With'}
             </Text>
@@ -1060,7 +1123,7 @@ export default function Track() {
     return (
     <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
-          <View className={`${language === 'ar' ? 'flex-row' : 'flex-row'}  justify-between items-center mb-4`}>
+          <View className={`${language === 'ar' ? 'flex-row-reverse' : 'flex-row'} justify-between items-center mb-2`}>
             <Text className="text-xl font-CairoBold text-gray-800">
               {isRTL ? 'مشاركاتي' : 'My Shares'}
             </Text>
@@ -1071,6 +1134,9 @@ export default function Track() {
               <AntDesign name="close" size={24} color="#374151" />
             </TouchableOpacity>
           </View>
+          <Text className={`text-sm text-gray-500 font-CairoRegular mb-4 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+            {isRTL ? 'الاشخاص الذين اشارك موقعي معهم' : 'People you are sharing your location with'}
+          </Text>
           
           {myShares.length > 0 && (
             <TouchableOpacity
@@ -1372,9 +1438,14 @@ export default function Track() {
           handleIndicatorStyle={{ backgroundColor: '#9ca3af', width: 50 }}
         >
           <View className={`flex-1 bg-white`}>
-            <Text className={`text-lg font-CairoBold text-gray-800 px-4 py-4 ${language === 'ar' ? "text-right" : "text-left"} `}>
-              {isRTL ? 'طلبات الموقع' : 'Location Requests'}
-            </Text>
+            <View className="px-4 pt-4">
+              <Text className={`text-lg font-CairoBold text-gray-800 ${language === 'ar' ? "text-right" : "text-left"} `}>
+                {isRTL ? "طلبات الموقع" : 'Location Requests'}
+              </Text>
+              <Text className={`text-sm text-gray-500 font-CairoRegular mt-1 ${language === 'ar' ? "text-right" : "text-left"}`}>
+                {isRTL ? 'الاشخاص الذين يشاركون موقعهم معك في الوقت الحالي' : 'People who are currently sharing their location with you'}
+              </Text>
+            </View>
             {renderBottomSheetContent()}
           </View>
         </BottomSheet>
