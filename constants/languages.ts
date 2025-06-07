@@ -353,7 +353,7 @@ export interface TranslationKeys {
   invalidCode: string;
   emailTaken: string;
   invalidEmailFormat: string;
-  TotalRating: string;
+  rideSeats: string;
 }
 
 export interface Translations {
@@ -646,15 +646,16 @@ export const translations: Translations = {
     daysNotSpecified: "الأيام غير محددة",
     stop: "نقطة توقف",
     passenger: "الراكب",
+    rideSeats: " عدد مقاعد السيارة اقل من عدد المقاعد المطلوب" ,
     rideOrDriverDataMissing: "بيانات الرحلة أو السائق غير متوفرة",
     bookingAccepted: "تم قبول طلب الحجز!",
     bookingAcceptedForRide: "تم قبول طلب حجزك للرحلة من",
-    bookingAcceptedSuccess: "✅ تم قبول طلب الحجز بنجاح",
+    bookingAcceptedSuccess: " تم قبول طلب الحجز بنجاح",
     bookingAcceptedFor: "تم قبول طلب",
     errorAcceptingRequest: "حدث خطأ أثناء قبول الطلب.",
     bookingRejected: "تم رفض طلب الحجز",
     bookingRejectedForRide: "عذراً، تم رفض طلب حجزك للرحلة من",
-    bookingRejectedSuccess: "✅ تم رفض طلب الحجز",
+    bookingRejectedSuccess: " تم رفض طلب الحجز",
     bookingRejectedFor: "تم رفض طلب",
     errorRejectingRequest: "حدث خطأ أثناء رفض الطلب.",
     loadingBookingRequests: "جاري تحميل طلبات الحجز...",
@@ -713,7 +714,7 @@ export const translations: Translations = {
     searchUserPlaceholder: "بحث عن مستخدم...",
     noUsersFound: "لم يتم العثور على مستخدمين",
     startSharing: "بدء المشاركة",
-    locationRequests: "الاشخاص اللذين يشاركون مقعهم معي",
+    locationRequests: "طلبات الموقع",
     noActiveLocationRequests: "لا توجد طلبات موقع نشطة",
     myShares: "مشاركاتي",
     updateLocationForAll: "تحديث الموقع للجميع",
@@ -741,7 +742,6 @@ export const translations: Translations = {
     invalidCode: "رمز التحقق غير صحيح أو منتهي الصلاحية.",
     emailTaken: "هذا البريد الإلكتروني مستخدم بالفعل. يرجى المحاولة ببريد آخر.",
     invalidEmailFormat: "يجب أن يكون البريد الإلكتروني بصيغة صحيحة.",
-    TotalRating: "عدد التقييمات"
   },
   en: {
     chooseLanguage: "Choose Language",
@@ -1122,6 +1122,6 @@ export const translations: Translations = {
     invalidCode: "The verification code is invalid or expired.",
     emailTaken: "That email address is taken. Please try another.",
     invalidEmailFormat: "email_address must be a valid email address.",
-    TotalRating: "Total Rating "
+    rideSeats: "Number of Ride Seats upper than the seats you want"
   },
 };

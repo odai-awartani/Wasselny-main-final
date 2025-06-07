@@ -10,7 +10,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Platform, ActivityIndicator, 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useUser } from '@clerk/clerk-expo';
 import { router } from 'expo-router';
-import { collection, query, where, onSnapshot, doc, getDoc, updateDoc, setDoc, getDocs } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, getDoc, updateDoc, setDoc, getDocs, addDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { MaterialIcons, AntDesign, MaterialCommunityIcons } from '@expo/vector-icons';
 import MapView, { Marker } from 'react-native-maps';
@@ -22,7 +22,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as Haptics from 'expo-haptics';
 import Header from '@/components/Header';
 import * as Notifications from 'expo-notifications';
-import { sendLocationUpdateNotification } from '@/lib/notifications';
+import { sendLocationUpdateNotification, sendLocationShareNotification } from '@/lib/notifications';
 import { Animated } from 'react-native';
 
 // Types
@@ -266,7 +266,6 @@ export default function Track() {
     type: 'info',
     onConfirm: () => {},
   });
-  const [showRequestsModal, setShowRequestsModal] = useState(false);
 
   // Timer for updating times
   useEffect(() => {
@@ -750,93 +749,77 @@ export default function Track() {
 
   // Start location sharing with selected user
   const startLocationSharing = async () => {
+    if (!selectedUser || !user?.id) return;
+    
     try {
-      // Validate required data
-      if (!selectedUser || !userLocation || !user?.id) {
-        setAlertConfig({
-          visible: true,
-          title: isRTL ? 'خطأ' : 'Error',
-          message: isRTL ? 'لا يمكن مشاركة الموقع، يرجى تحديث موقعك واختيار مستخدم' : 'Cannot share location, please refresh your location and select a user',
-          type: 'error',
-          onConfirm: () => setAlertConfig(prev => ({ ...prev, visible: false })),
-          confirmText: isRTL ? 'حسنا' : 'OK'
-        });
-        return;
-      }
-
-      // Show loading indicator
       setIsRefreshing(true);
-
-      // Clear any existing interval
-      if (trackingInterval) {
-        clearInterval(trackingInterval);
-        setTrackingInterval(null);
-      }
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       
-      // Get current location to ensure it's fresh
-      try {
-        const currentLocation = await Location.getCurrentPositionAsync({
+      // Use existing location if available, otherwise get new location
+      let location;
+      if (userLocation) {
+        location = {
+          coords: {
+            latitude: userLocation.latitude,
+            longitude: userLocation.longitude
+          }
+        };
+      } else {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+          setAlertConfig({
+            visible: true,
+            title: isRTL ? 'خطأ' : 'Error',
+            message: isRTL ? 'يجب السماح بالوصول إلى الموقع لمشاركته' : 'Location permission is required to share location',
+            type: 'error',
+            onConfirm: () => setAlertConfig(prev => ({ ...prev, visible: false })),
+            confirmText: isRTL ? 'حسنا' : 'OK'
+          });
+          return;
+        }
+        
+        location = await Location.getCurrentPositionAsync({
           accuracy: Location.Accuracy.Balanced
         });
-        
-        // Create initial location sharing record
-        await updateSharedLocation(
-          currentLocation.coords.latitude, 
-          currentLocation.coords.longitude
-        );
-      } catch (error) {
-        console.error('Error getting location:', error);
-        // Use last known location if current fails
-        if (userLocation) {
-          await updateSharedLocation(userLocation.latitude, userLocation.longitude);
-        }
       }
       
-      // Set up interval to update location every 30 seconds
-      const interval = setInterval(async () => {
-        try {
-          // Check if we still have valid data before updating
-          if (!user?.id || !selectedUser?.id) {
-            if (trackingInterval) {
-              clearInterval(trackingInterval);
-              setTrackingInterval(null);
-            }
-            return;
-          }
-
-          const location = await Location.getCurrentPositionAsync({
-            accuracy: Location.Accuracy.Balanced
-          });
-          
-          await updateSharedLocation(location.coords.latitude, location.coords.longitude);
-        } catch (error) {
-          console.error('Error updating location in interval:', error);
-        }
-      }, 30000);
+      // Add sharing document
+      const shareDoc = await addDoc(collection(db, 'location_sharing'), {
+        sharer_id: user.id,
+        recipient_id: selectedUser.id,
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+        last_updated: new Date().toISOString(),
+        is_active: true
+      });
       
-      setTrackingInterval(interval);
-      setIsLocationSharing(true);
+      // Send location share notification
+      await sendLocationShareNotification(
+        selectedUser.id, 
+        user?.fullName || (isRTL ? 'مستخدم' : 'A user'), 
+        isRTL,
+        user.id
+      );
       
-      // Hide loading indicator
-      setIsRefreshing(false);
-      
-      // Close modal and show success message
+      // Close modal and show success
       setActiveModal('none');
+      setSelectedUser(null);
+      setSearchQuery('');
+      setFilteredUsers(appUsers);
       
+      // Show success message
       setAlertConfig({
         visible: true,
-        title: isRTL ? 'مشاركة الموقع نشطة' : 'Location Sharing Active',
+        title: isRTL ? 'تم بدء المشاركة' : 'Sharing Started',
         message: isRTL ? `أنت الآن تشارك موقعك مع ${selectedUser.name}` : `You are now sharing your location with ${selectedUser.name}`,
         type: 'success',
         onConfirm: () => setAlertConfig(prev => ({ ...prev, visible: false })),
         confirmText: isRTL ? 'حسنا' : 'OK'
       });
+      
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (error) {
       console.error('Error starting location sharing:', error);
-      
-      // Hide loading indicator
-      setIsRefreshing(false);
-      
       setAlertConfig({
         visible: true,
         title: isRTL ? 'خطأ' : 'Error',
@@ -845,6 +828,9 @@ export default function Track() {
         onConfirm: () => setAlertConfig(prev => ({ ...prev, visible: false })),
         confirmText: isRTL ? 'حسنا' : 'OK'
       });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    } finally {
+      setIsRefreshing(false);
     }
   };
 
@@ -896,44 +882,33 @@ export default function Track() {
   ), [selectedUser]);
 
   // Render request item
-  const renderRequestItem = useCallback(({ item }: { item: any }) => (
-    <TouchableOpacity
-      className="flex-row items-center p-4 border-b border-gray-100"
-      onPress={() => viewSharerLocation(item)}
-    >
-      <View className="w-10 h-10 rounded-full bg-gray-200 justify-center items-center mr-3">
-        {item.sharer.profile_image ? (
-          <Image 
-            source={{ uri: item.sharer.profile_image }} 
-            className="w-10 h-10 rounded-full"
-          />
-        ) : (
-          <Text className="text-gray-500 font-CairoBold">
-            {(item.sharer.name?.charAt(0) || '?').toUpperCase()}
-          </Text>
-        )}
-      </View>
-      <View className="flex-1">
-        <Text className="text-base font-CairoBold text-gray-800">
-          {item.sharer.name}
-        </Text>
-        <Text className="text-sm font-CairoRegular text-gray-500">
-          {item.sharer.email}
-        </Text>
-        <Text className="text-xs font-CairoRegular text-gray-400 mt-1">
-          {isRTL ? 'آخر تحديث: ' : 'Last updated: '}{formatTimeElapsed(item.last_updated)}
-        </Text>
-      </View>
-      <TouchableOpacity 
-        className="bg-orange-50 px-4 py-2 rounded-full"
-        onPress={() => viewSharerLocation(item)}
+  const renderRequestItem = ({ item }: { item: any }) => {
+    return (
+      <TouchableOpacity
+        className="flex-row items-center p-4 border-b border-gray-100"
+        onPress={() => {
+          viewSharerLocation(item);
+          setShowRequestsModal(false); // Close the modal when clicking View
+        }}
       >
-        <Text className="text-orange-500 font-CairoMedium">
-          {isRTL ? 'عرض' : 'View'}
-        </Text>
+        <View className="w-12 h-12 rounded-full bg-gray-200 justify-center items-center mr-4">
+          {item.sharer.profile_image ? (
+            <Image source={{ uri: item.sharer.profile_image }} className="w-12 h-12 rounded-full" />
+          ) : (
+            <Text className="text-gray-500 font-bold text-lg">
+              {(item.sharer.name?.charAt(0) || item.sharer.email?.charAt(0) || '?').toUpperCase()}
+            </Text>
+          )}
+        </View>
+        <View className="flex-1">
+          <Text className="font-bold text-gray-800 text-lg">{item.sharer.name}</Text>
+          <Text className="text-gray-500 text-sm">{item.sharer.email}</Text>
+          <Text className="text-xs text-gray-400 mt-1">Last updated: {formatTimeElapsed(item.last_updated)}</Text>
+        </View>
+        <Text className="text-orange-500 font-bold">View</Text>
       </TouchableOpacity>
-    </TouchableOpacity>
-  ), [viewSharerLocation, formatTimeElapsed, isRTL]);
+    );
+  };
 
   // Render search user modal
   const renderSearchModal = () => {
@@ -1053,6 +1028,7 @@ export default function Track() {
       </View>
     );
   };
+  const [showRequestsModal, setShowRequestsModal] = useState(false);
 
   // Function to update location for all shared users
   const updateAllSharedLocations = async () => {
@@ -1225,75 +1201,76 @@ export default function Track() {
     );
   };
 
-  // Render requests modal
-  const renderRequestsModal = () => {
-    if (!showRequestsModal) return null;
-    
-    return (
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
-          <View className={`${language === 'ar' ? 'flex-row-reverse' : 'flex-row'} justify-between items-center mb-4`}>
-            <Text className="text-xl font-CairoBold text-gray-800">
-              {isRTL ? 'طلبات الموقع' : 'Location Requests'}
-            </Text>
-            <TouchableOpacity 
-              onPress={() => setShowRequestsModal(false)}
-              className="p-1"
-            >
-              <AntDesign name="close" size={24} color="#374151" />
-            </TouchableOpacity>
-          </View>
-          
-          <Text className={`text-sm text-gray-500 font-CairoRegular mb-4 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
-            {isRTL ? 'الاشخاص الذين يشاركون موقعهم معك في الوقت الحالي' : 'People who are currently sharing their location with you'}
+
+// Render requests modal
+const renderRequestsModal = () => {
+  if (!showRequestsModal) return null;
+  
+  return (
+    <View style={styles.modalOverlay}>
+      <View style={styles.modalContent}>
+        <View className={`${language === 'ar' ? 'flex-row-reverse' : 'flex-row'} justify-between items-center mb-4`}>
+          <Text className="text-xl font-CairoBold text-gray-800">
+            {isRTL ? 'طلبات الموقع' : 'Location Requests'}
           </Text>
-          
-          {loading ? (
-            <View className="flex-1">
-              {[1, 2, 3].map((_, index) => (
-                <View key={index} className="flex-row items-center p-4 border-b border-gray-100">
-                  <View className="w-10 h-10 rounded-full bg-gray-200" />
-                  <View className="flex-1 ml-4">
-                    <View className="h-4 bg-gray-200 rounded w-32 mb-2" />
-                    <View className="h-3 bg-gray-200 rounded w-48 mb-2" />
-                    <View className="h-3 bg-gray-200 rounded w-24" />
-                  </View>
-                  <View className="w-16 h-8 bg-gray-200 rounded-full" />
-                </View>
-              ))}
-            </View>
-          ) : trackRequests.length > 0 ? (
-            <FlatList
-              data={trackRequests}
-              keyExtractor={item => item.docId}
-              renderItem={renderRequestItem}
-              contentContainerStyle={{ paddingBottom: 20 }}
-              initialNumToRender={5}
-              maxToRenderPerBatch={10}
-              windowSize={5}
-              refreshControl={
-                <RefreshControl
-                  refreshing={isRefreshing}
-                  onRefresh={fetchUserLocation}
-                  colors={['#f97316']}
-                  tintColor="#f97316"
-                  title={isRTL ? 'جاري التحديث...' : 'Refreshing...'}
-                  titleColor="#f97316"
-                  progressViewOffset={20}
-                />
-              }
-            />
-          ) : (
-            <View className="flex-1 justify-center items-center p-4">
-              <Text className="text-gray-500 font-CairoRegular text-center">
-                {isRTL ? 'لا توجد طلبات موقع نشطة' : 'No active location requests'}
-              </Text>
-            </View>
-          )}
+          <TouchableOpacity 
+            onPress={() => setShowRequestsModal(false)}
+            className="p-1"
+          >
+            <AntDesign name="close" size={24} color="#374151" />
+          </TouchableOpacity>
         </View>
+        
+        <Text className={`text-sm text-gray-500 font-CairoRegular mb-4 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+          {isRTL ? 'الاشخاص الذين يشاركون موقعهم معك في الوقت الحالي' : 'People who are currently sharing their location with you'}
+        </Text>
+        
+        {loading ? (
+          <View className="flex-1">
+            {[1, 2, 3].map((_, index) => (
+              <View key={index} className="flex-row items-center p-4 border-b border-gray-100">
+                <View className="w-10 h-10 rounded-full bg-gray-200" />
+                <View className="flex-1 ml-4">
+                  <View className="h-4 bg-gray-200 rounded w-32 mb-2" />
+                  <View className="h-3 bg-gray-200 rounded w-48 mb-2" />
+                  <View className="h-3 bg-gray-200 rounded w-24" />
+                </View>
+                <View className="w-16 h-8 bg-gray-200 rounded-full" />
+              </View>
+            ))}
+          </View>
+        ) : trackRequests.length > 0 ? (
+          <FlatList
+            data={trackRequests}
+            keyExtractor={item => item.docId}
+            renderItem={renderRequestItem}
+            contentContainerStyle={{ paddingBottom: 20 }}
+            initialNumToRender={5}
+            maxToRenderPerBatch={10}
+            windowSize={5}
+            refreshControl={
+              <RefreshControl
+                refreshing={isRefreshing}
+                onRefresh={fetchUserLocation}
+                colors={['#f97316']}
+                tintColor="#f97316"
+                title={isRTL ? 'جاري التحديث...' : 'Refreshing...'}
+                titleColor="#f97316"
+                progressViewOffset={20}
+              />
+            }
+          />
+        ) : (
+          <View className="flex-1 justify-center items-center p-4">
+            <Text className="text-gray-500 font-CairoRegular text-center">
+              {isRTL ? 'لا توجد طلبات موقع نشطة' : 'No active location requests'}
+            </Text>
+          </View>
+        )}
       </View>
-    );
-  };
+    </View>
+  );
+};
 
   if (isInitialLoading) {
     return (
@@ -1435,22 +1412,21 @@ export default function Track() {
           >
             <MaterialIcons name="person-add" size={32} color="#fff" />
           </TouchableOpacity>
-
-          {/* Button to view Location Requests */}
-          <TouchableOpacity
-            className="absolute bottom-6 left-6 w-16 h-16 bg-blue-500 rounded-full items-center justify-center shadow-lg"
-            onPress={() => setShowRequestsModal(true)}
-            style={{
-              shadowColor: '#3b82f6',
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.3,
-              shadowRadius: 8,
-              elevation: 8,
-              zIndex: 10
-            }}
-          >
-            <MaterialIcons name="list-alt" size={32} color="#fff" />
-          </TouchableOpacity>
+{/* Button to view Location Requests */}
+<TouchableOpacity
+          className="absolute bottom-6 left-6 w-16 h-16 bg-blue-500 rounded-full items-center justify-center shadow-lg"
+          onPress={() => setShowRequestsModal(true)}
+          style={{
+            shadowColor: '#3b82f6',
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.3,
+            shadowRadius: 8,
+            elevation: 8,
+            zIndex: 10
+          }}
+        >
+          <MaterialIcons name="list-alt" size={32} color="#fff" />
+        </TouchableOpacity>
 
           {/* Location sharing status */}
           {isLocationSharing && (
@@ -1463,7 +1439,7 @@ export default function Track() {
         </View>
 
         {/* Bottom Sheet for Requests */}
-        {renderRequestsModal()}
+         {renderRequestsModal()}
 
         {/* Render modals */}
         {renderSearchModal()}

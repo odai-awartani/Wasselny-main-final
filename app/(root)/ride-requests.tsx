@@ -477,18 +477,12 @@ const RideRequests = () => {
       // Get the ride details to check available seats
       const rideDoc = await getDoc(doc(db, 'rides', params.rideId as string));
       const rideData = rideDoc.data();
-      console.log('Ride Data:', rideData);
-      
-      const totalSeats = rideData?.seats || 0;
-      const currentAvailableSeats = rideData?.available_seats || 0;
-      console.log('Total Seats:', totalSeats);
-      console.log('Current Available Seats:', currentAvailableSeats);
+      const availableSeats = rideData?.available_seats || 0;
 
       // Get the request details to check requested seats
       const requestDoc = await getDoc(doc(db, 'ride_requests', requestId));
       const requestData = requestDoc.data();
       const requestedSeats = requestData?.requested_seats || 1;
-      console.log('Requested Seats:', requestedSeats);
 
       // Get all current passengers to calculate total seats taken
       const currentPassengersQuery = query(
@@ -503,20 +497,14 @@ const RideRequests = () => {
         const passengerData = doc.data();
         totalSeatsTaken += passengerData.requested_seats || 1;
       });
-      console.log('Total Seats Taken:', totalSeatsTaken);
 
-      // Calculate available seats
-      const availableSeats = Math.max(currentAvailableSeats, totalSeats - totalSeatsTaken);
-      console.log('Calculated Available Seats:', availableSeats);
-
-      // Check if there are enough seats
-      if (requestedSeats > availableSeats) {
-        console.log('Not enough seats. Requested:', requestedSeats, 'Available:', availableSeats);
+      // Check if there are enough seats (available_seats - total_taken_seats >= requested_seats)
+      if ((availableSeats - totalSeatsTaken) < requestedSeats) {
         showAlert({
           visible: true,
-          title: t.insufficientSeats,
-          message: `${t.onlyAvailableSeats} ${availableSeats} ${availableSeats === 1 ? t.seat : t.seats}`,
-          type: 'warning',
+          title: t.error,
+          message: `عدد مقاعة السيارة:  ${availableSeats}\n ${t.rideSeats}`,
+          type: 'error',
           onConfirm: () => setAlertConfig(prev => ({ ...prev, visible: false })),
           confirmText: t.ok
         });
@@ -528,26 +516,33 @@ const RideRequests = () => {
         visible: true,
         title: t.confirmAcceptRequest,
         message: `${t.acceptRequestFor} ${passengerName}?`,
-        type: 'warning',
+        type: 'info',
+        onCancel: () => setAlertConfig(prev => ({ ...prev, visible: false })),
+        confirmText: t.yes,
+        cancelText: t.no,
         onConfirm: async () => {
           setAlertConfig(prev => ({ ...prev, visible: false }));
 
           const passengerNotificationId = await scheduleRideNotification(params.rideId as string, userId, false);
           const driverNotificationId = await scheduleRideNotification(params.rideId as string, params.driverId as string, true);
 
-          // Update the ride's available seats
-          await updateDoc(doc(db, 'rides', params.rideId as string), {
-            available_seats: availableSeats - requestedSeats,
-            updated_at: serverTimestamp(),
-          });
-
+          // Update the ride request status
           await updateDoc(doc(db, 'ride_requests', requestId), {
             status: 'accepted',
             updated_at: serverTimestamp(),
             passenger_name: passengerName,
             passenger_id: userId,
-            notification_id: passengerNotificationId || null,
+            notification_id: passengerNotificationId || null
           });
+
+          // Check if all seats are now taken and update ride status if needed
+          const updatedTotalSeatsTaken = totalSeatsTaken + requestedSeats;
+          if (updatedTotalSeatsTaken >= availableSeats && rideData?.status === 'available') {
+            await updateDoc(doc(db, 'rides', params.rideId as string), {
+              status: 'full',
+              updated_at: serverTimestamp()
+            });
+          }
 
           await sendRideStatusNotification(
             userId,
@@ -566,15 +561,14 @@ const RideRequests = () => {
             onConfirm: () => setAlertConfig(prev => ({ ...prev, visible: false })),
             confirmText: t.ok
           });
-        },
-        onCancel: () => setAlertConfig(prev => ({ ...prev, visible: false }))
+        }
       });
     } catch (error) {
       console.error('Error accepting request:', error);
       showAlert({
         visible: true,
-        title: t.errorAcceptingRequest,
-        message: t.tryAgainLater,
+        title: t.error,
+        message: t.errorAcceptingRequest,
         type: 'error',
         onConfirm: () => setAlertConfig(prev => ({ ...prev, visible: false })),
         confirmText: t.ok
@@ -661,12 +655,20 @@ const RideRequests = () => {
           // Get the ride details to update available seats
           const rideDoc = await getDoc(doc(db, 'rides', params.rideId as string));
           const rideData = rideDoc.data();
-          const currentAvailableSeats = rideData?.available_seats || 0;
+          const availableSeats = rideData?.available_seats || 0;
 
-          // Update the ride's available seats
-          await updateDoc(doc(db, 'rides', params.rideId as string), {
-            available_seats: currentAvailableSeats + requestedSeats,
-            updated_at: serverTimestamp(),
+          // Get all current passengers to calculate total seats taken
+          const currentPassengersQuery = query(
+            collection(db, 'ride_requests'),
+            where('ride_id', '==', params.rideId),
+            where('status', 'in', ['accepted', 'checked_in'])
+          );
+          const currentPassengersSnapshot = await getDocs(currentPassengersQuery);
+          
+          let totalSeatsTaken = 0;
+          currentPassengersSnapshot.forEach(doc => {
+            const passengerData = doc.data();
+            totalSeatsTaken += passengerData.requested_seats || 1;
           });
 
           // Update the request status
@@ -674,6 +676,15 @@ const RideRequests = () => {
             status: 'cancelled',
             updated_at: serverTimestamp(),
           });
+
+          // Check if we need to update ride status back to available
+          const remainingSeats = totalSeatsTaken - requestedSeats;
+          if (remainingSeats < availableSeats && rideData?.status === 'full') {
+            await updateDoc(doc(db, 'rides', params.rideId as string), {
+              status: 'available',
+              updated_at: serverTimestamp()
+            });
+          }
 
           // Send notification to passenger
           await sendRideStatusNotification(

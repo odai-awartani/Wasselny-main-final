@@ -147,153 +147,162 @@ const AllRides = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState(SORT_OPTIONS.TIME_ASC);
   const [showSortModal, setShowSortModal] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const fetchRides = (filter: string) => {
-    try {
-      setLoading(true);
-      setError(null);
+const fetchRides = (filter: string) => {
+  try {
+    setLoading(true);
+    setError(null);
 
-      const ridesRef = collection(db, 'rides');
-      const now = new Date();
-      
-      // Helper function to format date as DD/MM/YYYY HH:mm
-      const formatDateForQuery = (date: Date) => {
-        const day = date.getDate().toString().padStart(2, '0');
-        const month = (date.getMonth() + 1).toString().padStart(2, '0');
-        const year = date.getFullYear();
-        const hours = date.getHours().toString().padStart(2, '0');
-        const minutes = date.getMinutes().toString().padStart(2, '0');
-        return `${day}/${month}/${year} ${hours}:${minutes}`;
-      };
+    const ridesRef = collection(db, 'rides');
+    const now = new Date();
+    // Helper function to format date as DD/MM/YYYY HH:mm
+    const formatDateForQuery = (date: Date) => {
+      const day = date.getDate().toString().padStart(2, '0');
+      const month = (date.getMonth() + 1).toString().padStart(2, '0');
+      const year = date.getFullYear();
+      const hours = date.getHours().toString().padStart(2, '0');
+      const minutes = date.getMinutes().toString().padStart(2, '0');
+      return `${day}/${month}/${year} ${hours}:${minutes}`;
+    };
 
-      // Helper function to parse date from DD/MM/YYYY HH:mm format
-      const parseDateFromString = (dateStr: string) => {
-        const [datePart, timePart] = dateStr.split(' ');
-        const [day, month, year] = datePart.split('/');
-        const [hours, minutes] = timePart.split(':');
-        return new Date(parseInt(year), parseInt(month) - 1, parseInt(day), parseInt(hours), parseInt(minutes));
-      };
+     
+    // Helper function to parse date from DD/MM/YYYY HH:mm format
+    const parseDateFromString = (dateStr: string) => {
+      const [datePart, timePart] = dateStr.split(' ');
+      const [day, month, year] = datePart.split('/');
+      const [hours, minutes] = timePart.split(':');
+      return new Date(parseInt(year), parseInt(month) - 1, parseInt(day), parseInt(hours), parseInt(minutes));
+    };
 
-      // Helper function to get start of day
-      const getStartOfDay = (date: Date) => {
-        const newDate = new Date(date);
-        newDate.setHours(0, 0, 0, 0);
-        return newDate;
-      };
+    // Helper function to get start of day
+    const getStartOfDay = (date: Date) => {
+      const newDate = new Date(date);
+      newDate.setHours(0, 0, 0, 0);
+      return newDate;
+    };
 
-      // Helper function to get end of day
-      const getEndOfDay = (date: Date) => {
-        const newDate = new Date(date);
-        newDate.setHours(23, 59, 59, 999);
-        return newDate;
-      };
-      
-      let ridesQuery;
-      
-      switch (filter) {
-        case FILTERS.TODAY:
-          const todayStart = getStartOfDay(now);
-          const todayEnd = getEndOfDay(now);
-          ridesQuery = query(
-            ridesRef,
-            where('ride_datetime', '>=', formatDateForQuery(todayStart)),
-            where('ride_datetime', '<=', formatDateForQuery(todayEnd)),
-            where('status', '==', 'available'),
-            orderBy('ride_datetime', 'asc')
-          );
-          break;
-          
-        case FILTERS.TOMORROW:
-          const tomorrowStart = getStartOfDay(new Date(now.getTime() + 24 * 60 * 60 * 1000));
-          const tomorrowEnd = getEndOfDay(new Date(now.getTime() + 24 * 60 * 60 * 1000));
-          ridesQuery = query(
-            ridesRef,
-            where('ride_datetime', '>=', formatDateForQuery(tomorrowStart)),
-            where('ride_datetime', '<=', formatDateForQuery(tomorrowEnd)),
-            where('status', '==', 'available'),
-            orderBy('ride_datetime', 'asc')
-          );
-          break;
+    // Helper function to get end of day
+    const getEndOfDay = (date: Date) => {
+      const newDate = new Date(date);
+      newDate.setHours(23, 59, 59, 999);
+      return newDate;
+    };
 
-        case FILTERS.DAY_AFTER_TOMORROW:
-          const dayAfterTomorrowStart = getStartOfDay(new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000));
-          const dayAfterTomorrowEnd = getEndOfDay(new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000));
-          ridesQuery = query(
-            ridesRef,
-            where('ride_datetime', '>=', formatDateForQuery(dayAfterTomorrowStart)),
-            where('ride_datetime', '<=', formatDateForQuery(dayAfterTomorrowEnd)),
-            where('status', '==', 'available'),
-            orderBy('ride_datetime', 'asc')
-          );
-          break;
+    let ridesQuery;
 
-        case FILTERS.DAY_3:
-          const day3Start = getStartOfDay(new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000));
-          const day3End = getEndOfDay(new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000));
-          ridesQuery = query(
-            ridesRef,
-            where('ride_datetime', '>=', formatDateForQuery(day3Start)),
-            where('ride_datetime', '<=', formatDateForQuery(day3End)),
-            where('status', '==', 'available'),
-            orderBy('ride_datetime', 'asc')
-          );
-          break;
-
-        case FILTERS.DAY_4:
-          const day4Start = getStartOfDay(new Date(now.getTime() + 4 * 24 * 60 * 60 * 1000));
-          const day4End = getEndOfDay(new Date(now.getTime() + 4 * 24 * 60 * 60 * 1000));
-          ridesQuery = query(
-            ridesRef,
-            where('ride_datetime', '>=', formatDateForQuery(day4Start)),
-            where('ride_datetime', '<=', formatDateForQuery(day4End)),
-            where('status', '==', 'available'),
-            orderBy('ride_datetime', 'asc')
-          );
-          break;
-
-        case FILTERS.DAY_5:
-          const day5Start = getStartOfDay(new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000));
-          const day5End = getEndOfDay(new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000));
-          ridesQuery = query(
-            ridesRef,
-            where('ride_datetime', '>=', formatDateForQuery(day5Start)),
-            where('ride_datetime', '<=', formatDateForQuery(day5End)),
-            where('status', '==', 'available'),
-            orderBy('ride_datetime', 'asc')
-          );
-          break;
+    const todayStart = getStartOfDay(now);
+    switch (filter) {
+      case FILTERS.ALL:
+        // Show all rides from now onwards
+        ridesQuery = query(
+          ridesRef,
+          where('ride_datetime', '>=', formatDateForQuery(todayStart)),
+          where('status', '==', 'available'),
+          orderBy('ride_datetime', 'asc')
+        );
+        break;
         
-        default: // FILTERS.ALL
-          // For ALL rides, we'll filter out past rides in the snapshot handler
-          ridesQuery = query(
-            ridesRef,
-            orderBy('ride_datetime', 'asc')
-          );
-          break;
-      }
+      case FILTERS.TODAY:
+        const todayEnd = getEndOfDay(now);
+        ridesQuery = query(
+          ridesRef,
+          where('ride_datetime', '>=', formatDateForQuery(todayStart)),
+          where('ride_datetime', '<=', formatDateForQuery(todayEnd)),
+          where('status', '==', 'available'),
+          orderBy('ride_datetime', 'asc')
+        );
+        break;
 
-      console.log('Setting up listener for rides with filter:', filter);
+      case FILTERS.TOMORROW:
+        const tomorrowStart = getStartOfDay(new Date(now.getTime() + 24 * 60 * 60 * 1000));
+        const tomorrowEnd = getEndOfDay(new Date(now.getTime() + 24 * 60 * 60 * 1000));
+        ridesQuery = query(
+          ridesRef,
+          where('ride_datetime', '>=', formatDateForQuery(tomorrowStart)),
+          where('ride_datetime', '<=', formatDateForQuery(tomorrowEnd)),
+          where('status', '==', 'available'),
+          orderBy('ride_datetime', 'asc')
+        );
+        break;
 
-      // Set up real-time listener
-      const unsubscribe = onSnapshot(ridesQuery, async (snapshot) => {
-        console.log('Received snapshot update with', snapshot.docs.length, 'rides');
-        
-        const ridesData = snapshot.docs.map(doc => {
-          const data = doc.data();
-          return { id: doc.id, ...data } as Ride;
-        });
+      case FILTERS.DAY_AFTER_TOMORROW:
+        const dayAfterTomorrowStart = getStartOfDay(new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000));
+        const dayAfterTomorrowEnd = getEndOfDay(new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000));
+        ridesQuery = query(
+          ridesRef,
+          where('ride_datetime', '>=', formatDateForQuery(dayAfterTomorrowStart)),
+          where('ride_datetime', '<=', formatDateForQuery(dayAfterTomorrowEnd)),
+          where('status', '==', 'available'),
+          orderBy('ride_datetime', 'asc')
+        );
+        break;
 
-        // Filter out past rides for ALL filter
-        const filteredRidesData = filter === FILTERS.ALL 
-          ? ridesData.filter(ride => {
-              const rideDate = parseDateFromString(ride.ride_datetime);
-              return rideDate > now;
-            })
-          : ridesData;
+      case FILTERS.DAY_3:
+        const day3Start = getStartOfDay(new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000));
+        const day3End = getEndOfDay(new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000));
+        ridesQuery = query(
+          ridesRef,
+          where('ride_datetime', '>=', formatDateForQuery(day3Start)),
+          where('ride_datetime', '<=', formatDateForQuery(day3End)),
+          where('status', '==', 'available'),
+          orderBy('ride_datetime', 'asc')
+        );
+        break;
+
+      case FILTERS.DAY_4:
+        const day4Start = getStartOfDay(new Date(now.getTime() + 4 * 24 * 60 * 60 * 1000));
+        const day4End = getEndOfDay(new Date(now.getTime() + 4 * 24 * 60 * 60 * 1000));
+        ridesQuery = query(
+          ridesRef,
+          where('ride_datetime', '>=', formatDateForQuery(day4Start)),
+          where('ride_datetime', '<=', formatDateForQuery(day4End)),
+          where('status', '==', 'available'),
+          orderBy('ride_datetime', 'asc')
+        );
+        break;
+
+      case FILTERS.DAY_5:
+        const day5Start = getStartOfDay(new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000));
+        const day5End = getEndOfDay(new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000));
+        ridesQuery = query(
+          ridesRef,
+          where('ride_datetime', '>=', formatDateForQuery(day5Start)),
+          where('ride_datetime', '<=', formatDateForQuery(day5End)),
+          where('status', '==', 'available'),
+          orderBy('ride_datetime', 'asc')
+        );
+        break;
+
+      default:
+        // Fallback to ALL rides
+        ridesQuery = query(
+          ridesRef,
+          where('ride_datetime', '>=', formatDateForQuery(todayStart)),
+          orderBy('ride_datetime', 'asc')
+        );
+        break;
+    }
+
+    console.log('Setting up listener for rides with filter:', filter);
+
+    // Set up real-time listener
+    const unsubscribe = onSnapshot(ridesQuery, async (snapshot) => {
+      console.log('Received snapshot update with', snapshot.docs.length, 'rides');
+
+      const ridesData = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return { id: doc.id, ...data } as Ride;
+      });
+
+      // For FILTERS.ALL, include all rides from today onwards (including today's past rides)
+      const filteredRidesData = filter === FILTERS.ALL
+        ? ridesData // No additional client-side filtering needed since Firestore query handles it
+        : ridesData;
 
       // Fetch driver information for each ride
       const ridesWithDriverInfo = await Promise.all(
-          filteredRidesData.map(async (ride) => {
+        filteredRidesData.map(async (ride) => {
           if (ride.driver_id) {
             try {
               const driverDoc = await getDoc(doc(db, 'users', ride.driver_id));
@@ -315,27 +324,27 @@ const AllRides = () => {
         })
       );
 
-        console.log('Setting rides with driver info:', ridesWithDriverInfo);
+      console.log('Setting rides with driver info:', ridesWithDriverInfo);
       setRides(ridesWithDriverInfo);
       setFilteredRides(ridesWithDriverInfo);
-        setLoading(false);
-      }, (err) => {
-        console.error('Error in rides listener:', err);
-        setError(language === 'ar' ? 'فشل في تحميل الرحلات' : 'Failed to load rides');
-        setLoading(false);
-      });
-
-      return () => {
-        console.log('Cleaning up rides listener');
-        unsubscribe();
-      };
-    } catch (err) {
-      console.error('Error setting up rides listener:', err);
+      setLoading(false);
+    }, (err) => {
+      console.error('Error in rides listener:', err);
       setError(language === 'ar' ? 'فشل في تحميل الرحلات' : 'Failed to load rides');
       setLoading(false);
-      return () => {};
-    }
-  };
+    });
+
+    return () => {
+      console.log('Cleaning up rides listener');
+      unsubscribe();
+    };
+  } catch (err) {
+    console.error('Error setting up rides listener:', err);
+    setError(language === 'ar' ? 'فشل في تحميل الرحلات' : 'Failed to load rides');
+    setLoading(false);
+    return () => {};
+  }
+};
 
   // Add a debug effect to log state changes
   useEffect(() => {
@@ -457,7 +466,7 @@ const AllRides = () => {
         case 'completed':
           return {
             bgColor: 'bg-gray-50',
-            textColor: 'text-gray-600',
+            textColor: 'text-red-600',
             text: language === 'ar' ? 'مكتمل' : 'Completed'
           };
         case 'cancelled':
@@ -539,10 +548,10 @@ const AllRides = () => {
           <View className={`flex-row items-center ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
             <Image source={icons.calendar} className={`w-4 h-4 ${language === 'ar' ? 'ml-1' : 'mr-1'}`} />
             <View>
-              <Text className={`text-sm pt-5 text-gray-600 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+              <Text className={`text-sm mt-1.5 font-CairoBold pt-5 text-gray-600 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
                 {dayOfWeek}
               </Text>
-              <Text className={`text-sm text-gray-500 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+              <Text className={`text-sm font-CairoRegular text-gray-500 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
                 {date}
               </Text>
             </View>
@@ -555,7 +564,7 @@ const AllRides = () => {
           </View>
           <View className={`flex-row items-center ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
             <Image source={icons.person} className={`w-4 h-4 ${language === 'ar' ? 'ml-1' : 'mr-1'}`} />
-            <Text className={`text-sm text-gray-600 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+            <Text className={`text-sm mt-1 font-CairoRegular text-gray-600 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
               {item.available_seats} {language === 'ar' ? 'مقاعد' : 'seats'}
             </Text>
           </View>
@@ -616,6 +625,17 @@ const AllRides = () => {
       ))}
     </View>
   );
+
+  const onRefresh = React.useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await fetchRides(activeFilter);
+    } catch (error) {
+      console.error('Error refreshing rides:', error);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [activeFilter]);
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
@@ -755,6 +775,8 @@ const AllRides = () => {
           keyExtractor={(item) => item.id}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ padding: 16 }}
+          refreshing={refreshing}
+          onRefresh={onRefresh}
         />
       )}
     </SafeAreaView>

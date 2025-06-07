@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, Image, FlatList, ActivityIndicator, Platform, ScrollView } from 'react-native'
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, Image, FlatList, ActivityIndicator, Platform, ScrollView, RefreshControl } from 'react-native'
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter, useLocalSearchParams } from 'expo-router'
@@ -196,6 +196,7 @@ const Search = () => {
   const searchInputRef = useRef<TextInput>(null);
   const isRemovingRef = useRef(false);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   // Function to save a recent search with debounce
   const saveRecentSearch = async (query: string) => {
@@ -1296,6 +1297,21 @@ const Search = () => {
     )
   }
 
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await fetchUserLocation();
+      await fetchAllRides();
+      // Reapply filters to the refreshed data
+      const filteredResults = applyFilters(allResults);
+      setDisplayedResults(filteredResults.slice(0, currentIndex));
+    } catch (error) {
+      console.error('Error refreshing:', error);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [fetchUserLocation, fetchAllRides, applyFilters, allResults, currentIndex]);
+
   return (
     <SafeAreaView className="flex-1 bg-white">
       <Header profileImageUrl={profileImageUrl} title={t.Search} />
@@ -1412,27 +1428,33 @@ const Search = () => {
           <FlatList
             data={displayedResults}
             renderItem={renderSearchResult}
-            keyExtractor={(item) => `${item.type}-${item.id}`}
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ paddingVertical: 16, paddingBottom: 80 }}
+            keyExtractor={(item) => item.id}
             onEndReached={handleLoadMore}
             onEndReachedThreshold={0.5}
-            ListFooterComponent={() => (
-              loadingMore ? (
-                <View className="py-4">
-                  <ActivityIndicator size="small" color="#4F46E5" />
+            ListFooterComponent={loadingMore ? <ActivityIndicator size="large" color="#f97316" /> : null}
+            ListEmptyComponent={
+              loading ? (
+                <View className="flex-1 items-center justify-center p-4">
+                  {Array(3).fill(0).map((_, index) => (
+                    <SearchResultSkeleton key={index} />
+                  ))}
                 </View>
-              ) : hasMore ? (
-                <TouchableOpacity
-                  onPress={handleLoadMore}
-                  className="bg-primary/10 py-3 rounded-xl mb-4"
-                >
-                  <Text className="text-primary text-center font-CairoBold">
-                    {language === 'ar' ? 'تحميل المزيد' : 'Load More'}
+              ) : (
+                <View className="flex-1 items-center justify-center p-4">
+                  <Text className="text-gray-500 text-lg font-CairoRegular">
+                    {language === 'ar' ? 'لا توجد نتائج' : 'No results found'}
                   </Text>
-                </TouchableOpacity>
-              ) : null
-            )}
+                </View>
+              )
+            }
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                colors={['#f97316']}
+                tintColor="#f97316"
+              />
+            }
           />
         ) : (
           <View className="flex-1 items-center justify-center py-20">

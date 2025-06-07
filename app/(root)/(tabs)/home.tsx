@@ -363,19 +363,19 @@ export default function Home() {
 
       if (isDriver) {
         // For drivers: fetch rides with status 'in-progress'
-        const ridesRef = collection(db, 'rides');
-        const q = query(
-          ridesRef,
-          where('driver_id', '==', user.id),
-          where('status', '==', 'in-progress'),
-          orderBy('created_at', 'desc')
-        );
-        
-        const snapshot = await getDocs(q);
+      const ridesRef = collection(db, 'rides');
+      const q = query(
+        ridesRef,
+        where('driver_id', '==', user.id),
+        where('status', '==', 'in-progress'),
+        orderBy('created_at', 'desc')
+      );
+      
+      const snapshot = await getDocs(q);
         console.log('Driver rides found:', snapshot.size);
-        snapshot.forEach((doc) => {
-          rides.push({ id: doc.id, ...doc.data() } as Ride);
-        });
+      snapshot.forEach((doc) => {
+        rides.push({ id: doc.id, ...doc.data() } as Ride);
+      });
       } else {
         // For passengers: fetch ride requests with status 'checked_in'
         const requestsRef = collection(db, 'ride_requests');
@@ -503,12 +503,12 @@ export default function Home() {
         }
 
         // Calculate time difference in hours
-        const timeDiff = (currentTime - parseInt(lastShownTime)) / (1000 * 60 );
+        const timeDiff = (currentTime - parseInt(lastShownTime)) / (1000 * 60 * 60);
         console.log(`Time since last show: ${timeDiff.toFixed(2)} hours`);
         
         // Only show if exactly 12 or more hours have passed
-        if (timeDiff >= 1) {
-          console.log('1 hours passed, showing location modal');
+        if (timeDiff >= 12) {
+          console.log('12 hours passed, showing location modal');
           setShowLocationModal(true);
           await AsyncStorage.setItem('lastLocationModalShown', currentTime.toString());
         } else {
@@ -842,24 +842,24 @@ export default function Home() {
                   renderItem={({ item: ride }) => {
                     const rideWithStatus = ride as Ride & { display_status?: string };
                     return (
-                      <TouchableOpacity
-                        key={ride.id}
-                        onPress={() => {
-                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                          router.push(`/(root)/ride-details/${ride.id}`);
-                        }}
-                        className="bg-white mx-3 mb-3 p-4 rounded-2xl shadow-lg"
-                        style={{
-                          elevation: 3,
-                          shadowColor: '#000',
-                          shadowOffset: { width: 0, height: 2 },
-                          shadowOpacity: 0.1,
-                          shadowRadius: 3.84,
-                        }}
-                      >
-                        <View className={`flex-row items-center justify-between ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
-                          <View className="flex-1">
-                            <View className={`flex-row items-center mb-2 ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
+                    <TouchableOpacity
+                      key={ride.id}
+                      onPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                        router.push(`/(root)/ride-details/${ride.id}`);
+                      }}
+                      className="bg-white mx-3 mb-3 p-4 rounded-2xl shadow-lg"
+                      style={{
+                        elevation: 3,
+                        shadowColor: '#000',
+                        shadowOffset: { width: 0, height: 2 },
+                        shadowOpacity: 0.1,
+                        shadowRadius: 3.84,
+                      }}
+                    >
+                      <View className={`flex-row items-center justify-between ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
+                        <View className="flex-1">
+                          <View className={`flex-row items-center mb-2 ${language === 'ar' ? 'flex-row-reverse' : 'flex-row'}`}>
                               <View className={`px-2 py-1 rounded-full ${
                                 rideWithStatus.display_status === 'completed' ? 'bg-blue-100' : 'bg-green-100'
                               }`}>
@@ -872,32 +872,32 @@ export default function Home() {
                                     ? (rideWithStatus.display_status === 'completed' ? 'مكتملة' : 'قيد التقدم')
                                     : (rideWithStatus.display_status === 'completed' ? 'Completed' : 'In Progress')
                                   }
-                                </Text>
-                              </View>
-                              <Text className={`text-gray-500 text-sm ${language === 'ar' ? 'font-CairoBold mr-2' : 'font-JakartaBold ml-2'}`}>
-                                {ride.ride_datetime}
                               </Text>
                             </View>
-                            <Text className={`text-gray-900 text-lg mb-1 ${language === 'ar' ? 'font-CairoBold text-right' : 'font-CairoBold text-left'}`}>
-                              {ride.destination_address}
+                            <Text className={`text-gray-500 text-sm ${language === 'ar' ? 'font-CairoBold mr-2' : 'font-JakartaBold ml-2'}`}>
+                              {ride.ride_datetime}
                             </Text>
-                            <Text className={`text-gray-600 text-sm ${language === 'ar' ? 'font-CairoBold text-right' : 'font-CairoRegular text-left'}`}>
-                              {ride.origin_address}
-                            </Text>
+                          </View>
+                          <Text className={`text-gray-900 text-lg mb-1 ${language === 'ar' ? 'font-CairoBold text-right' : 'font-CairoBold text-left'}`}>
+                            {ride.destination_address}
+                          </Text>
+                          <Text className={`text-gray-600 text-sm ${language === 'ar' ? 'font-CairoBold text-right' : 'font-CairoRegular text-left'}`}>
+                            {ride.origin_address}
+                          </Text>
                             {isDriver && (
-                              <Text className={`text-orange-500 text-sm mt-1 ${language === 'ar' ? 'font-CairoBold text-right' : 'font-JakartaBold text-left'}`}>
-                                {language === 'ar' ? `المقاعد المتاحة: ${ride.available_seats}` : `Available seats: ${ride.available_seats}`}
-                              </Text>
+                          <Text className={`text-orange-500 text-sm mt-1 ${language === 'ar' ? 'font-CairoBold text-right' : 'font-JakartaBold text-left'}`}>
+                            {language === 'ar' ? `المقاعد المتاحة: ${ride.available_seats}` : `Available seats: ${ride.available_seats}`}
+                          </Text>
                             )}
-                          </View>
-                          <View className={`items-center ${language === 'ar' ? 'ml-3' : 'mr-3'}`}>
-                            <MaterialIcons name="navigation" size={24} color="#f97316" />
-                            <Text className={`text-orange-500 text-xs mt-1 ${language === 'ar' ? 'font-CairoBold' : 'font-JakartaBold'}`}>
-                              {language === 'ar' ? 'انتقل' : 'Navigate'}
-                            </Text>
-                          </View>
                         </View>
-                      </TouchableOpacity>
+                        <View className={`items-center ${language === 'ar' ? 'ml-3' : 'mr-3'}`}>
+                          <MaterialIcons name="navigation" size={24} color="#f97316" />
+                          <Text className={`text-orange-500 text-xs mt-1 ${language === 'ar' ? 'font-CairoBold' : 'font-JakartaBold'}`}>
+                            {language === 'ar' ? 'انتقل' : 'Navigate'}
+                          </Text>
+                        </View>
+                      </View>
+                    </TouchableOpacity>
                     );
                   }}
                   keyExtractor={(item) => item.id}
