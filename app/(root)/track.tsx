@@ -266,6 +266,7 @@ export default function Track() {
     type: 'info',
     onConfirm: () => {},
   });
+  const [showRequestsModal, setShowRequestsModal] = useState(false);
 
   // Timer for updating times
   useEffect(() => {
@@ -1224,57 +1225,73 @@ export default function Track() {
     );
   };
 
-  // Render bottom sheet content
-  const renderBottomSheetContent = () => {
-    if (loading) {
-      return (
-        <View className="flex-1">
-          {[1, 2, 3].map((_, index) => (
-            <View key={index} className="flex-row items-center p-4 border-b border-gray-100">
-              <View className="w-10 h-10 rounded-full bg-gray-200" />
-              <View className="flex-1 ml-4">
-                <View className="h-4 bg-gray-200 rounded w-32 mb-2" />
-                <View className="h-3 bg-gray-200 rounded w-48 mb-2" />
-                <View className="h-3 bg-gray-200 rounded w-24" />
-              </View>
-              <View className="w-16 h-8 bg-gray-200 rounded-full" />
-            </View>
-          ))}
-        </View>
-      );
-    }
-
-    if (trackRequests.length === 0) {
-      return (
-        <View className="flex-1 justify-center items-center p-4">
-          <Text className="text-gray-500 font-CairoRegular text-center">
-            {isRTL ? 'لا توجد طلبات موقع نشطة' : 'No active location requests'}
-          </Text>
-        </View>
-      );
-    }
-
+  // Render requests modal
+  const renderRequestsModal = () => {
+    if (!showRequestsModal) return null;
+    
     return (
-      <BottomSheetFlatList
-        data={trackRequests}
-        keyExtractor={item => item.docId}
-        renderItem={renderRequestItem}
-        contentContainerStyle={{ paddingBottom: 20 }}
-        initialNumToRender={5}
-        maxToRenderPerBatch={10}
-        windowSize={5}
-        refreshControl={
-          <RefreshControl
-            refreshing={isRefreshing}
-            onRefresh={fetchUserLocation}
-            colors={['#f97316']}
-            tintColor="#f97316"
-            title={isRTL ? 'جاري التحديث...' : 'Refreshing...'}
-            titleColor="#f97316"
-            progressViewOffset={20}
-          />
-        }
-      />
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContent}>
+          <View className={`${language === 'ar' ? 'flex-row-reverse' : 'flex-row'} justify-between items-center mb-4`}>
+            <Text className="text-xl font-CairoBold text-gray-800">
+              {isRTL ? 'طلبات الموقع' : 'Location Requests'}
+            </Text>
+            <TouchableOpacity 
+              onPress={() => setShowRequestsModal(false)}
+              className="p-1"
+            >
+              <AntDesign name="close" size={24} color="#374151" />
+            </TouchableOpacity>
+          </View>
+          
+          <Text className={`text-sm text-gray-500 font-CairoRegular mb-4 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+            {isRTL ? 'الاشخاص الذين يشاركون موقعهم معك في الوقت الحالي' : 'People who are currently sharing their location with you'}
+          </Text>
+          
+          {loading ? (
+            <View className="flex-1">
+              {[1, 2, 3].map((_, index) => (
+                <View key={index} className="flex-row items-center p-4 border-b border-gray-100">
+                  <View className="w-10 h-10 rounded-full bg-gray-200" />
+                  <View className="flex-1 ml-4">
+                    <View className="h-4 bg-gray-200 rounded w-32 mb-2" />
+                    <View className="h-3 bg-gray-200 rounded w-48 mb-2" />
+                    <View className="h-3 bg-gray-200 rounded w-24" />
+                  </View>
+                  <View className="w-16 h-8 bg-gray-200 rounded-full" />
+                </View>
+              ))}
+            </View>
+          ) : trackRequests.length > 0 ? (
+            <FlatList
+              data={trackRequests}
+              keyExtractor={item => item.docId}
+              renderItem={renderRequestItem}
+              contentContainerStyle={{ paddingBottom: 20 }}
+              initialNumToRender={5}
+              maxToRenderPerBatch={10}
+              windowSize={5}
+              refreshControl={
+                <RefreshControl
+                  refreshing={isRefreshing}
+                  onRefresh={fetchUserLocation}
+                  colors={['#f97316']}
+                  tintColor="#f97316"
+                  title={isRTL ? 'جاري التحديث...' : 'Refreshing...'}
+                  titleColor="#f97316"
+                  progressViewOffset={20}
+                />
+              }
+            />
+          ) : (
+            <View className="flex-1 justify-center items-center p-4">
+              <Text className="text-gray-500 font-CairoRegular text-center">
+                {isRTL ? 'لا توجد طلبات موقع نشطة' : 'No active location requests'}
+              </Text>
+            </View>
+          )}
+        </View>
+      </View>
     );
   };
 
@@ -1419,6 +1436,22 @@ export default function Track() {
             <MaterialIcons name="person-add" size={32} color="#fff" />
           </TouchableOpacity>
 
+          {/* Button to view Location Requests */}
+          <TouchableOpacity
+            className="absolute bottom-6 left-6 w-16 h-16 bg-blue-500 rounded-full items-center justify-center shadow-lg"
+            onPress={() => setShowRequestsModal(true)}
+            style={{
+              shadowColor: '#3b82f6',
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.3,
+              shadowRadius: 8,
+              elevation: 8,
+              zIndex: 10
+            }}
+          >
+            <MaterialIcons name="list-alt" size={32} color="#fff" />
+          </TouchableOpacity>
+
           {/* Location sharing status */}
           {isLocationSharing && (
             <View className="absolute bottom-32 left-4 right-4 bg-white p-3 rounded-lg shadow-md">
@@ -1430,25 +1463,7 @@ export default function Track() {
         </View>
 
         {/* Bottom Sheet for Requests */}
-        <BottomSheet
-          ref={bottomSheetRef}
-          snapPoints={['25%', '50%', '85%']}
-          index={1}
-          enablePanDownToClose={false}
-          handleIndicatorStyle={{ backgroundColor: '#9ca3af', width: 50 }}
-        >
-          <View className={`flex-1 bg-white`}>
-            <View className="px-4 pt-4">
-              <Text className={`text-lg font-CairoBold text-gray-800 ${language === 'ar' ? "text-right" : "text-left"} `}>
-                {isRTL ? "طلبات الموقع" : 'Location Requests'}
-              </Text>
-              <Text className={`text-sm text-gray-500 font-CairoRegular mt-1 ${language === 'ar' ? "text-right" : "text-left"}`}>
-                {isRTL ? 'الاشخاص الذين يشاركون موقعهم معك في الوقت الحالي' : 'People who are currently sharing their location with you'}
-              </Text>
-            </View>
-            {renderBottomSheetContent()}
-          </View>
-        </BottomSheet>
+        {renderRequestsModal()}
 
         {/* Render modals */}
         {renderSearchModal()}

@@ -35,6 +35,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import Header from "./Header";
 import { Circle, Svg } from 'react-native-svg';
 
+type IconName = keyof typeof MaterialIcons.glyphMap;
 
 interface Location {
   latitude: number;
@@ -533,7 +534,13 @@ const strokeDashoffset = circumference - progress * circumference;
           setTripDate(formatDate(date));
         } else {
           if (date < selectedDateRange.startDate) {
-            Alert.alert(t.error, t.endDateError);
+            showAlert({
+              visible: true,
+              title: t.error,
+              message: t.endDateError,
+              type: 'error',
+              onConfirm: () => setAlertConfig(prev => ({ ...prev, visible: false }))
+            });
             return;
           }
           setSelectedDateRange(prev => ({ ...prev, endDate: date }));
@@ -590,10 +597,13 @@ const strokeDashoffset = circumference - progress * circumference;
     
     // Strict validation
     if (seatsNumber > maxSeats) {
-      Alert.alert(
-        language === 'ar' ? "تنبيه" : "Alert",
-        t.maxSeatsError(maxSeats)
-      );
+      showAlert({
+        visible: true,
+        title: language === 'ar' ? "تنبيه" : "Alert",
+        message: t.maxSeatsError(maxSeats),
+        type: 'warning',
+        onConfirm: () => setAlertConfig(prev => ({ ...prev, visible: false }))
+      });
       setAvailableSeats(maxSeats.toString());
       return;
     }
@@ -677,9 +687,9 @@ const strokeDashoffset = circumference - progress * circumference;
       if (!userAddress || !destinationAddress) {
         showAlert({
           visible: true,
-          title: language === 'ar' ? "تنبيه" : "Alert",
+          title: language === 'ar' ? "خطأ" : "Error",
           message: language === 'ar' ? "يرجى إدخال نقطة البداية والوجهة" : "Please enter starting point and destination",
-          type: 'warning',
+          type: 'error',
           onConfirm: () => setAlertConfig(prev => ({ ...prev, visible: false }))
         });
         return false;
@@ -871,13 +881,29 @@ const strokeDashoffset = circumference - progress * circumference;
       // Create date object
       const selectedDate = new Date(year, month - 1, day, hours, minutes);
       if (isNaN(selectedDate.getTime())) {
-        throw new Error(language === 'ar' ? "تاريخ أو وقت غير صالح" : "Invalid date or time");
+        showAlert({
+          visible: true,
+          title: t.error,
+          message: t.invalidDateTimeError,
+          type: 'error',
+          onConfirm: () => setAlertConfig(prev => ({ ...prev, visible: false }))
+        });
+        setIsLoading(false);
+        return;
       }
 
       // Validate future date
       const now = new Date();
       if (selectedDate <= now) {
-        throw new Error(language === 'ar' ? "يجب اختيار تاريخ ووقت في المستقبل" : "Date and time must be in the future");
+        showAlert({
+          visible: true,
+          title: t.bookingFailed,
+          message: t.futureDateTimeError,
+          type: 'error',
+          onConfirm: () => setAlertConfig(prev => ({ ...prev, visible: false }))
+        });
+        setIsLoading(false);
+        return;
       }
 
       const rideDateTimeStr = `${tripDate} ${tripTime}`;
@@ -912,10 +938,13 @@ const strokeDashoffset = circumference - progress * circumference;
       });
 
       if (hasConflict) {
-        Alert.alert(
-          language === 'ar' ? "تعارض زمني" : "Time Conflict", 
-          language === 'ar' ? "لديك رحلة مجدولة في نفس الوقت تقريبًا" : "You have a ride scheduled at approximately the same time"
-        );
+        showAlert({
+          visible: true,
+          title: t.timeConflict,
+          message: t.conflictError,
+          type: 'error',
+          onConfirm: () => setAlertConfig(prev => ({ ...prev, visible: false }))
+        });
         setIsLoading(false);
         return;
       }
@@ -982,7 +1011,13 @@ const strokeDashoffset = circumference - progress * circumference;
         tripDate,
         tripTime,
       });
-      Alert.alert("فشل الحجز", error.message || "تعذر إتمام الحجز. حاول مرة أخرى.");
+      showAlert({
+        visible: true,
+        title: t.bookingFailed,
+        message: error.message || t.bookingFailedError,
+        type: 'error',
+        onConfirm: () => setAlertConfig(prev => ({ ...prev, visible: false }))
+      });
     } finally {
       setIsLoading(false);
     }
@@ -1628,6 +1663,7 @@ const strokeDashoffset = circumference - progress * circumference;
              }}
             >
               <GoogleTextInput
+                key={`start-${currentStep}`}
                 icon={icons.pin}
                 initialLocation={userAddress || ""}
                 containerStyle="bg-white rounded-xl"
@@ -1725,6 +1761,7 @@ const strokeDashoffset = circumference - progress * circumference;
               }}
             >
               <GoogleTextInput
+                key={`waypoint-${currentStep}-${item.index}`}
                 icon={icons.target}  // Changed from map to target for waypoints
                 initialLocation={item.waypoint?.address || ""}
                 containerStyle="bg-white rounded-xl"
@@ -1781,6 +1818,7 @@ const strokeDashoffset = circumference - progress * circumference;
              }}
             >
               <GoogleTextInput
+                key={`dest-${currentStep}`}
                 icon={icons.target}  // Changed from map to target for destination
                 initialLocation={destinationAddress || ""}
                 containerStyle="bg-white rounded-xl"
