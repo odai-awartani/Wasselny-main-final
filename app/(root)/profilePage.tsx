@@ -566,27 +566,30 @@ const Profile = () => {
           </View>
         </View>
 
-        <View className={`flex-row justify-between w-full mt-4 ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
-          <View className="items-center bg-white rounded-xl p-4 flex-1 mx-2" style={Platform.OS === 'android' ? styles.androidShadow : styles.iosShadow}>
-            <Text className={`text-2xl ${language === 'ar' ? 'font-CairoBold' : 'font-Jakartab'}`}>
-              {userData.data?.driver?.total_rides || 0}
-            </Text>
-            <Text className={`text-gray-500 text-sm ${language === 'ar' ? 'font-CairoBold' : 'font-Jakartab'}`}>
-              {language === 'ar' ? 'إجمالي التقييمات' : 'Total Rating'}
-            </Text>
-          </View>
-          <View className="items-center bg-white rounded-xl p-4 flex-1 mx-2" style={Platform.OS === 'android' ? styles.androidShadow : styles.iosShadow}>
-            <View className="flex-row items-center">
-              <Text className={`text-2xl ${language === 'ar' ? 'font-CairoBold' : 'font-Jakartab'} ${language === 'ar' ? 'mr-1' : 'ml-1'}`}>
-                {userData.data?.driver?.rating?.toFixed(1) || '0.0'}
+        {/* Rating Statistics - Only for Drivers */}
+        {userData.isDriver && (
+          <View className={`flex-row justify-between w-full mt-4 ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
+            <View className="items-center bg-white rounded-xl p-4 flex-1 mx-2" style={Platform.OS === 'android' ? styles.androidShadow : styles.iosShadow}>
+              <Text className={`text-2xl ${language === 'ar' ? 'font-CairoBold' : 'font-Jakartab'}`}>
+                {userData.data?.driver?.total_rides || 0}
               </Text>
-              <Image source={icons.star} style={{ width: 20, height: 20 }} />
+              <Text className={`text-gray-500 text-sm ${language === 'ar' ? 'font-CairoBold' : 'font-Jakartab'}`}>
+                {language === 'ar' ? 'إجمالي التقييمات' : 'Total Rating'}
+              </Text>
             </View>
-            <Text className={`text-gray-500 text-sm ${language === 'ar' ? 'font-CairoBold' : 'font-Jakartab'}`}>
-              {language === 'ar' ? 'التقييم' : 'Rating'}
-            </Text>
+            <View className="items-center bg-white rounded-xl p-4 flex-1 mx-2" style={Platform.OS === 'android' ? styles.androidShadow : styles.iosShadow}>
+              <View className="flex-row items-center">
+                <Text className={`text-2xl ${language === 'ar' ? 'font-CairoBold' : 'font-Jakartab'} ${language === 'ar' ? 'mr-1' : 'ml-1'}`}>
+                  {userData.data?.driver?.rating?.toFixed(1) || '0.0'}
+                </Text>
+                <Image source={icons.star} style={{ width: 20, height: 20 }} />
+              </View>
+              <Text className={`text-gray-500 text-sm ${language === 'ar' ? 'font-CairoBold' : 'font-Jakartab'}`}>
+                {language === 'ar' ? 'التقييم' : 'Rating'}
+              </Text>
+            </View>
           </View>
-        </View>
+        )}
 
         {/* Driver Information Section */}
         {userData.isDriver && (

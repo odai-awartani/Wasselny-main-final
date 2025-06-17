@@ -155,12 +155,18 @@ const industryMap = new Map([
           case 'form_identifier_already_in_use':
             errorMessageKey = t.emailTaken;
             break;
+          case 'form_password_pwned':
+            errorMessageKey = t.passwordBreach;
+            break;
           default:
             if (err.errors[0].longMessage === 'That email address is taken. Please try another.') {
               errorMessageKey = t.emailTaken;
             } else if (err.errors[0].longMessage === 'email_address must be a valid email address.') {
               errorMessageKey = t.invalidEmailFormat;
-            } else {
+            } else if (err.errors[0].longMessage === 'Password has been found in an online data breach. For account safety, please use a different password.') {
+              errorMessageKey = t.passwordBreach;
+            } 
+            else {
               errorMessageKey = err.errors[0].longMessage || t.signInFailed;
             }
             break;

@@ -353,6 +353,7 @@ export interface TranslationKeys {
   invalidCode: string;
   emailTaken: string;
   invalidEmailFormat: string;
+  passwordBreach: string;
   rideSeats: string;
 }
 
@@ -646,7 +647,6 @@ export const translations: Translations = {
     daysNotSpecified: "الأيام غير محددة",
     stop: "نقطة توقف",
     passenger: "الراكب",
-    rideSeats: " عدد مقاعد السيارة اقل من عدد المقاعد المطلوب" ,
     rideOrDriverDataMissing: "بيانات الرحلة أو السائق غير متوفرة",
     bookingAccepted: "تم قبول طلب الحجز!",
     bookingAcceptedForRide: "تم قبول طلب حجزك للرحلة من",
@@ -742,6 +742,8 @@ export const translations: Translations = {
     invalidCode: "رمز التحقق غير صحيح أو منتهي الصلاحية.",
     emailTaken: "هذا البريد الإلكتروني مستخدم بالفعل. يرجى المحاولة ببريد آخر.",
     invalidEmailFormat: "يجب أن يكون البريد الإلكتروني بصيغة صحيحة.",
+    passwordBreach: "تم العثور على كلمة المرور هذه في اختراق بيانات عبر الإنترنت. لسلامة حسابك، يرجى استخدام كلمة مرور مختلفة.",
+    rideSeats: " عدد مقاعد السيارة اقل من عدد المقاعد المطلوب" ,
   },
   en: {
     chooseLanguage: "Choose Language",
@@ -1122,6 +1124,7 @@ export const translations: Translations = {
     invalidCode: "The verification code is invalid or expired.",
     emailTaken: "That email address is taken. Please try another.",
     invalidEmailFormat: "email_address must be a valid email address.",
+    passwordBreach: "Password has been found in an online data breach. For account safety, please use a different password.",
     rideSeats: "Number of Ride Seats upper than the seats you want"
   },
 };
