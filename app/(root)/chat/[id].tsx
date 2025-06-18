@@ -282,11 +282,11 @@ export default function ConversationScreen() {
             className="flex-1 text-sm text-gray-700 px-2  max-h-20"
           />
           <TouchableOpacity 
-            className="ml-2 bg-primary p-2 rounded-full"
+            className="ml-2 bg-orange-500 p-2 rounded-full"
             onPress={handleSend}
             disabled={!newMessage.trim()}
           >
-            <Ionicons name="send" size={25} color="orange" />
+            <Ionicons name="send" size={22} color="#fff" />
           </TouchableOpacity>
         </View>
       </View>

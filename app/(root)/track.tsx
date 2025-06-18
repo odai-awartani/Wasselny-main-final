@@ -1211,7 +1211,7 @@ const renderRequestsModal = () => {
       <View style={styles.modalContent}>
         <View className={`${language === 'ar' ? 'flex-row-reverse' : 'flex-row'} justify-between items-center mb-4`}>
           <Text className="text-xl font-CairoBold text-gray-800">
-            {isRTL ? 'طلبات الموقع' : 'Location Requests'}
+            {isRTL ? 'طلبات التتبع' : 'Location Requests'}
           </Text>
           <TouchableOpacity 
             onPress={() => setShowRequestsModal(false)}

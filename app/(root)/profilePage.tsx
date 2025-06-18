@@ -1,21 +1,49 @@
 import React, { useEffect, useState } from "react";
 import { useUser, useAuth } from "@clerk/clerk-expo";
-import { Image, ScrollView, Text, View, TouchableOpacity, Alert, ActivityIndicator, RefreshControl, Modal, StyleSheet, Platform } from "react-native";
+import {
+  Image,
+  ScrollView,
+  Text,
+  View,
+  TouchableOpacity,
+  Alert,
+  ActivityIndicator,
+  RefreshControl,
+  Modal,
+  StyleSheet,
+  Platform,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useLanguage } from '@/context/LanguageContext';
-import { icons } from '@/constants';
-import { AntDesign, MaterialCommunityIcons, Ionicons, FontAwesome5, MaterialIcons } from '@expo/vector-icons';
+import { useLanguage } from "@/context/LanguageContext";
+import { icons } from "@/constants";
+import {
+  AntDesign,
+  MaterialCommunityIcons,
+  Ionicons,
+  FontAwesome5,
+  MaterialIcons,
+} from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { doc, getDoc, updateDoc, setDoc, query, getDocs, collection, where, onSnapshot } from "firebase/firestore";
+import {
+  doc,
+  getDoc,
+  updateDoc,
+  setDoc,
+  query,
+  getDocs,
+  collection,
+  where,
+  onSnapshot,
+} from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import * as ImagePicker from "expo-image-picker";
 import { uploadImageToCloudinary } from "@/lib/upload";
-import { translations } from '@/constants/languages';
+import { translations } from "@/constants/languages";
 import Header from "@/components/Header";
-import { useProfile } from '@/context/ProfileContext';
-import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import * as Haptics from 'expo-haptics';
-import { useNotifications } from '@/context/NotificationContext';
+import { useProfile } from "@/context/ProfileContext";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import * as Haptics from "expo-haptics";
+import { useNotifications } from "@/context/NotificationContext";
 
 interface UserData {
   driver?: {
@@ -30,6 +58,7 @@ interface UserData {
   };
   profile_image_url?: string;
   role?: string;
+  industry?: string;
 }
 
 interface DetailedRating {
@@ -55,7 +84,7 @@ const Profile = () => {
   const router = useRouter();
   const t = translations[language];
   const { refreshProfileImage } = useProfile();
-  
+
   // Add state for pending applications count
   const [pendingApplicationsCount, setPendingApplicationsCount] = useState(0);
 
@@ -70,14 +99,14 @@ const Profile = () => {
     profileImage: string | null;
     data: UserData | null;
     isAdmin: boolean;
-  }>({ 
+  }>({
     isDriver: false,
     isLoading: true,
     profileImage: null,
     data: null,
-    isAdmin: false
+    isAdmin: false,
   });
-  
+
   const [isUploading, setIsUploading] = useState(false);
   const [showFullImage, setShowFullImage] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -85,64 +114,67 @@ const Profile = () => {
     driverInfo: false,
     carImage: false,
     accountInfo: false,
-    ratings: true
+    ratings: true,
   });
 
   const [ratings, setRatings] = useState<DetailedRating[]>([]);
   const [showRatings, setShowRatings] = useState(false);
 
-  const phoneNumber = user?.unsafeMetadata?.phoneNumber as string || "+1 123-456-7890";
+  const phoneNumber =
+    (user?.unsafeMetadata?.phoneNumber as string) || "+1 123-456-7890";
 
   const onRefresh = React.useCallback(() => {
     setIsRefreshing(true);
     fetchUserData().finally(() => setIsRefreshing(false));
   }, []);
   const handleSignOut = () => {
-      signOut();
-      router.replace("/(auth)/sign-in");
-    };
+    signOut();
+    router.replace("/(auth)/sign-in");
+  };
 
   const fetchUserData = async (isMounted = true) => {
     if (!user?.id) {
       if (isMounted) {
-        setUserData(prev => ({
+        setUserData((prev) => ({
           ...prev,
           isLoading: false,
           isDriver: false,
           profileImage: user?.imageUrl || null,
-          isAdmin: false
+          isAdmin: false,
         }));
       }
       return;
     }
 
     try {
-      const userRef = doc(db, 'users', user.id);
+      const userRef = doc(db, "users", user.id);
       const userDoc = await getDoc(userRef);
-      
+
       if (!isMounted) return;
 
       if (userDoc.exists()) {
         const data = userDoc.data() as UserData;
-        
+
         // Fetch detailed ratings if user is a driver
         if (data.driver?.is_active) {
           const ratingsQuery = query(
-            collection(db, 'ratings'),
-            where('driver_id', '==', user.id)
+            collection(db, "ratings"),
+            where("driver_id", "==", user.id)
           );
-          
+
           const ratingsSnapshot = await getDocs(ratingsQuery);
-          const ratingsData = ratingsSnapshot.docs.map(doc => ({
-            ...doc.data()
+          const ratingsData = ratingsSnapshot.docs.map((doc) => ({
+            ...doc.data(),
           })) as DetailedRating[];
-          
+
           if (isMounted) {
             setRatings(ratingsData);
 
             // Calculate average rating
             if (ratingsData.length > 0) {
-              const avgRating = ratingsData.reduce((acc, curr) => acc + curr.overall, 0) / ratingsData.length;
+              const avgRating =
+                ratingsData.reduce((acc, curr) => acc + curr.overall, 0) /
+                ratingsData.length;
               data.driver.rating = avgRating;
               data.driver.total_rides = ratingsData.length;
             }
@@ -153,31 +185,32 @@ const Profile = () => {
           setUserData({
             isDriver: !!data.driver?.is_active,
             isLoading: false,
-            profileImage: data.driver?.profile_image_url || user?.imageUrl || null,
+            profileImage:
+              data.driver?.profile_image_url || user?.imageUrl || null,
             data,
-            isAdmin: data.role === 'admin'
+            isAdmin: data.role === "admin",
           });
         }
       } else {
-        console.log('User document does not exist'); // Debug log
-        setUserData(prev => ({
+        console.log("User document does not exist"); // Debug log
+        setUserData((prev) => ({
           ...prev,
           isDriver: false,
           isLoading: false,
           profileImage: user?.imageUrl || null,
           data: null,
-          isAdmin: false
+          isAdmin: false,
         }));
       }
     } catch (error) {
-      console.error('Error fetching user data:', error);
+      console.error("Error fetching user data:", error);
       if (isMounted) {
-        setUserData(prev => ({
+        setUserData((prev) => ({
           ...prev,
           isDriver: false,
           isLoading: false,
           profileImage: user?.imageUrl || null,
-          isAdmin: false
+          isAdmin: false,
         }));
       }
     }
@@ -192,24 +225,28 @@ const Profile = () => {
   // Update function to fetch pending applications count with real-time updates
   const fetchPendingApplicationsCount = async () => {
     if (!userData.isAdmin) return;
-    
+
     try {
       const usersQuery = query(
-        collection(db, 'users'),
-        where('driver.status', '==', 'pending')
+        collection(db, "users"),
+        where("driver.status", "==", "pending")
       );
-      
+
       // Set up real-time listener
-      const unsubscribe = onSnapshot(usersQuery, (snapshot) => {
-        setPendingApplicationsCount(snapshot.size);
-      }, (error) => {
-        console.error('Error in pending applications listener:', error);
-      });
+      const unsubscribe = onSnapshot(
+        usersQuery,
+        (snapshot) => {
+          setPendingApplicationsCount(snapshot.size);
+        },
+        (error) => {
+          console.error("Error in pending applications listener:", error);
+        }
+      );
 
       // Return cleanup function
       return unsubscribe;
     } catch (error) {
-      console.error('Error setting up pending applications listener:', error);
+      console.error("Error setting up pending applications listener:", error);
     }
   };
 
@@ -241,11 +278,14 @@ const Profile = () => {
 
   const handleImagePick = async () => {
     try {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== 'granted') {
+      const { status } =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== "granted") {
         Alert.alert(
-          language === 'ar' ? 'تم رفض الإذن' : 'Permission Denied',
-          language === 'ar' ? 'يجب منح إذن للوصول إلى مكتبة الصور' : 'You need to grant permission to access media library.'
+          language === "ar" ? "تم رفض الإذن" : "Permission Denied",
+          language === "ar"
+            ? "يجب منح إذن للوصول إلى مكتبة الصور"
+            : "You need to grant permission to access media library."
         );
         return;
       }
@@ -263,24 +303,28 @@ const Profile = () => {
       if (!asset?.uri) return;
 
       // Validate file type
-      const fileExtension = asset.uri.split('.').pop()?.toLowerCase();
-      if (!['jpg', 'jpeg', 'png'].includes(fileExtension || '')) {
+      const fileExtension = asset.uri.split(".").pop()?.toLowerCase();
+      if (!["jpg", "jpeg", "png"].includes(fileExtension || "")) {
         Alert.alert(
-          language === 'ar' ? 'خطأ' : 'Error',
-          language === 'ar' ? 'يجب اختيار صورة بصيغة JPG أو PNG' : 'Please select a JPG or PNG image.'
+          language === "ar" ? "خطأ" : "Error",
+          language === "ar"
+            ? "يجب اختيار صورة بصيغة JPG أو PNG"
+            : "Please select a JPG or PNG image."
         );
         return;
       }
 
       // Show temporary local image while uploading
-      setUserData(prev => ({ ...prev, profileImage: asset.uri }));
+      setUserData((prev) => ({ ...prev, profileImage: asset.uri }));
       setIsUploading(true);
 
       // Upload to Cloudinary first
       const uploadedImageUrl = await uploadImageToCloudinary(asset.uri);
 
       if (!uploadedImageUrl) {
-        throw new Error(language === 'ar' ? 'فشل في تحميل الصورة' : 'Failed to upload image');
+        throw new Error(
+          language === "ar" ? "فشل في تحميل الصورة" : "Failed to upload image"
+        );
       }
 
       // Update both Firebase and Clerk
@@ -288,28 +332,30 @@ const Profile = () => {
         // Update Clerk profile image
         const response = await fetch(asset.uri);
         const blob = await response.blob();
-        const file = new File([blob], `profile.${fileExtension}`, { type: `image/${fileExtension}` });
-        
+        const file = new File([blob], `profile.${fileExtension}`, {
+          type: `image/${fileExtension}`,
+        });
+
         await user.setProfileImage({
-          file: file
+          file: file,
         });
 
         // Update Firestore document
-        const userRef = doc(db, 'users', user.id);
+        const userRef = doc(db, "users", user.id);
         const userDoc = await getDoc(userRef);
-        
+
         if (userDoc.exists()) {
           const userData = userDoc.data() as UserData;
           // Update both driver and user profile image URLs
           const updateData: any = {
-            profile_image_url: uploadedImageUrl
+            profile_image_url: uploadedImageUrl,
           };
-          
+
           // If user is a driver, also update the driver profile image
           if (userData.driver?.is_active) {
-            updateData['driver.profile_image_url'] = uploadedImageUrl;
+            updateData["driver.profile_image_url"] = uploadedImageUrl;
           }
-          
+
           await updateDoc(userRef, updateData);
         } else {
           // Create a new user document with profile image
@@ -319,32 +365,39 @@ const Profile = () => {
             firstName: user.firstName,
             lastName: user.lastName,
             createdAt: new Date().toISOString(),
-            profile_image_url: uploadedImageUrl
+            profile_image_url: uploadedImageUrl,
           });
         }
 
         // Update profile image state with the Cloudinary URL
-        setUserData(prev => ({ ...prev, profileImage: uploadedImageUrl }));
-        
+        setUserData((prev) => ({ ...prev, profileImage: uploadedImageUrl }));
+
         // Refresh the profile image in the context
         await refreshProfileImage();
-        
+
         Alert.alert(
-          language === 'ar' ? 'نجاح' : 'Success',
-          language === 'ar' ? 'تم تحديث صورة البروفايل بنجاح' : 'Profile picture updated successfully'
+          language === "ar" ? "نجاح" : "Success",
+          language === "ar"
+            ? "تم تحديث صورة البروفايل بنجاح"
+            : "Profile picture updated successfully"
         );
 
         // Trigger haptic feedback
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
     } catch (error) {
-      console.error('Profile image upload error:', error);
+      console.error("Profile image upload error:", error);
       Alert.alert(
-        language === 'ar' ? 'خطأ' : 'Error',
-        language === 'ar' ? 'حدث خطأ أثناء تحديث صورة البروفايل' : 'Error updating profile picture'
+        language === "ar" ? "خطأ" : "Error",
+        language === "ar"
+          ? "حدث خطأ أثناء تحديث صورة البروفايل"
+          : "Error updating profile picture"
       );
       // Revert to previous image if available
-      setUserData(prev => ({ ...prev, profileImage: user?.imageUrl || null }));
+      setUserData((prev) => ({
+        ...prev,
+        profileImage: user?.imageUrl || null,
+      }));
     } finally {
       setIsUploading(false);
     }
@@ -352,7 +405,9 @@ const Profile = () => {
 
   const formatDate = (date: string) => {
     const d = new Date(date);
-    const month = d.toLocaleString(language === 'ar' ? 'ar-SA' : 'en-US', { month: 'long' });
+    const month = d.toLocaleString(language === "ar" ? "ar-SA" : "en-US", {
+      month: "long",
+    });
     const year = d.getFullYear();
     return `${month} ${year}`;
   };
@@ -360,9 +415,9 @@ const Profile = () => {
   const memberSince = formatDate("2024-04-01"); // Example date, replace with actual date
 
   const toggleCard = (cardName: keyof typeof expandedCards) => {
-    setExpandedCards(prev => ({
+    setExpandedCards((prev) => ({
       ...prev,
-      [cardName]: !prev[cardName]
+      [cardName]: !prev[cardName],
     }));
   };
 
@@ -370,19 +425,25 @@ const Profile = () => {
     if (!userData.isDriver || ratings.length === 0) return null;
 
     return (
-      <TouchableOpacity 
-        onPress={() => toggleCard('ratings')}
-        className="bg-white rounded-xl p-5 mt-4" 
-        style={Platform.OS === 'android' ? styles.androidShadow : styles.iosShadow}
+      <TouchableOpacity
+        onPress={() => toggleCard("ratings")}
+        className="bg-white rounded-xl p-5 mt-4"
+        style={
+          Platform.OS === "android" ? styles.androidShadow : styles.iosShadow
+        }
       >
-        <View className={`flex-row justify-between items-center ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
-          <Text className={`text-lg ${language === 'ar' ? 'font-CairoBold' : 'font-Jakartab'}`}>
-            {language === 'ar' ? 'التقييمات التفصيلية' : 'Detailed Ratings'}
+        <View
+          className={`flex-row justify-between items-center ${language === "ar" ? "flex-row-reverse" : ""}`}
+        >
+          <Text
+            className={`text-lg ${language === "ar" ? "font-CairoBold" : "font-Jakartab"}`}
+          >
+            {language === "ar" ? "التقييمات التفصيلية" : "Detailed Ratings"}
           </Text>
-          <AntDesign 
-            name={expandedCards.ratings ? 'up' : 'down'} 
-            size={20} 
-            color="#374151" 
+          <AntDesign
+            name={expandedCards.ratings ? "up" : "down"}
+            size={20}
+            color="#374151"
           />
         </View>
 
@@ -390,48 +451,81 @@ const Profile = () => {
           <View className="space-y-4 mt-4">
             {ratings.map((rating, index) => (
               <View key={index} className="bg-gray-50 p-4 rounded-xl">
-                <View className={`flex-row justify-between items-center mb-2 ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
-                  <Text className={`text-sm ${language === 'ar' ? 'font-CairoRegular' : 'font-Jakartab'} text-gray-600`}>
+                <View
+                  className={`flex-row justify-between items-center mb-2 ${language === "ar" ? "flex-row-reverse" : ""}`}
+                >
+                  <Text
+                    className={`text-sm ${language === "ar" ? "font-CairoRegular" : "font-Jakartab"} text-gray-600`}
+                  >
                     {rating.passenger_name}
                   </Text>
                   <View className="flex-row items-center">
-                    <Text className={`text-base ${language === 'ar' ? 'font-CairoBold' : 'font-Jakartab'} text-gray-900 ${language === 'ar' ? 'mr-1' : 'ml-1'}`}>
+                    <Text
+                      className={`text-base ${language === "ar" ? "font-CairoBold" : "font-Jakartab"} text-gray-900 ${language === "ar" ? "mr-1" : "ml-1"}`}
+                    >
                       {rating.overall.toFixed(1)}
                     </Text>
-                    <Image source={icons.star} style={{ width: 16, height: 16 }} />
+                    <Image
+                      source={icons.star}
+                      style={{ width: 16, height: 16 }}
+                    />
                   </View>
                 </View>
 
                 <View className="space-y-2">
-                  <View className={`flex-row justify-between ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
-                    <Text className={`text-sm ${language === 'ar' ? 'font-CairoRegular' : 'font-Jakartab'} text-gray-600`}>
-                      {language === 'ar' ? 'قيادة السيارة' : 'Driving'}
+                  <View
+                    className={`flex-row justify-between ${language === "ar" ? "flex-row-reverse" : ""}`}
+                  >
+                    <Text
+                      className={`text-sm ${language === "ar" ? "font-CairoRegular" : "font-Jakartab"} text-gray-600`}
+                    >
+                      {language === "ar" ? "قيادة السيارة" : "Driving"}
                     </Text>
-                    <Text className={`text-sm ${language === 'ar' ? 'font-CairoBold' : 'font-Jakartab'} text-gray-900`}>
+                    <Text
+                      className={`text-sm ${language === "ar" ? "font-CairoBold" : "font-Jakartab"} text-gray-900`}
+                    >
                       {rating.driving}
                     </Text>
                   </View>
-                  <View className={`flex-row justify-between ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
-                    <Text className={`text-sm ${language === 'ar' ? 'font-CairoRegular' : 'font-Jakartab'} text-gray-600`}>
-                      {language === 'ar' ? 'الأخلاق والسلوك' : 'Behavior'}
+                  <View
+                    className={`flex-row justify-between ${language === "ar" ? "flex-row-reverse" : ""}`}
+                  >
+                    <Text
+                      className={`text-sm ${language === "ar" ? "font-CairoRegular" : "font-Jakartab"} text-gray-600`}
+                    >
+                      {language === "ar" ? "الأخلاق والسلوك" : "Behavior"}
                     </Text>
-                    <Text className={`text-sm ${language === 'ar' ? 'font-CairoBold' : 'font-Jakartab'} text-gray-900`}>
+                    <Text
+                      className={`text-sm ${language === "ar" ? "font-CairoBold" : "font-Jakartab"} text-gray-900`}
+                    >
                       {rating.behavior}
                     </Text>
                   </View>
-                  <View className={`flex-row justify-between ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
-                    <Text className={`text-sm ${language === 'ar' ? 'font-CairoRegular' : 'font-Jakartab'} text-gray-600`}>
-                      {language === 'ar' ? 'الالتزام بالمواعيد' : 'Punctuality'}
+                  <View
+                    className={`flex-row justify-between ${language === "ar" ? "flex-row-reverse" : ""}`}
+                  >
+                    <Text
+                      className={`text-sm ${language === "ar" ? "font-CairoRegular" : "font-Jakartab"} text-gray-600`}
+                    >
+                      {language === "ar" ? "الالتزام بالمواعيد" : "Punctuality"}
                     </Text>
-                    <Text className={`text-sm ${language === 'ar' ? 'font-CairoBold' : 'font-Jakartab'} text-gray-900`}>
+                    <Text
+                      className={`text-sm ${language === "ar" ? "font-CairoBold" : "font-Jakartab"} text-gray-900`}
+                    >
                       {rating.punctuality}
                     </Text>
                   </View>
-                  <View className={`flex-row justify-between ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
-                    <Text className={`text-sm ${language === 'ar' ? 'font-CairoRegular' : 'font-Jakartab'} text-gray-600`}>
-                      {language === 'ar' ? 'نظافة السيارة' : 'Cleanliness'}
+                  <View
+                    className={`flex-row justify-between ${language === "ar" ? "flex-row-reverse" : ""}`}
+                  >
+                    <Text
+                      className={`text-sm ${language === "ar" ? "font-CairoRegular" : "font-Jakartab"} text-gray-600`}
+                    >
+                      {language === "ar" ? "نظافة السيارة" : "Cleanliness"}
                     </Text>
-                    <Text className={`text-sm ${language === 'ar' ? 'font-CairoBold' : 'font-Jakartab'} text-gray-900`}>
+                    <Text
+                      className={`text-sm ${language === "ar" ? "font-CairoBold" : "font-Jakartab"} text-gray-900`}
+                    >
                       {rating.cleanliness}
                     </Text>
                   </View>
@@ -439,14 +533,19 @@ const Profile = () => {
 
                 {rating.comment && (
                   <View className="mt-2 p-2 bg-white rounded-lg">
-                    <Text className={`text-sm ${language === 'ar' ? 'font-CairoRegular' : 'font-Jakartab'} text-gray-600 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+                    <Text
+                      className={`text-sm ${language === "ar" ? "font-CairoRegular" : "font-Jakartab"} text-gray-600 ${language === "ar" ? "text-right" : "text-left"}`}
+                    >
                       {rating.comment}
                     </Text>
                   </View>
                 )}
 
-                <Text className={`text-xs ${language === 'ar' ? 'font-CairoRegular' : 'font-Jakartab'} text-gray-500 mt-2 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
-                  {rating.ride_details.origin_address} → {rating.ride_details.destination_address}
+                <Text
+                  className={`text-xs ${language === "ar" ? "font-CairoRegular" : "font-Jakartab"} text-gray-500 mt-2 ${language === "ar" ? "text-right" : "text-left"}`}
+                >
+                  {rating.ride_details.origin_address} →{" "}
+                  {rating.ride_details.destination_address}
                 </Text>
               </View>
             ))}
@@ -456,17 +555,53 @@ const Profile = () => {
     );
   };
 
+  // Update industry translations to match sign-up values
+  const industryTranslations: { [key: string]: { en: string; ar: string } } = {
+    Student: { en: "Student", ar: "طالب" },
+    Employee: { en: "Employee", ar: "موظف" },
+    Freelancer: { en: "Freelancer", ar: "أعمال حرة" },
+    Engineer: { en: "Engineer", ar: "مهندس" },
+    Doctor: { en: "Doctor", ar: "طبيب" },
+    Teacher: { en: "Teacher", ar: "معلم" },
+    Accountant: { en: "Accountant", ar: "محاسب" },
+    "Software Developer": { en: "Software Developer", ar: "مطور برمجيات" },
+    Merchant: { en: "Merchant", ar: "تاجر" },
+    "Healthcare Worker": { en: "Healthcare Worker", ar: "عامل في الصحة" },
+  };
+
+  const translateIndustry = (industry: string) => {
+    // If the stored value is in English, translate to Arabic if needed
+    if (language === "ar") {
+      const translation = industryTranslations[industry];
+      if (translation) {
+        return translation.ar;
+      }
+    }
+    // If the stored value is in Arabic, translate to English if needed
+    if (language === "en") {
+      for (const [key, value] of Object.entries(industryTranslations)) {
+        if (value.ar === industry) {
+          return value.en;
+        }
+      }
+    }
+    return industry; // Return original if no translation found
+  };
+
   return (
     <SafeAreaView className="flex-1 bg-white">
       <Header
-        title={language === 'ar' ? "الملف الشخصي" : "Profile"}
+        title={language === "ar" ? "الملف الشخصي" : "Profile"}
         showSideMenu={false}
         showProfileImage={false}
       />
       <ScrollView
         refreshControl={
-          <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} colors={["#F97316"]}  
-          tintColor="#F97316"
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={onRefresh}
+            colors={["#F97316"]}
+            tintColor="#F97316"
           />
         }
         className="px-5"
@@ -475,30 +610,37 @@ const Profile = () => {
       >
         {/* Profile Header */}
         <View className="items-center mt-6 mb-4">
-          <TouchableOpacity onPress={() => setShowFullImage(true)} className="relative">
-            {userData.profileImage || user?.imageUrl ? (
-              <Image
-                source={{ uri: userData.profileImage || user?.imageUrl }}
-                className="w-24 h-24 rounded-full"
-              />
+          <TouchableOpacity
+            onPress={() => setShowFullImage(true)}
+            className="relative"
+          >
+            {isUploading ? (
+              <View className="w-full aspect-square bg-gray-200 items-center justify-center">
+                <ActivityIndicator size="large" color="#f97316" />
+              </View>
             ) : (
-              <View style={{ width: 96, height: 96, borderRadius: 48, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#f97316' }}>
-                <MaterialIcons name="person" size={60} color="#f97316" />
-              </View>
+              <Image
+                source={{
+                  uri: userData.isDriver
+                    ? userData.data?.driver?.profile_image_url
+                    : userData.data?.profile_image_url ||
+                      user?.imageUrl ||
+                      "https://www.pngitem.com/pimgs/m/146-1468479_my-profile-icon-blank-profile-picture-circle-hd.png",
+                }}
+                className="w-24 h-24 rounded-full"
+                resizeMode="cover"
+              />
             )}
-            {isUploading && (
-              <View className="absolute inset-0 bg-black/50 rounded-full items-center justify-center">
-                <ActivityIndicator color="white" />
-              </View>
-            )}
-            <TouchableOpacity 
-              onPress={handleImagePick} 
-              className={`absolute bottom-0 ${language === 'ar' ? 'left-0' : 'right-0'} bg-gray-800 rounded-full p-2`}
+            <TouchableOpacity
+              onPress={handleImagePick}
+              className={`absolute bottom-0 ${language === "ar" ? "left-0" : "right-0"} bg-gray-800 rounded-full p-2`}
             >
               <MaterialCommunityIcons name="camera" size={16} color="white" />
             </TouchableOpacity>
           </TouchableOpacity>
-          <Text className={`text-xl ${language === 'ar' ? 'font-CairoBold' : 'font-Jakartab'} mt-2`}>
+          <Text
+            className={`text-xl ${language === "ar" ? "font-CairoBold" : "font-Jakartab"} mt-2`}
+          >
             {user?.fullName || "John Doe"}
           </Text>
           <Text className="text-gray-500 text-sm mb-4">
@@ -506,86 +648,159 @@ const Profile = () => {
           </Text>
 
           {/* Action Icons */}
-          <View className={`flex-row justify-center ${language === 'ar' ? 'space-x-reverse' : 'space-x-8'} space-x-8`}>
+          <View
+            className={`flex-row justify-center ${language === "ar" ? "space-x-reverse" : "space-x-8"} space-x-8`}
+          >
             <TouchableOpacity
-              onPress={() => router.push('/(root)/profilePageEdit')}
+              onPress={() => router.push("/(root)/profilePageEdit")}
               className="items-center"
             >
-              <View className="bg-white p-3 rounded-full" style={Platform.OS === 'android' ? styles.androidShadow : styles.iosShadow}>
+              <View
+                className="bg-white p-3 rounded-full"
+                style={
+                  Platform.OS === "android"
+                    ? styles.androidShadow
+                    : styles.iosShadow
+                }
+              >
                 <MaterialIcons name="edit" size={20} color="#374151" />
               </View>
-              <Text className={`text-xs text-gray-600 mt-2 ${language === 'ar' ? 'font-CairoBold' : 'font-Jakartab'}`}>
-                {language === 'ar' ? 'تعديل الملف' : 'Edit Profile'}
+              <Text
+                className={`text-xs text-gray-600 mt-2 ${language === "ar" ? "font-CairoBold" : "font-Jakartab"}`}
+              >
+                {language === "ar" ? "تعديل الملف" : "Edit Profile"}
               </Text>
             </TouchableOpacity>
-            
-            <TouchableOpacity 
-              onPress={() => router.push('/(root)/track' as any)}
+
+            <TouchableOpacity
+              onPress={() => router.push("/(root)/track" as any)}
               className="items-center"
             >
-              <View className="bg-white p-3 rounded-full" style={Platform.OS === 'android' ? styles.androidShadow : styles.iosShadow}>
-                <MaterialCommunityIcons name="map-marker-path" size={20} color="#374151" />
+              <View
+                className="bg-white p-3 rounded-full"
+                style={
+                  Platform.OS === "android"
+                    ? styles.androidShadow
+                    : styles.iosShadow
+                }
+              >
+                <MaterialCommunityIcons
+                  name="map-marker-path"
+                  size={20}
+                  color="#374151"
+                />
               </View>
-              <Text className={`text-xs text-gray-600 mt-2 ${language === 'ar' ? 'font-CairoBold' : 'font-Jakartab'}`}>
-                {language === 'ar' ? 'التتبع' : 'Track'}
+              <Text
+                className={`text-xs text-gray-600 mt-2 ${language === "ar" ? "font-CairoBold" : "font-Jakartab"}`}
+              >
+                {language === "ar" ? "التتبع" : "Track"}
               </Text>
             </TouchableOpacity>
 
             {userData.isAdmin && (
-              <TouchableOpacity 
-                onPress={() => router.push('/(root)/admin' as any)}
+              <TouchableOpacity
+                onPress={() => router.push("/(root)/admin" as any)}
                 className="items-center"
               >
-                <View className="bg-white p-3 rounded-full relative" style={Platform.OS === 'android' ? styles.androidShadow : styles.iosShadow}>
-                  <MaterialCommunityIcons name="shield-account" size={20} color="#374151" />
+                <View
+                  className="bg-white p-3 rounded-full relative"
+                  style={
+                    Platform.OS === "android"
+                      ? styles.androidShadow
+                      : styles.iosShadow
+                  }
+                >
+                  <MaterialCommunityIcons
+                    name="shield-account"
+                    size={20}
+                    color="#374151"
+                  />
                   {pendingApplicationsCount > 0 && (
                     <View className="absolute -top-1 -right-1 bg-red-500 rounded-full min-w-[20px] h-5 items-center justify-center px-1">
                       <Text className="text-white text-xs font-bold">
-                        {pendingApplicationsCount > 99 ? '99+' : pendingApplicationsCount}
+                        {pendingApplicationsCount > 99
+                          ? "99+"
+                          : pendingApplicationsCount}
                       </Text>
                     </View>
                   )}
                 </View>
-                <Text className={`text-xs text-gray-600 mt-2 ${language === 'ar' ? 'font-CairoBold' : 'font-Jakartab'}`}>
-                  {language === 'ar' ? 'لوحة التحكم' : 'Admin Panel'}
+                <Text
+                  className={`text-xs text-gray-600 mt-2 ${language === "ar" ? "font-CairoBold" : "font-Jakartab"}`}
+                >
+                  {language === "ar" ? "لوحة التحكم" : "Admin Panel"}
                 </Text>
               </TouchableOpacity>
             )}
-            
-            <TouchableOpacity 
-              onPress={handleSignOut}
-              className="items-center"
-            >
-              <View className="bg-white p-3 rounded-full" style={Platform.OS === 'android' ? styles.androidShadow : styles.iosShadow}>
-                <MaterialCommunityIcons name="logout" size={20} color="#EF4444" />
+
+            <TouchableOpacity onPress={handleSignOut} className="items-center">
+              <View
+                className="bg-white p-3 rounded-full"
+                style={
+                  Platform.OS === "android"
+                    ? styles.androidShadow
+                    : styles.iosShadow
+                }
+              >
+                <MaterialCommunityIcons
+                  name="logout"
+                  size={20}
+                  color="#EF4444"
+                />
               </View>
-              <Text className={`text-xs text-gray-600 mt-2 ${language === 'ar' ? 'font-CairoBold' : 'font-Jakartab'}`}>
-                {language === 'ar' ? 'تسجيل الخروج' : 'Sign Out'}
+              <Text
+                className={`text-xs text-gray-600 mt-2 ${language === "ar" ? "font-CairoBold" : "font-Jakartab"}`}
+              >
+                {language === "ar" ? "تسجيل الخروج" : "Sign Out"}
               </Text>
             </TouchableOpacity>
           </View>
         </View>
 
-        {/* Rating Statistics - Only for Drivers */}
+        {/* Rating and Total Rating Boxes - Only for Drivers */}
         {userData.isDriver && (
-          <View className={`flex-row justify-between w-full mt-4 ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
-            <View className="items-center bg-white rounded-xl p-4 flex-1 mx-2" style={Platform.OS === 'android' ? styles.androidShadow : styles.iosShadow}>
-              <Text className={`text-2xl ${language === 'ar' ? 'font-CairoBold' : 'font-Jakartab'}`}>
+          <View
+            className={`flex-row justify-between w-full mt-4 ${language === "ar" ? "flex-row-reverse" : ""}`}
+          >
+            <View
+              className="items-center bg-white rounded-xl p-4 flex-1 mx-2"
+              style={
+                Platform.OS === "android"
+                  ? styles.androidShadow
+                  : styles.iosShadow
+              }
+            >
+              <Text
+                className={`text-2xl ${language === "ar" ? "font-CairoBold" : "font-Jakartab"}`}
+              >
                 {userData.data?.driver?.total_rides || 0}
               </Text>
-              <Text className={`text-gray-500 text-sm ${language === 'ar' ? 'font-CairoBold' : 'font-Jakartab'}`}>
-                {language === 'ar' ? 'إجمالي التقييمات' : 'Total Rating'}
+              <Text
+                className={`text-gray-500 text-sm ${language === "ar" ? "font-CairoBold" : "font-Jakartab"}`}
+              >
+                {language === "ar" ? "إجمالي الرحلات" : "Total Rides"}
               </Text>
             </View>
-            <View className="items-center bg-white rounded-xl p-4 flex-1 mx-2" style={Platform.OS === 'android' ? styles.androidShadow : styles.iosShadow}>
+            <View
+              className="items-center bg-white rounded-xl p-4 flex-1 mx-2"
+              style={
+                Platform.OS === "android"
+                  ? styles.androidShadow
+                  : styles.iosShadow
+              }
+            >
               <View className="flex-row items-center">
-                <Text className={`text-2xl ${language === 'ar' ? 'font-CairoBold' : 'font-Jakartab'} ${language === 'ar' ? 'mr-1' : 'ml-1'}`}>
-                  {userData.data?.driver?.rating?.toFixed(1) || '0.0'}
+                <Text
+                  className={`text-2xl ${language === "ar" ? "font-CairoBold" : "font-Jakartab"} ${language === "ar" ? "mr-1" : "ml-1"}`}
+                >
+                  {userData.data?.driver?.rating?.toFixed(1) || "0.0"}
                 </Text>
                 <Image source={icons.star} style={{ width: 20, height: 20 }} />
               </View>
-              <Text className={`text-gray-500 text-sm ${language === 'ar' ? 'font-CairoBold' : 'font-Jakartab'}`}>
-                {language === 'ar' ? 'التقييم' : 'Rating'}
+              <Text
+                className={`text-gray-500 text-sm ${language === "ar" ? "font-CairoBold" : "font-Jakartab"}`}
+              >
+                {language === "ar" ? "التقييم" : "Rating"}
               </Text>
             </View>
           </View>
@@ -595,64 +810,101 @@ const Profile = () => {
         {userData.isDriver && (
           <>
             {renderDetailedRatings()}
-            <TouchableOpacity 
-              onPress={() => toggleCard('driverInfo')}
-              className="bg-white rounded-xl p-5 mt-4" 
-              style={Platform.OS === 'android' ? styles.androidShadow : styles.iosShadow}
+            <TouchableOpacity
+              onPress={() => toggleCard("driverInfo")}
+              className="bg-white rounded-xl p-5 mt-4"
+              style={
+                Platform.OS === "android"
+                  ? styles.androidShadow
+                  : styles.iosShadow
+              }
             >
-              <View className={`flex-row justify-between items-center ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
-                <Text className={`text-lg ${language === 'ar' ? 'font-CairoBold' : 'font-Jakartab'}`}>
-                  {language === 'ar' ? 'معلومات السائق' : 'Driver Information'}
+              <View
+                className={`flex-row justify-between items-center ${language === "ar" ? "flex-row-reverse" : ""}`}
+              >
+                <Text
+                  className={`text-lg ${language === "ar" ? "font-CairoBold" : "font-Jakartab"}`}
+                >
+                  {language === "ar" ? "معلومات السائق" : "Driver Information"}
                 </Text>
-                <AntDesign 
-                  name={expandedCards.driverInfo ? 'up' : 'down'} 
-                  size={20} 
-                  color="#374151" 
+                <AntDesign
+                  name={expandedCards.driverInfo ? "up" : "down"}
+                  size={20}
+                  color="#374151"
                 />
               </View>
               {expandedCards.driverInfo && (
                 <View className="space-y-4 mt-4">
                   <View>
-                    <Text className={`text-gray-500 text-sm mb-1 ${language === 'ar' ? 'font-CairoBold text-right' : 'font-Jakartab text-left'}`}>
-                      {language === 'ar' ? 'نوع السيارة' : 'Car Type'}
+                    <Text
+                      className={`text-gray-500 text-sm mb-1 ${language === "ar" ? "font-CairoBold text-right" : "font-Jakartab text-left"}`}
+                    >
+                      {language === "ar" ? "نوع السيارة" : "Car Type"}
                     </Text>
                     <View className="bg-gray-100 rounded-lg p-3 border border-gray-300">
-                      <Text className={`${language === 'ar' ? 'font-CairoBold text-right' : 'font-Jakartab text-left'}`}>
-                        {userData.data?.driver?.car_type || (language === 'ar' ? 'غير محدد' : 'Not specified')}
+                      <Text
+                        className={`${language === "ar" ? "font-CairoBold text-right" : "font-Jakartab text-left"}`}
+                      >
+                        {userData.data?.driver?.car_type ||
+                          (language === "ar" ? "غير محدد" : "Not specified")}
                       </Text>
                     </View>
                   </View>
 
                   <View>
-                    <Text className={`text-gray-500 text-sm mb-1 ${language === 'ar' ? 'font-CairoBold text-right' : 'font-Jakartab text-left'}`}>
-                      {language === 'ar' ? 'عدد المقاعد' : 'Number of Seats'}
+                    <Text
+                      className={`text-gray-500 text-sm mb-1 ${language === "ar" ? "font-CairoBold text-right" : "font-Jakartab text-left"}`}
+                    >
+                      {language === "ar" ? "عدد المقاعد" : "Number of Seats"}
                     </Text>
                     <View className="bg-gray-100 rounded-lg p-3 border border-gray-300">
-                      <Text className={`${language === 'ar' ? 'font-CairoBold text-right' : 'font-Jakartab text-left'}`}>
+                      <Text
+                        className={`${language === "ar" ? "font-CairoBold text-right" : "font-Jakartab text-left"}`}
+                      >
                         {userData.data?.driver?.car_seats || 0}
                       </Text>
                     </View>
                   </View>
 
                   <View>
-                    <Text className={`text-gray-500 text-sm mb-1 ${language === 'ar' ? 'font-CairoBold text-right' : 'font-Jakartab text-left'}`}>
-                      {language === 'ar' ? 'تاريخ التسجيل' : 'Registration Date'}
+                    <Text
+                      className={`text-gray-500 text-sm mb-1 ${language === "ar" ? "font-CairoBold text-right" : "font-Jakartab text-left"}`}
+                    >
+                      {language === "ar"
+                        ? "تاريخ التسجيل"
+                        : "Registration Date"}
                     </Text>
                     <View className="bg-gray-100 rounded-lg p-3 border border-gray-300">
-                      <Text className={`${language === 'ar' ? 'font-CairoBold text-right' : 'font-Jakartab text-left'}`}>
-                        {formatDate(userData.data?.driver?.created_at || '')}
+                      <Text
+                        className={`${language === "ar" ? "font-CairoBold text-right" : "font-Jakartab text-left"}`}
+                      >
+                        {formatDate(userData.data?.driver?.created_at || "")}
                       </Text>
                     </View>
                   </View>
 
                   <View>
-                    <Text className={`text-gray-500 text-sm mb-1 ${language === 'ar' ? 'font-CairoBold text-right' : 'font-Jakartab text-left'}`}>
-                      {language === 'ar' ? 'حالة السائق' : 'Driver Status'}
+                    <Text
+                      className={`text-gray-500 text-sm mb-1 ${language === "ar" ? "font-CairoBold text-right" : "font-Jakartab text-left"}`}
+                    >
+                      {language === "ar" ? "حالة السائق" : "Driver Status"}
                     </Text>
-                    <View className={`flex-row ${language === 'ar' ? 'justify-end' : 'justify-start'}`}>
-                      <View className={`px-3 py-1 rounded-full ${userData.data?.driver?.is_active ? 'bg-green-100' : 'bg-red-100'}`}>
-                        <Text className={`text-sm ${userData.data?.driver?.is_active ? 'text-green-700' : 'text-red-700'} ${language === 'ar' ? 'font-CairoBold' : 'font-Jakartab'}`}>
-                          {userData.data?.driver?.is_active ? (language === 'ar' ? 'نشط' : 'Active') : (language === 'ar' ? 'غير نشط' : 'Inactive')}
+                    <View
+                      className={`flex-row ${language === "ar" ? "justify-end" : "justify-start"}`}
+                    >
+                      <View
+                        className={`px-3 py-1 rounded-full ${userData.data?.driver?.is_active ? "bg-green-100" : "bg-red-100"}`}
+                      >
+                        <Text
+                          className={`text-sm ${userData.data?.driver?.is_active ? "text-green-700" : "text-red-700"} ${language === "ar" ? "font-CairoBold" : "font-Jakartab"}`}
+                        >
+                          {userData.data?.driver?.is_active
+                            ? language === "ar"
+                              ? "نشط"
+                              : "Active"
+                            : language === "ar"
+                              ? "غير نشط"
+                              : "Inactive"}
                         </Text>
                       </View>
                     </View>
@@ -663,19 +915,27 @@ const Profile = () => {
 
             {/* Car Image Card */}
             {userData.data?.driver?.car_image_url && (
-              <TouchableOpacity 
-                onPress={() => toggleCard('carImage')}
-                className="bg-white rounded-xl p-5 mt-4" 
-                style={Platform.OS === 'android' ? styles.androidShadow : styles.iosShadow}
+              <TouchableOpacity
+                onPress={() => toggleCard("carImage")}
+                className="bg-white rounded-xl p-5 mt-4"
+                style={
+                  Platform.OS === "android"
+                    ? styles.androidShadow
+                    : styles.iosShadow
+                }
               >
-                <View className={`flex-row justify-between items-center ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
-                  <Text className={`text-lg ${language === 'ar' ? 'font-CairoBold' : 'font-Jakartab'}`}>
-                    {language === 'ar' ? 'صورة السيارة' : 'Car Image'}
+                <View
+                  className={`flex-row justify-between items-center ${language === "ar" ? "flex-row-reverse" : ""}`}
+                >
+                  <Text
+                    className={`text-lg ${language === "ar" ? "font-CairoBold" : "font-Jakartab"}`}
+                  >
+                    {language === "ar" ? "صورة السيارة" : "Car Image"}
                   </Text>
-                  <AntDesign 
-                    name={expandedCards.carImage ? 'up' : 'down'} 
-                    size={20} 
-                    color="#374151" 
+                  <AntDesign
+                    name={expandedCards.carImage ? "up" : "down"}
+                    size={20}
+                    color="#374151"
                   />
                 </View>
                 {expandedCards.carImage && (
@@ -698,14 +958,23 @@ const Profile = () => {
             onPress={handleRegisterDriver}
             className="bg-rose-50 rounded-xl p-5 mt-4"
           >
-            <View className={`flex-row items-center justify-between ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
-              <AntDesign name={language === 'ar' ? 'left' : 'right'} size={24} color="#F43F5E" />
-              <View className={`flex-1 ${language === 'ar' ? 'items-end' : 'items-start'}`}>
-                <Text className={`text-lg ${language === 'ar' ? 'font-CairoRegular' : 'font-JakartaBold'} text-rose-500`}>
-                  {language === 'ar' ? 'كن سائقاً' : 'Become a Driver'}
+            <View
+              className={`flex-row items-center justify-between ${language === "ar" ? "flex-row-reverse" : ""}`}
+            >
+              <View
+                className={`flex-1 ${language === "ar" ? "items-end" : "items-start"}`}
+              >
+                <Text
+                  className={`text-lg ${language === "ar" ? "font-CairoRegular" : "font-JakartaBold"} text-rose-500`}
+                >
+                  {language === "ar" ? "كن سائقاً" : "Become a Driver"}
                 </Text>
-                <Text className={`text-sm text-gray-500 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
-                  {language === 'ar' ? 'اكسب المال من خلال تقديم الرحلات' : 'Earn money by giving rides'}
+                <Text
+                  className={`text-sm text-gray-500 ${language === "ar" ? "text-right" : "text-left"}`}
+                >
+                  {language === "ar"
+                    ? "اكسب المال من خلال تقديم الرحلات"
+                    : "Earn money by giving rides"}
                 </Text>
               </View>
             </View>
@@ -713,43 +982,73 @@ const Profile = () => {
         )}
 
         {/* Account Information */}
-        <TouchableOpacity 
-          onPress={() => toggleCard('accountInfo')}
-          className="bg-white rounded-xl p-5 mt-4" 
-          style={Platform.OS === 'android' ? styles.androidShadow : styles.iosShadow}
+        <TouchableOpacity
+          onPress={() => toggleCard("accountInfo")}
+          className="bg-white rounded-xl p-5 mt-4"
+          style={
+            Platform.OS === "android" ? styles.androidShadow : styles.iosShadow
+          }
         >
-          <View className={`flex-row justify-between items-center ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
-            <Text className={`text-lg ${language === 'ar' ? 'font-CairoBold' : 'font-Jakartab'}`}>
-              {language === 'ar' ? 'معلومات الحساب' : 'Account Information'}
+          <View
+            className={`flex-row justify-between items-center ${language === "ar" ? "flex-row-reverse" : ""}`}
+          >
+            <Text
+              className={`text-lg ${language === "ar" ? "font-CairoBold" : "font-Jakartab"}`}
+            >
+              {language === "ar" ? "معلومات الحساب" : "Account Information"}
             </Text>
-            <AntDesign 
-              name={expandedCards.accountInfo ? 'up' : 'down'} 
-              size={20} 
-              color="#374151" 
+            <AntDesign
+              name={expandedCards.accountInfo ? "up" : "down"}
+              size={20}
+              color="#374151"
             />
           </View>
           {expandedCards.accountInfo && (
             <View className="space-y-4 mt-4">
               <View>
-                <Text className={`text-gray-500 text-sm mb-1 ${language === 'ar' ? 'font-CairoBold text-right' : 'font-Jakartab text-left'}`}>
-                  {language === 'ar' ? 'رقم الهاتف' : 'Phone Number'}
+                <Text
+                  className={`text-gray-500 text-sm mb-1 ${language === "ar" ? "font-CairoBold text-right" : "font-Jakartab text-left"}`}
+                >
+                  {language === "ar" ? "رقم الهاتف" : "Phone Number"}
                 </Text>
                 <View className="bg-gray-100 rounded-lg p-3 border border-gray-300">
-                  <Text className={`${language === 'ar' ? 'font-CairoBold text-right' : 'font-Jakartab text-left'}`}>
+                  <Text
+                    className={`${language === "ar" ? "font-CairoBold text-right" : "font-Jakartab text-left"}`}
+                  >
                     {phoneNumber}
                   </Text>
                 </View>
               </View>
               <View>
-                <Text className={`text-gray-500 text-sm mb-1 ${language === 'ar' ? 'font-CairoBold text-right' : 'font-Jakartab text-left'}`}>
-                  {language === 'ar' ? 'عضو منذ' : 'Member Since'}
+                <Text
+                  className={`text-gray-500 text-sm mb-1 ${language === "ar" ? "font-CairoBold text-right" : "font-Jakartab text-left"}`}
+                >
+                  {language === "ar" ? "عضو منذ" : "Member Since"}
                 </Text>
                 <View className="bg-gray-100 rounded-lg p-3 border border-gray-300">
-                  <Text className={`${language === 'ar' ? 'font-CairoBold text-right' : 'font-Jakartab text-left'}`}>
+                  <Text
+                    className={`${language === "ar" ? "font-CairoBold text-right" : "font-Jakartab text-left"}`}
+                  >
                     {memberSince}
                   </Text>
                 </View>
               </View>
+              {userData.data?.industry && (
+                <View>
+                  <Text
+                    className={`text-gray-500 text-sm mb-1 ${language === "ar" ? "font-CairoBold text-right" : "font-Jakartab text-left"}`}
+                  >
+                    {language === "ar" ? "مجال العمل" : "Work Industry"}
+                  </Text>
+                  <View className="bg-gray-100 rounded-lg p-3 border border-gray-300">
+                    <Text
+                      className={`${language === "ar" ? "font-CairoBold text-right" : "font-Jakartab text-left"}`}
+                    >
+                      {translateIndustry(userData.data.industry)}
+                    </Text>
+                  </View>
+                </View>
+              )}
             </View>
           )}
         </TouchableOpacity>
@@ -763,14 +1062,17 @@ const Profile = () => {
         transparent={true}
         onRequestClose={() => setShowFullImage(false)}
       >
-        <TouchableOpacity 
+        <TouchableOpacity
           className="flex-1 bg-black/90 items-center justify-center"
           onPress={() => setShowFullImage(false)}
           activeOpacity={1}
         >
           <Image
             source={{
-              uri: userData.profileImage || user?.imageUrl || 'https://www.pngitem.com/pimgs/m/146-1468479_my-profile-icon-blank-profile-picture-circle-hd.png'
+              uri:
+                userData.profileImage ||
+                user?.imageUrl ||
+                "https://www.pngitem.com/pimgs/m/146-1468479_my-profile-icon-blank-profile-picture-circle-hd.png",
             }}
             className="w-80 h-80 rounded-xl"
             resizeMode="contain"
@@ -785,7 +1087,7 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   iosShadow: {
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 3,

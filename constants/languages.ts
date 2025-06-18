@@ -355,6 +355,7 @@ export interface TranslationKeys {
   invalidEmailFormat: string;
   passwordBreach: string;
   rideSeats: string;
+  TotalRating: string;
 }
 
 export interface Translations {
@@ -394,6 +395,7 @@ export const translations: Translations = {
     email: "البريد الإلكتروني",
     password: "كلمة السر",
     gender: "الجنس",
+    TotalRating: "اجمالي التقييمات",
     selectGender: "اختر الجنس",
     workIndustry: "مجال العمل",
     selectIndustry: "اختر مجال العمل",
@@ -714,7 +716,7 @@ export const translations: Translations = {
     searchUserPlaceholder: "بحث عن مستخدم...",
     noUsersFound: "لم يتم العثور على مستخدمين",
     startSharing: "بدء المشاركة",
-    locationRequests: "طلبات الموقع",
+    locationRequests: "طلبات التتبع",
     noActiveLocationRequests: "لا توجد طلبات موقع نشطة",
     myShares: "مشاركاتي",
     updateLocationForAll: "تحديث الموقع للجميع",
@@ -814,6 +816,7 @@ export const translations: Translations = {
     code: "Code",
     verifyEmail: "Verify Email",
     verified: "Verified",
+    TotalRating: " Total Rating",
     verificationSuccess: "You have successfully verified your account.",
     browseHome: "Browse Home",
     error: "Error",

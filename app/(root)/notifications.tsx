@@ -135,6 +135,10 @@ export default function Notifications() {
             case 'driver_request' :
             router.push('/(root)/admin/driverApplications');
             break;  
+            case 'location_share' :
+              router.push('/track');
+              break; 
+
         case 'ride_request':
         case 'ride_status':
         case 'ride_complete':

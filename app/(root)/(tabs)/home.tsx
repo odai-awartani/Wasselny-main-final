@@ -915,7 +915,7 @@ export default function Home() {
                 </Text>
               </View>
               <View className={`${language === 'ar' ? 'items-start' : 'items-end'}`}>
-                {isDriver && 
+               
                 <TouchableOpacity
                   onPress={() => {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -926,7 +926,7 @@ export default function Home() {
                   <Text className="font-CairoSemiBold">
                     {language === 'ar' ? 'عرض الكل' : 'View All'}
                   </Text>
-                </TouchableOpacity>}
+                </TouchableOpacity>
               </View>
             </View>
             <SuggestedRides ref={suggestedRidesRef} />

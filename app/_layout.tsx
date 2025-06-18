@@ -66,6 +66,12 @@ export default function RootLayout() {
     "Cairo-Medium": require("../assets/fonts/Cairo-Medium.ttf"),
     "Cairo-Regular": require("../assets/fonts/Cairo-Regular.ttf"),
     "Cairo-SemiBold": require("../assets/fonts/Cairo-SemiBold.ttf"),
+    // Load Font Awesome 5, MaterialCommunityIcons, MaterialIcons, AntDesign and Ionicons font families
+    MaterialCommunityIcons: require("@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/MaterialCommunityIcons.ttf"),
+    MaterialIcons: require("@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/MaterialIcons.ttf"),
+    AntDesign: require("@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/AntDesign.ttf"),
+    Ionicons: require("@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Ionicons.ttf"),
+    FontAwesome5: require("@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/FontAwesome5_Regular.ttf"),
   });
 
   const [user, setUser] = useState<User | null>(null);
